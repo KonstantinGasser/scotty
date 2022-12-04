@@ -8,6 +8,9 @@
 
 ## Draft 
 
-Often enough in order to develop applications in your local development you are required to run more than one service. Let's say one service dealing with authentication and another service taking care about user data. If everything is working - great why do we need logs in the first place?😆...but if the login fails what happens, you have to trace through the logs to find the issue. However, since you have two services you need to stich together the logs from the terminal windows; yak 😒.
+`scotty` aims to improve the process of understanding logs and tracing request or span ids while developing services locally. With `scotty` and its sub command `beam` you can multiplex many log streams into a consolidated view on which you can apply aggregations and filters. Thereby, you no longer need to manually stich together logs from multiple terminal windows.
 
-Scotty's goal is to make this process of tracing logs in local environments easier and similar to what developers are used to in production environments. At least to funnel all logs into one output and allow for filtering yay even tracing of an id. As a side goal Scotty aims to provide better log output for logs which can be represented as JSON making it again easier and quicker to find the root cause of the issue.
+As a secondary goal `scotty` tries parsing your logs (if they are structured) into JSON helping the readability while browsing the logs.
+
+By using `unix pipes` to pipe your program output into `beam` you are free to append commands prior to calling `beam`. By default `beam` will try to connect to a `unix socket` however, since applications nowadays usually are shipped within replicated environments (such as `docker`) `scotty` will also allow you to beam **sorry stream** your logs via a `tcp:ip` connection. 
+
