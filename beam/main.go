@@ -1,17 +1,43 @@
 package main
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
+	"io"
+	"os"
 	"time"
 )
 
 func main() {
-	fmt.Println("beam me up, Scotty")
 
-	for i := 0; i < 5; i++ {
-		fmt.Printf("[INFO] msg=I am log #%d\n", i)
-		time.Sleep(time.Second * 1)
+	socket := flag.String("socket", "unix:/temp", "connection to stream logs over. Use ip:port to connect to a tcp:ip socket")
+	// stream := flag.String("stream", "relative path of programm", "labels the stream. scotty is showing information under this name")
+	flag.Parse()
+
+	sock, err := newUnix(*socket)
+	if err != nil {
+		panic(err)
 	}
 
-	fmt.Println("[INFO] msg=shutting down server")
+	reader := bufio.NewReader(os.Stdin)
+	var i = 1
+	for {
+
+		log, _, err := reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err)
+		}
+
+		if _, err := sock.Write(log); err != nil {
+			panic(err)
+		}
+		fmt.Printf("\rLogs send(%d)", i)
+		time.Sleep(time.Second * 2)
+		i++
+	}
+
 }
