@@ -1,8 +1,8 @@
 # scotty
 
-<div style="text-align: center">
+<p align="center">
     <img src="resources/gopher-scotty.png" alt="scotty gopher :)" width="250px" height="250px"></img>
-</div>
+</p>
 
 > Multiplex log streams for aggregation and analysis while developing local services
 
