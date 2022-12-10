@@ -1,50 +1,53 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"io"
+	"net"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	fmt.Println("Scotty, reporting for duty!")
-	defer fmt.Println("\nScotty, signing off!")
 
-	info, err := os.Stdin.Stat()
+	listener, err := net.Listen("unix", "/tmp/scotty.sock")
 	if err != nil {
 		panic(err)
 	}
+	defer listener.Close()
 
-	if info.Mode()&os.ModeCharDevice == os.ModeCharDevice || info.Size() <= 0 {
-		fmt.Println("Program requires input through pipes\n\tUsage: cat logs.log | beam")
-		return
-	}
+	sig := make(chan os.Signal, 1)
 
-	f, err := os.Create("temp.log")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	reader := bufio.NewReader(os.Stdin)
-	var i = 1
+	go func(s <-chan os.Signal) {
+		<-s
+		listener.Close()
+		fmt.Println("graceful shutdown")
+		os.Exit(0)
+	}(sig)
+
+	fmt.Println("Listening on unix socket: /tmp/scotty.sock")
 	for {
-
-		log, _, err := reader.ReadLine()
+		conn, err := listener.Accept()
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err)
+			fmt.Printf("unable to accept connect: %v\n", err)
+			return
 		}
 
-		line := fmt.Sprintf("%v: %s\n", time.Now(), string(log))
-		if _, err := f.WriteString(line); err != nil {
-			panic(err)
-		}
-		fmt.Printf("\rLogs send(%d)", i)
-		i++
+		go func(c net.Conn) {
+			defer c.Close()
+
+			for {
+
+				buf := make([]byte, 1024)
+				if _, err := c.Read(buf); err != nil {
+					fmt.Printf("unable to read from client: %v\n", err)
+					break
+				}
+
+				fmt.Printf("[scotty] [conn=%v] %s\n", conn, string(buf))
+			}
+		}(conn)
 	}
 }

@@ -23,23 +23,51 @@ to some writer
 :next iteration
 */
 
+// Stream allows to stream logs via a connection
+// to a receving endpoint
+// scotty currently supports unix socket and tcp socket
+// streams
+type Stream interface {
+	Connect(addr string) error
+	Close() error
+	Write(b []byte) (int, error)
+}
+
+func newStream(protocol string) (Stream, error) {
+	switch protocol {
+	case "unix":
+		return &socket{}, nil
+	case "tcp":
+		return nil, fmt.Errorf("not implemented")
+	default:
+		return nil, fmt.Errorf("unknown protocol: %q", protocol)
+	}
+}
+
 // unix represents a unix socket connection
 // over which logs can be send. unix implements
 // io.Writer interface
-type unix struct {
+type socket struct {
 	sock net.Conn
 }
 
-func newUnix(ipc string) (*unix, error) {
+func (s *socket) Connect(ipc string) error {
 
-	conn, err := net.Dial("unix", fmt.Sprintf("/tmp/%s.sock", ipc))
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to %q socket: %w", ipc, err)
+	var err error
+	if s.sock, err = net.Dial("unix", ipc); err != nil {
+		return fmt.Errorf("unable to connect to unix socket %q: %w", ipc, err)
 	}
 
-	return &unix{sock: conn}, nil
+	return nil
 }
 
-func (ux unix) Write(b []byte) (int, error) {
-	return ux.sock.Write(b)
+func (s *socket) Write(b []byte) (int, error) {
+	return s.sock.Write(b)
+}
+
+func (s *socket) Close() error {
+	if s.sock == nil {
+		return nil
+	}
+	return s.sock.Close()
 }
