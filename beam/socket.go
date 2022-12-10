@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"math/rand"
 	"net"
+	"time"
 )
 
 /*g
@@ -28,15 +31,28 @@ to some writer
 // scotty currently supports unix socket and tcp socket
 // streams
 type Stream interface {
+	// Connect should connect to the request scotty process
+	// how depends on which type is chosen (uinx, tcp)
 	Connect(addr string) error
+	// Close the stream and the underlying net.Conn
 	Close() error
+	// io.Writer interface implemented by net.Conn as such only a wrapper
 	Write(b []byte) (int, error)
 }
 
-func newStream(protocol string) (Stream, error) {
+func newStream(protocol string, label string) (Stream, error) {
+
+	// in order to distinct between multiple streams
+	// generate a random value if not set
+	if len(label) == 0 {
+		label = randLabel(8)
+	}
+
 	switch protocol {
 	case "unix":
-		return &socket{}, nil
+		return &socket{
+			stream: label,
+		}, nil
 	case "tcp":
 		return nil, fmt.Errorf("not implemented")
 	default:
@@ -44,12 +60,15 @@ func newStream(protocol string) (Stream, error) {
 	}
 }
 
-// unix represents a unix socket connection
-// over which logs can be send. unix implements
-// io.Writer interface
 type socket struct {
-	sock net.Conn
+	stream string
+	sock   net.Conn
 }
+
+const (
+	// synFlag is used to say hi to scotty after connecting
+	syncFlag = "SYNC"
+)
 
 func (s *socket) Connect(ipc string) error {
 
@@ -58,10 +77,31 @@ func (s *socket) Connect(ipc string) error {
 		return fmt.Errorf("unable to connect to unix socket %q: %w", ipc, err)
 	}
 
+	// send hello SYN flag to scotty which includes meta-data about the beam
+	// such as the stream name (if provided)
+	if err := s.sync(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// sync tells the running scotty process that a new stream is about to
+// stream logs. Within the message certain meta-data such as the stream name
+// can be announced to scotty
+func (s *socket) sync() error {
+
+	var syncMsg = []byte(fmt.Sprintf("%s;stream=%s", syncFlag, s.stream))
+
+	if _, err := s.Write(syncMsg); err != nil {
+		return fmt.Errorf("beam is unable to sync with scotty: %w", err)
+	}
+
 	return nil
 }
 
 func (s *socket) Write(b []byte) (int, error) {
+	b = append(b, '\n')
 	return s.sock.Write(b)
 }
 
@@ -70,4 +110,20 @@ func (s *socket) Close() error {
 		return nil
 	}
 	return s.sock.Close()
+}
+
+var (
+	letters = []byte("abcdefghijklmnopqrstuvwxyz")
+)
+
+func randLabel(size int) string {
+	rand.Seed(time.Now().Unix())
+
+	var out bytes.Buffer
+
+	for i := 0; i < size; i++ {
+		out.WriteByte(letters[rand.Intn(26)])
+	}
+
+	return out.String()
 }

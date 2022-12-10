@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
@@ -38,15 +39,22 @@ func main() {
 		go func(c net.Conn) {
 			defer c.Close()
 
+			reader := bufio.NewReader(c)
+
 			for {
 
-				buf := make([]byte, 1024)
-				if _, err := c.Read(buf); err != nil {
+				// buf := make([]byte, 512)
+				// var buf []byte
+				// if _, err := c.Read(buf); err != nil {
+				// 	break
+				// }
+				log, err := reader.ReadString('\n')
+				if err != nil {
 					fmt.Printf("unable to read from client: %v\n", err)
 					break
 				}
 
-				fmt.Printf("[scotty] [conn=%v] %s\n", conn, string(buf))
+				fmt.Printf("[scotty] %s\n", log)
 			}
 		}(conn)
 	}
