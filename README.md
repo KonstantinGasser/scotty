@@ -1,8 +1,8 @@
 # scotty
 
-<div style="text-align: center">
+<p align="center">
     <img src="resources/gopher-scotty.png" alt="scotty gopher :)" width="250px" height="250px"></img>
-</div>
+</p>
 
 > Multiplex log streams for aggregation and analysis while developing local services
 
@@ -12,5 +12,5 @@
 
 As a secondary goal `scotty` tries parsing your logs (if they are structured) into JSON helping the readability while browsing the logs.
 
-By using `unix pipes` to pipe your program output into `beam` you are free to append commands prior to calling `beam`. By default `beam` will try to connect to a `unix socket` however, since applications nowadays usually are shipped within replicated environments (such as `docker`) `scotty` will also allow you to beam **sorry stream** your logs via a `tcp:ip` connection. 
+By using *unix pipes* to pipe your program output into `beam` you are free to append commands prior to calling `beam`. By default `beam` will try to connect to a *unix socket* however, since applications nowadays usually are shipped within replicated environments (such as ***docker***) `scotty` will also allow you to beam **sorry stream** your logs via a `tcp:ip` connection. 
 
