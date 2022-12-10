@@ -54,7 +54,7 @@ func main() {
 					break
 				}
 
-				fmt.Printf("[scotty] %s\n", log)
+				fmt.Printf("[scotty] %s", log)
 			}
 		}(conn)
 	}

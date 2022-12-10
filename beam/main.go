@@ -15,13 +15,13 @@ func main() {
 	label := flag.String("stream", "", "labels the stream. scotty is showing information under this name (default random hash)")
 	flag.Parse()
 
-	info, err := os.Stdin.Stat()
+	stat, err := os.Stdin.Stat()
 	if err != nil {
 		fatal("unable to check stdin input: %v\n", err)
 		return
 	}
 
-	if info.Mode()&os.ModeCharDevice == os.ModeCharDevice || info.Size() <= 0 {
+	if stat.Mode()&os.ModeCharDevice == os.ModeCharDevice || stat.Size() <= 0 {
 		warn("Program requires input through pipes\n\tUsage: cat logs.log | beam\n")
 		return
 	}
@@ -37,6 +37,9 @@ func main() {
 		fatal("unable to connect to %q: %v\n", *addr, err)
 		return
 	}
+
+	stop, _ := spin(" beam me up, Scotty!")
+	defer stop()
 
 	reader := bufio.NewReader(os.Stdin)
 
