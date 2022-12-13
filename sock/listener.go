@@ -1,7 +1,9 @@
 package sock
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
 )
 
@@ -9,7 +11,7 @@ func Open(network string, addr string) (net.Listener, error) {
 	return net.Listen(network, addr)
 }
 
-func Listen(ln net.Listener, message chan<- net.Conn, stop <-chan struct{}) {
+func Listen(ln net.Listener, w io.Writer, stop <-chan struct{}) {
 
 	go func() {
 		<-stop
@@ -26,6 +28,26 @@ func Listen(ln net.Listener, message chan<- net.Conn, stop <-chan struct{}) {
 			return
 		}
 
-		message <- conn
+		go read(conn, w)
+
+	}
+}
+
+func read(conn net.Conn, w io.Writer) {
+
+	var buf = bufio.NewReader(conn)
+
+	for {
+
+		msg, err := buf.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				// write closing message to io.Writer
+				break
+			}
+			break
+		}
+
+		w.Write(msg)
 	}
 }

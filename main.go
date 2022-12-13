@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/KonstantinGasser/scotty/log"
 	"github.com/KonstantinGasser/scotty/models/base"
 	"github.com/KonstantinGasser/scotty/sock"
 
@@ -16,6 +17,8 @@ func main() {
 	network := flag.String("protocol", "unix", "type of network scotty can accept logs from")
 	addr := flag.String("addr", "/tmp/scotty.sock", "address beam can connect to; beam -addr <scotty:address>")
 
+	processor := log.NewProcessor()
+
 	listener, err := sock.Open(*network, *addr)
 	if err != nil {
 		fmt.Printf("unable to start scotty; %v", err)
@@ -24,13 +27,12 @@ func main() {
 
 	stop := make(chan struct{}, 1)
 
-	stream := make(chan net.Conn)
-	defer close(stream)
+	connC := make(chan net.Conn)
+	defer close(connC)
 
-	go sock.Listen(listener, stream, stop)
+	go sock.Listen(listener, processor, stop)
 
-	events := make(chan base.Event)
-	logV := base.New(stop, stream, events)
+	logV := base.New(stop, processor)
 
 	app := tea.NewProgram(logV)
 	if _, err := app.Run(); err != nil {

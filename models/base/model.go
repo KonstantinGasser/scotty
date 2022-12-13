@@ -1,10 +1,7 @@
 package base
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"net"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -19,50 +16,61 @@ type Event interface {
 	Index() uint8
 }
 
+type Streamer interface {
+	Stream() <-chan Event
+}
+
 type Model struct {
-	quite  chan<- struct{}
-	stream <-chan net.Conn
+	// quite channel indicated that the user/tea received
+	// a quite (q) or ctl+c
+	quite chan<- struct{}
+	// stream is currently required in the model to receive
+	// network connections and read from the connections.
+	// IMO, I don't like that this is anchored in the model
+	// as it is to low-level + upon the received events filter,
+	// aggregations and processing must be applied. As such
+	// I would suggest to have a module which consumes the
+	// events, process them and offers an APIs to be plucked into
+	// this model
+	// streamer <-chan net.Conn
+	streamer Streamer
+	// events receives events which are processed and
+	// only need to be displayed/viewed in the model or a delegate
 	events chan Event
+	// represents the latest event received by the events channel
 	latest Event
 }
 
-func New(quite chan<- struct{}, stream <-chan net.Conn, evts chan Event) *Model {
+func New(quite chan<- struct{}, streamer Streamer) *Model {
 	return &Model{
-		quite:  quite,
-		stream: stream,
-		events: evts,
+		quite:    quite,
+		streamer: streamer,
+		events:   make(chan Event),
 	}
 }
 
-type SomeEvent struct {
-	msg string
-}
-
-func (se SomeEvent) View() string { return se.msg }
-
-func (se SomeEvent) Index() uint8 { return 0 }
-
 func receiveEvents(m *Model) tea.Cmd {
 	return func() tea.Msg {
-		for conn := range m.stream {
-			go func(c net.Conn) {
+		for evt := range m.streamer.Stream() {
+			m.events <- evt
+			// go func(c net.Conn) {
 
-				reader := bufio.NewReader(c)
-				for {
-					line, err := reader.ReadString('\n')
-					if err != nil {
-						if err == io.EOF {
-							// what should we do here? good questions
-							// need to build further logic to make sense
-							// out of it
-							return
-						}
-						fmt.Printf("unable to read from stream: %v", err)
-						return
-					}
-					m.events <- SomeEvent{msg: line}
-				}
-			}(conn)
+			// 	reader := bufio.NewReader(c)
+			// 	for {
+			// 		line, err := reader.ReadString('\n')
+			// 		if err != nil {
+			// 			if err == io.EOF {
+			// 				// what should we do here? good questions
+			// 				// need to build further logic to make sense
+			// 				// out of it
+			// 				return
+			// 			}
+			// 			fmt.Printf("unable to read from stream: %v", err)
+			// 			return
+			// 		}
+			// 		m.events <- SomeEvent{msg: line}
+			// 	}
+			// }(conn)
 		}
 
 		return "Done" // has no effect and is just here to satisfy the compiler
