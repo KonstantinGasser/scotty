@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"flag"
-	"io"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
+
+	"github.com/KonstantinGasser/scotty/beam/stream"
 )
 
 func main() {
@@ -15,49 +16,46 @@ func main() {
 	label := flag.String("stream", "", "labels the stream. scotty is showing information under this name (default random hash)")
 	flag.Parse()
 
+	if ok := hasPipeInput(); !ok {
+		fatal("beam required you to pipe logs into beam\n\tUsage: go run -race cmd/my/program.go | beam")
+		return
+	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	defer close(sig)
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	// propagate termination down to stream
+	go func(s <-chan os.Signal, st chan<- struct{}) {
+		<-s
+		st <- struct{}{}
+	}(sig, stop)
+
+	conn, err := stream.Connection(*protocol, *addr)
+	if err != nil {
+		fatal("unable to connect to %q with protocol %q: %v", *addr, *protocol, err)
+		return
+	}
+
+	if err := stream.New(*label, conn).Stream(stop); err != nil {
+		fatal("unable to stream logs to scotty: %v", err)
+		return
+	}
+
+}
+
+func hasPipeInput() bool {
 	stat, err := os.Stdin.Stat()
 	if err != nil {
-		fatal("unable to check stdin input: %v\n", err)
-		return
+		return false // not sure if I like this. Essentially ignoring the error..
 	}
 
 	if stat.Mode()&os.ModeCharDevice == os.ModeCharDevice || stat.Size() <= 0 {
-		warn("Program requires input through pipes\n\tUsage: cat logs.log | beam\n")
-		return
+		return false
 	}
 
-	stream, err := newStream(*protocol, *label)
-	if err != nil {
-		fatal("unable to connect to scotty: %v\n", err)
-		return
-	}
-	defer stream.Close()
-
-	if err := stream.Connect(*addr); err != nil {
-		fatal("unable to connect to %q: %v\n", *addr, err)
-		return
-	}
-
-	stop, _ := spin(" beam me up, Scotty!")
-	defer stop()
-
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-
-		log, _, err := reader.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			fatal("unable to read log: %v\n", err)
-			os.Exit(1)
-		}
-
-		if _, err := stream.Write(log); err != nil {
-			fatal("unable to beam log: %v\n", err)
-		}
-		time.Sleep(time.Second * 1)
-	}
-
+	return true
 }

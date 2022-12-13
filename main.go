@@ -1,61 +1,40 @@
 package main
 
 import (
-	"bufio"
+	"flag"
 	"fmt"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
+
+	"github.com/KonstantinGasser/scotty/models/base"
+	"github.com/KonstantinGasser/scotty/sock"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
 
-	listener, err := net.Listen("unix", "/tmp/scotty.sock")
+	network := flag.String("protocol", "unix", "type of network scotty can accept logs from")
+	addr := flag.String("addr", "/tmp/scotty.sock", "address beam can connect to; beam -addr <scotty:address>")
+
+	listener, err := sock.Open(*network, *addr)
 	if err != nil {
-		panic(err)
+		fmt.Printf("unable to start scotty; %v", err)
+		return
 	}
-	defer listener.Close()
 
-	sig := make(chan os.Signal, 1)
+	stop := make(chan struct{}, 1)
 
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	stream := make(chan net.Conn)
+	defer close(stream)
 
-	go func(s <-chan os.Signal) {
-		<-s
-		listener.Close()
-		fmt.Println("graceful shutdown")
-		os.Exit(0)
-	}(sig)
+	go sock.Listen(listener, stream, stop)
 
-	fmt.Println("Listening on unix socket: /tmp/scotty.sock")
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Printf("unable to accept connect: %v\n", err)
-			return
-		}
+	events := make(chan base.Event)
+	logV := base.New(stop, stream, events)
 
-		go func(c net.Conn) {
-			defer c.Close()
-
-			reader := bufio.NewReader(c)
-
-			for {
-
-				// buf := make([]byte, 512)
-				// var buf []byte
-				// if _, err := c.Read(buf); err != nil {
-				// 	break
-				// }
-				log, err := reader.ReadString('\n')
-				if err != nil {
-					fmt.Printf("unable to read from client: %v\n", err)
-					break
-				}
-
-				fmt.Printf("[scotty] %s", log)
-			}
-		}(conn)
+	app := tea.NewProgram(logV)
+	if _, err := app.Run(); err != nil {
+		fmt.Printf("unable to start scotty: %v", err)
+		return
 	}
 }
