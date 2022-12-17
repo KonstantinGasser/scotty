@@ -4,8 +4,9 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/KonstantinGasser/scotty/models/base"
 	"github.com/KonstantinGasser/scotty/streams"
+	"github.com/KonstantinGasser/scotty/ui"
+	"github.com/KonstantinGasser/scotty/ui/common"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -24,9 +25,24 @@ func main() {
 
 	go multiplexer.Listen(quite)
 
-	model := base.New(quite, multiplexer.Errors(), multiplexer.Messages())
+	// model, err := base.New(quite,
+	// 	multiplexer.Errors(),
+	// 	multiplexer.Subscribers(),
+	// 	multiplexer.Messages(),
+	// )
+	// if err != nil {
+	// 	fmt.Printf("unable to start scotty: %v", err)
+	// 	return
+	// }
 
-	app := tea.NewProgram(model, tea.WithAltScreen())
+	width, height, err := common.WindowSize()
+
+	if err != nil {
+		fmt.Printf("unable to determine terminal width and height: %v", err)
+		return
+	}
+	model := ui.New(width, height, quite)
+	app := tea.NewProgram(model, tea.WithAltScreen(), tea.WithoutCatchPanics())
 	if _, err := app.Run(); err != nil {
 		fmt.Printf("unable to start scotty: %v", err)
 		return

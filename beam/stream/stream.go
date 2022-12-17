@@ -73,7 +73,7 @@ func (str stream) Stream(stop <-chan struct{}) error {
 			if _, err := str.sock.Write(log); err != nil {
 				return fmt.Errorf("unable to write to scotty: %v", err)
 			}
-			// time.Sleep(time.Millisecond * 1)
+			time.Sleep(time.Millisecond * 1)
 		}
 	}
 }

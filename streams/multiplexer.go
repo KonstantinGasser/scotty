@@ -21,14 +21,18 @@ const (
 )
 
 type Multiplexer struct {
-	listener net.Listener
-	messages chan Message
-	errs     chan error
-	state    int
+	listener    net.Listener
+	messages    chan Message
+	subscribers chan string
+	errs        chan error
+	state       int
 }
 
 func (multi Multiplexer) Messages() <-chan Message {
 	return multi.messages
+}
+func (multi Multiplexer) Subscribers() <-chan string {
+	return multi.subscribers
 }
 
 func (multi Multiplexer) Errors() <-chan error {
@@ -43,10 +47,11 @@ func Open(network string, addr string) (*Multiplexer, error) {
 	}
 
 	return &Multiplexer{
-		listener: ln,
-		messages: make(chan Message),
-		errs:     make(chan error),
-		state:    unset,
+		listener:    ln,
+		messages:    make(chan Message),
+		subscribers: make(chan string),
+		errs:        make(chan error),
+		state:       unset,
 	}, nil
 }
 
@@ -78,7 +83,6 @@ func (multi Multiplexer) Listen(quite chan struct{}) {
 			// again error should go to the model somehow
 			continue
 		}
-
 		go stream.read()
 	}
 }
