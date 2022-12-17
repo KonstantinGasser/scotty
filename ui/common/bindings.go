@@ -22,8 +22,7 @@ func (k Bindings) ShortHelp() []key.Binding {
 // key.Map interface.
 func (k Bindings) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.View}, // first column
-		{k.Help, k.Quit},       // second column
+		{k.Help, k.Quit, k.Up, k.Down, k.View}, // first column
 	}
 }
 

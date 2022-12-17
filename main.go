@@ -41,8 +41,12 @@ func main() {
 		fmt.Printf("unable to determine terminal width and height: %v", err)
 		return
 	}
-	model := ui.New(width, height, quite)
-	app := tea.NewProgram(model, tea.WithAltScreen(), tea.WithoutCatchPanics())
+	model := ui.New(width, height,
+		quite,
+		multiplexer.Messages(),
+	)
+
+	app := tea.NewProgram(model, tea.WithAltScreen(), tea.WithoutCatchPanics(), tea.WithMouseAllMotion())
 	if _, err := app.Run(); err != nil {
 		fmt.Printf("unable to start scotty: %v", err)
 		return
