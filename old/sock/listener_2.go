@@ -42,12 +42,17 @@ func read(conn net.Conn, w io.Writer) {
 		msg, err := buf.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
-				// write closing message to io.Writer
+				// TODO: write closing message to io.Writer
 				break
 			}
 			break
 		}
 
-		w.Write(msg)
+		if _, err := w.Write(msg); err != nil {
+			// do what? The processor (log.Processor) should not return an error
+			// if it fails to parse/process the log line the raw value (log message)
+			// is pushed to the model
+			continue
+		}
 	}
 }

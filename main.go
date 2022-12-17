@@ -3,12 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 
-	"github.com/KonstantinGasser/scotty/log"
 	"github.com/KonstantinGasser/scotty/models/base"
-	"github.com/KonstantinGasser/scotty/sock"
-
+	"github.com/KonstantinGasser/scotty/streams"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -16,25 +13,20 @@ func main() {
 
 	network := flag.String("protocol", "unix", "type of network scotty can accept logs from")
 	addr := flag.String("addr", "/tmp/scotty.sock", "address beam can connect to; beam -addr <scotty:address>")
+	flag.Parse()
 
-	processor := log.NewProcessor()
-
-	listener, err := sock.Open(*network, *addr)
+	multiplexer, err := streams.Open(*network, *addr)
 	if err != nil {
-		fmt.Printf("unable to start scotty; %v", err)
-		return
+		fmt.Printf("scotty is unable to start: %v", err)
 	}
 
-	stop := make(chan struct{}, 1)
+	quite := make(chan struct{}, 1)
 
-	connC := make(chan net.Conn)
-	defer close(connC)
+	go multiplexer.Listen(quite)
 
-	go sock.Listen(listener, processor, stop)
+	model := base.New(quite, multiplexer.Errors(), multiplexer.Messages())
 
-	logV := base.New(stop, processor)
-
-	app := tea.NewProgram(logV)
+	app := tea.NewProgram(model, tea.WithAltScreen())
 	if _, err := app.Run(); err != nil {
 		fmt.Printf("unable to start scotty: %v", err)
 		return

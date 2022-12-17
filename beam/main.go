@@ -40,7 +40,13 @@ func main() {
 		return
 	}
 
-	if err := stream.New(*label, conn).Stream(stop); err != nil {
+	stream, err := stream.New(*label, conn)
+	if err != nil {
+		fatal("unable to beam logs: %v", err)
+		return
+	}
+
+	if err := stream.Stream(stop); err != nil {
 		fatal("unable to stream logs to scotty: %v", err)
 		return
 	}

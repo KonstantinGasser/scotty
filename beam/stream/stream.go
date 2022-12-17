@@ -33,7 +33,7 @@ type stream struct {
 	sock   net.Conn
 }
 
-func New(label string, conn net.Conn) Streamer {
+func New(label string, conn net.Conn) (Streamer, error) {
 
 	// in order to distinct between multiple streams
 	// generate a random value if not set
@@ -41,11 +41,16 @@ func New(label string, conn net.Conn) Streamer {
 		label = randLabel(16)
 	}
 
-	return &stream{
+	str := &stream{
 		label:  label,
 		reader: bufio.NewReaderSize(os.Stdin, 32),
 		sock:   conn,
 	}
+
+	if err := str.sync(); err != nil {
+		return nil, err
+	}
+	return str, nil
 }
 
 func (str stream) Stream(stop <-chan struct{}) error {
@@ -68,7 +73,7 @@ func (str stream) Stream(stop <-chan struct{}) error {
 			if _, err := str.sock.Write(log); err != nil {
 				return fmt.Errorf("unable to write to scotty: %v", err)
 			}
-			time.Sleep(time.Millisecond * 500)
+			// time.Sleep(time.Millisecond * 1)
 		}
 	}
 }
@@ -78,40 +83,19 @@ func (str stream) read() string {
 	return s
 }
 
-// const (
-// 	// synFlag is used to say hi to scotty after connecting
-// 	syncFlag = "SYNC"
-// )
-
-// func (s *stream) connect(ipc string) (io.WriteCloser, error) {
-
-// 	var err error
-// 	if s.sock, err = net.Dial("unix", ipc); err != nil {
-// 		return nil, fmt.Errorf("unable to connect to unix socket %q: %w", ipc, err)
-// 	}
-
-// 	// send hello SYN flag to scotty which includes meta-data about the beam
-// 	// such as the stream name (if provided)
-// 	if err := s.sync(); err != nil {
-// 		return nil, err
-// 	}
-
-// 	return s, nil
-// }
-
 // // sync tells the running scotty process that a new stream is about to
 // // stream logs. Within the message certain meta-data such as the stream name
 // // can be announced to scotty
-// func (s *stream) sync() error {
+func (s *stream) sync() error {
 
-// 	var syncMsg = []byte(fmt.Sprintf("%s;stream=%s", syncFlag, s.label))
+	var syncMsg = []byte(fmt.Sprintf("label=%s\n", s.label))
 
-// 	if _, err := s.Write(syncMsg); err != nil {
-// 		return fmt.Errorf("beam is unable to sync with scotty: %w", err)
-// 	}
+	if _, err := s.sock.Write(syncMsg); err != nil {
+		return fmt.Errorf("beam is unable to sync with scotty: %w", err)
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // func (s *stream) Write(b []byte) (int, error) {
 // 	b = append(b, '\n')
