@@ -1,8 +1,0 @@
-[INFO=1] msg=this is a message wow so much data
-[ERROR=2] error=unable to open database connection-unable to open database connection
-[WARN=3] warning=client is responding slow
-[INFO=4] msg=this is a message wow so much data
-[ERROR=5] error=unable to open database connection
-[WARN=6] warning=client is responding slow
-[INFO=7] msg=this is a message wow so much data
-[ERROR=8] error=unable to open database connection
