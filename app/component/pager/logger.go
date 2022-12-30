@@ -28,6 +28,10 @@ var (
 		)
 )
 
+// Logger implements the tea.Model interface.
+// Furthermore, Logger allows to tail logs.
+// Logger does not not store the logs its only
+// porose is it to display them.
 type Logger struct {
 
 	// underlying model which handles
@@ -57,7 +61,17 @@ func (log *Logger) Init() tea.Cmd {
 
 func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	return log, nil
+	var (
+		cmds []tea.Cmd
+	)
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		log.width = msg.Width
+		log.height = msg.Height
+	}
+
+	return log, tea.Batch(cmds...)
 }
 
 func (log *Logger) View() string {
