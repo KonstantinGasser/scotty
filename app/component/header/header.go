@@ -15,10 +15,20 @@ func New(w, h int) *Model {
 	}
 }
 
-func (h *Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (h *Model) View() string {
-	return ""
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+
+	var (
+		cmds []tea.Cmd
+		// cmd  tea.Cmd
+	)
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) View() string {
+	return "I am the header"
 }
