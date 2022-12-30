@@ -52,12 +52,15 @@ func (s stream) beam(quite <-chan struct{}) {
 
 			b, err := reader.ReadBytes('\n')
 			if err != nil {
-				fmt.Errorf("unable to read log-line:\n\n%v", err)
+				if err == io.EOF {
+					return
+				}
+				fmt.Printf("unable to read log-line:\n\n%v", err)
 				return
 			}
 
 			if _, err := s.writer.Write(b); err != nil {
-				fmt.Errorf("unable to beam log-line to scotty:\n\n%v", err)
+				fmt.Printf("unable to beam log-line to scotty:\n\n%v", err)
 				return
 			}
 		}

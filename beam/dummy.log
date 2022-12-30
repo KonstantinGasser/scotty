@@ -1,0 +1,11 @@
+[01][ERROR] error=something did not work ups
+[02][INFO] msg=user accessing somethime
+[03][DEBUG] msg=tree depth count=5
+[04][ERROR] error=something did not work ups
+[05][INFO] msg=user accessing somethime
+[06][DEBUG] msg=tree depth count=5
+[07][ERROR] error=something did not work ups
+[08][INFO] msg=user accessing somethime
+[09][DEBUG] msg=tree depth count=5
+[10][ERROR] error=something did not work ups
+
