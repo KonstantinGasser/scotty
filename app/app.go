@@ -16,22 +16,46 @@ import (
 var (
 	welcomeLogo = lipgloss.NewStyle().
 			MarginBottom(4).
-			Foreground(styles.ColorLogo).
-			Render(
+		// Foreground(styles.ColorLogo).
+		Render(
 			strings.Join([]string{
-				"____   ___  __  ____  ____  _  _ ",
-				"/ ___) / __)/  \\(_  _)(_  _)( \\/ )",
-				"\\___ \\( (__(  O ) )(    )(   )  / ",
-				"(____/ \\___)\\__/ (__)  (__) (__/",
+				lipgloss.NewStyle().Foreground(lipgloss.Color("93")).Render(
+					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
+				),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("99")).Render(
+					"██╔════╝██╔════╝██╔═══██╗╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝",
+				),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("105")).Render(
+					"███████╗██║     ██║   ██║   ██║      ██║    ╚████╔╝ ",
+				),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("111")).Render(
+					"╚════██║██║     ██║   ██║   ██║      ██║     ╚██╔╝ ",
+				),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("117")).Render(
+					"███████║╚██████╗╚██████╔╝   ██║      ██║      ██║",
+				),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("123")).Render(
+					"╚══════╝ ╚═════╝ ╚═════╝    ╚═╝      ╚═╝      ╚═╝",
+				),
 			}, "\n"),
 		)
 
 	welcomeUsage = lipgloss.NewStyle().
+			MarginBottom(2).
 			Render(
 			strings.Join([]string{
 				"usage:\n",
 				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam"),
 				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam"),
+			}, "\n"),
+		)
+
+	welcomeQueries = lipgloss.NewStyle().
+			Render(
+			strings.Join([]string{
+				"queries:\n",
+				"\tfilter stream(s): " + lipgloss.NewStyle().Bold(true).Render("filter beam=app_1 tracing_span='1e4851b8fe64ec763ad0'"),
+				"\tapply statistics: " + lipgloss.NewStyle().Bold(true).Render("filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
 			}, "\n"),
 		)
 
@@ -142,13 +166,21 @@ func (app *App) View() string {
 				lipgloss.Center,
 				welcomeLogo,
 			),
-			welcomeNews,
+			// lipgloss.PlaceHorizontal(
+			// 	maxWidth,
+			// 	lipgloss.Left,
+			// 	welcomeNews,
+			// ),
 			lipgloss.PlaceHorizontal(
 				maxWidth,
 				lipgloss.Left,
 				welcomeUsage,
 			),
-			app.footer.View(),
+			lipgloss.PlaceHorizontal(
+				maxWidth,
+				lipgloss.Left,
+				welcomeQueries,
+			),
 		)
 
 		return lipgloss.JoinVertical(lipgloss.Left,
