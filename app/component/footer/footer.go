@@ -41,6 +41,8 @@ func (m *Model) View() string {
 		lipgloss.JoinHorizontal(lipgloss.Left,
 			styles.StatusBarLogCount("beamed logs: 4092"),
 			styles.StatusBarBeamInfo("app_1"),
+			styles.StatusBarBeamInfo("app_2"),
+			styles.StatusBarBeamInfo("app_N"),
 		),
 	)
 }

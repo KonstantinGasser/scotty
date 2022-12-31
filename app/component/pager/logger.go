@@ -38,6 +38,16 @@ type Logger struct {
 	// scrolling and rendering of the logs
 	vp viewport.Model
 
+	// serialized is a slice where each value is
+	// the string representation of a log.
+	// Values in this slice will be shown in the terminal
+	// like tail -f would do
+	//
+	// THOUGHT @KonstantinGasser:
+	// what should happen when a stream disconnects in case you restart a service?
+	// These logs would need to be deleted
+	// -> Refers to the overall question of how to store the logs; define requirements first pls
+	serialized []string
 	// available tty width and height
 	// updates if changes
 	width, height int

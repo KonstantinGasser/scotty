@@ -7,7 +7,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/component/footer"
 	"github.com/KonstantinGasser/scotty/app/component/header"
-	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,8 +15,7 @@ import (
 var (
 	welcomeLogo = lipgloss.NewStyle().
 			MarginBottom(4).
-		// Foreground(styles.ColorLogo).
-		Render(
+			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Foreground(lipgloss.Color("93")).Render(
 					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
@@ -44,7 +42,7 @@ var (
 			MarginBottom(2).
 			Render(
 			strings.Join([]string{
-				"usage:\n",
+				lipgloss.NewStyle().Foreground(lipgloss.Color("105")).Render("usage:\n"),
 				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam"),
 				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam"),
 			}, "\n"),
@@ -53,29 +51,20 @@ var (
 	welcomeQueries = lipgloss.NewStyle().
 			Render(
 			strings.Join([]string{
-				"queries:\n",
+				lipgloss.NewStyle().Foreground(lipgloss.Color("105")).Render("queries:\n"),
 				"\tfilter stream(s): " + lipgloss.NewStyle().Bold(true).Render("filter beam=app_1 tracing_span='1e4851b8fe64ec763ad0'"),
 				"\tapply statistics: " + lipgloss.NewStyle().Bold(true).Render("filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
-			}, "\n"),
-		)
-
-	welcomeNews = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.ColorBorder).
-			Padding(1, 2).
-			MarginBottom(2).
-			Render(
-			strings.Join([]string{
-				"Changelog:\n",
-				"🚀 query single log streams or all together",
-				"\n",
-				"🐞 fixed issue #24 scrolling for logs failed when logs exceed terminal width",
+				"\ttail -f a query:  " + lipgloss.NewStyle().Bold(true).Render("tail |\n\t\t\t  filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
 			}, "\n"),
 		)
 )
 
 const (
+	// implies that the scotty command has just been executed
+	// no logs are there yet, no views have am created
 	empty = iota
+	// implies that at least one log-stream has connected to scotty and is sending
+	// logs. Should indicate to switch the view to pager.Logger
 	logging
 )
 
@@ -157,7 +146,7 @@ func (app *App) View() string {
 		maxWidth := max(
 			lipgloss.Width(welcomeLogo),
 			lipgloss.Width(welcomeUsage),
-			lipgloss.Width(welcomeNews),
+			lipgloss.Width(welcomeQueries),
 		)
 
 		welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -166,11 +155,6 @@ func (app *App) View() string {
 				lipgloss.Center,
 				welcomeLogo,
 			),
-			// lipgloss.PlaceHorizontal(
-			// 	maxWidth,
-			// 	lipgloss.Left,
-			// 	welcomeNews,
-			// ),
 			lipgloss.PlaceHorizontal(
 				maxWidth,
 				lipgloss.Left,
