@@ -60,7 +60,6 @@ var (
 )
 
 const (
-
 	// scotty has just been started
 	// show welcome page
 	welcome = iota
