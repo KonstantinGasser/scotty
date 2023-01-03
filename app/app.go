@@ -17,22 +17,22 @@ var (
 			MarginBottom(4).
 			Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("93")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4C94")).Render(
 					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("99")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#EF46AC")).Render(
 					"██╔════╝██╔════╝██╔═══██╗╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("105")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#D840C0")).Render(
 					"███████╗██║     ██║   ██║   ██║      ██║    ╚████╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("111")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#BE38D5")).Render(
 					"╚════██║██║     ██║   ██║   ██║      ██║     ╚██╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("117")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#BE38D5")).Render(
 					"███████║╚██████╗╚██████╔╝   ██║      ██║      ██║",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("123")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#9F2DEB")).Render(
 					"╚══════╝ ╚═════╝ ╚═════╝    ╚═╝      ╚═╝      ╚═╝",
 				),
 			}, "\n"),
@@ -42,7 +42,7 @@ var (
 			MarginBottom(2).
 			Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("105")).Render("usage:\n"),
+				lipgloss.NewStyle().Bold(true).Render("usage:\n"),
 				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam"),
 				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam"),
 			}, "\n"),
@@ -51,7 +51,7 @@ var (
 	welcomeQueries = lipgloss.NewStyle().
 			Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("105")).Render("queries:\n"),
+				lipgloss.NewStyle().Bold(true).Render("queries:\n"),
 				"\tfilter stream(s): " + lipgloss.NewStyle().Bold(true).Render("filter beam=app_1 tracing_span='1e4851b8fe64ec763ad0'"),
 				"\tapply statistics: " + lipgloss.NewStyle().Bold(true).Render("filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
 				"\ttail -f a query:  " + lipgloss.NewStyle().Bold(true).Render("tail |\n\t\t\t  filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
@@ -60,12 +60,20 @@ var (
 )
 
 const (
-	// implies that the scotty command has just been executed
-	// no logs are there yet, no views have am created
-	empty = iota
-	// implies that at least one log-stream has connected to scotty and is sending
-	// logs. Should indicate to switch the view to pager.Logger
-	logging
+
+	// scotty has just been started
+	// show welcome page
+	welcome = iota
+	// one or more log streams have connected
+	// and are streaming logs
+	// show logs in tailing window
+	logTailView
+	// a query was execute w/o tailing
+	// show view with query results
+	queryView
+	// a query was executed with tailing
+	// show logs in tailing window with query filters
+	queryTailView
 )
 
 type App struct {
@@ -112,7 +120,7 @@ func New() (*App, error) {
 		footer: footer.New(width, height),
 		width:  width,
 		height: height,
-		state:  empty,
+		state:  welcome,
 	}, nil
 }
 
@@ -141,7 +149,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (app *App) View() string {
 
-	if app.state == empty {
+	if app.state == welcome {
 
 		maxWidth := max(
 			lipgloss.Width(welcomeLogo),

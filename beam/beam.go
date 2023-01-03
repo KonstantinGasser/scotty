@@ -49,7 +49,6 @@ func (s stream) beam(quite <-chan struct{}) {
 		case <-quite:
 			return
 		default:
-
 			b, err := reader.ReadBytes('\n')
 			if err != nil {
 				if err == io.EOF {
