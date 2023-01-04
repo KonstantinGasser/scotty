@@ -1,6 +1,12 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+	"math/rand"
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 const (
 	ColorLogo              = lipgloss.Color("93")
@@ -11,19 +17,12 @@ const (
 	ColorErrorBackground   = lipgloss.Color("160")
 )
 
-var (
-	StatusBarLogCount = lipgloss.NewStyle().
-				Padding(0, 1).
-				Background(ColorStatusBarLogCount).
-				Render
+func RandColor() lipgloss.Color {
+	// including extended ANSI Grayscale color reach from 0-255
+	// see https://github.com/muesli/termenv which is used for lipgloss
+	return lipgloss.Color(fmt.Sprint(rand.Intn(256)))
+}
 
-	StatusBarBeamInfo = lipgloss.NewStyle().
-				Padding(0, 1).
-				Background(ColorStatusBarBeamInfo).
-				Render
-
-	ErrorInfo = lipgloss.NewStyle().
-			Padding(0, 1).
-			Background(ColorErrorBackground).
-			Render
-)
+func init() {
+	rand.Seed(time.Now().Unix())
+}

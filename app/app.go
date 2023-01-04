@@ -15,7 +15,7 @@ import (
 
 var (
 	welcomeLogo = lipgloss.NewStyle().
-			MarginBottom(4).
+			MarginBottom(2).
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4C94")).Render(
@@ -172,18 +172,20 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		app.width = msg.Width
 		app.height = msg.Height
+
 	case plexer.BeamNew:
-		_, cmd = app.footer.Update(msg)
-		cmds = append(cmds, cmd, app.consumeBeams)
+		cmds = append(cmds, app.consumeBeams)
 	case plexer.BeamError:
 		// any error received on the app.errs channel
-		_, cmd = app.footer.Update(msg)
-		cmds = append(cmds, cmd, app.consumeErrs)
+		cmds = append(cmds, app.consumeErrs)
 	case plexer.BeamMessage:
 		// do something with the message like storing it somewhere
-		_, cmd = app.footer.Update(msg)
-		cmds = append(cmds, cmd, app.consumeMsg)
+		cmds = append(cmds, app.consumeMsg)
 	}
+
+	// update other models
+	app.footer, cmd = app.footer.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return app, tea.Batch(cmds...)
 }
@@ -191,7 +193,6 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (app *App) View() string {
 
 	if app.state == welcome {
-
 		maxWidth := max(
 			lipgloss.Width(welcomeLogo),
 			lipgloss.Width(welcomeUsage),
@@ -229,6 +230,7 @@ func (app *App) View() string {
 			app.footer.View(),
 		)
 	}
+
 	return lipgloss.JoinVertical(lipgloss.Left,
 		app.header.View(),
 		app.footer.View(),

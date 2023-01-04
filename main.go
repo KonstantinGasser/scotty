@@ -38,7 +38,7 @@ func main() {
 
 	bubble := tea.NewProgram(ui,
 		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
+		// tea.WithMouseCellMotion(),
 	)
 
 	if _, err := bubble.Run(); err != nil {

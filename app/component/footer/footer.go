@@ -11,7 +11,9 @@ import (
 
 var (
 	footerStyle = lipgloss.NewStyle().
-		Margin(0, 2)
+			Margin(0, 2)
+
+	beamSpacer = styles.Spacer(1).Render("")
 )
 
 type Model struct {
@@ -51,8 +53,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 	case plexer.BeamNew:
-		m.connectedBeams = append(m.connectedBeams, styles.StatusBarBeamInfo(string(msg)))
+		m.connectedBeams = append(m.connectedBeams, styles.StatusBarBeamInfo.Background(styles.RandColor()).Render((string(msg))))
 	case plexer.BeamError:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?
@@ -67,11 +72,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) View() string {
 	var items = []string{
 		styles.StatusBarLogCount(fmt.Sprintf("beamed logs: %d", m.logCount)),
+		styles.Spacer(5).Render(""),
 	}
-	items = append(items, m.connectedBeams...)
+
+	// add a little space between beam labels
+	for i, beam := range m.connectedBeams {
+		if i < len(m.connectedBeams)-1 {
+			items = append(items, beamSpacer, beam)
+			continue
+		}
+		// not space after last one thou
+		items = append(items, beam)
+	}
 
 	if m.err != nil {
-		items = append(items, styles.ErrorInfo(m.err.Error()))
+		items = append(items,
+			styles.Spacer(2).Render(""), // add some space next to the beams
+			styles.ErrorInfo(m.err.Error()),
+		)
 	}
 
 	return footerStyle.Render(
