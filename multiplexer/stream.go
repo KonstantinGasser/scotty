@@ -2,25 +2,60 @@ package multiplexer
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"time"
 )
 
 type stream struct {
 	label  string
 	errs   chan<- error
-	msgs   chan<- interface{}
+	msgs   chan<- []byte
 	reader io.ReadCloser
 }
 
-func handleStream(conn net.Conn, errs chan<- error, msgs chan<- interface{}) {
+func newStream(conn net.Conn, errs chan<- error, msgs chan<- []byte) (*stream, error) {
 
+	s := stream{
+		errs:   errs,
+		msgs:   msgs,
+		reader: conn,
+	}
+
+	// we could use the stream.reader however we would lose
+	// control over timing out the wait. With the net.Conn
+	// we can utilize the net.Conn.SetReadDeadline
+	if err := s.waitForSync(conn); err != nil {
+		return nil, err
+	}
+
+	return &s, nil
 }
 
-func (s *stream) waitForSync() error {
+func (s *stream) handle() {
+
+	defer s.reader.Close()
+
+	var buf = bufio.NewReader(s.reader)
+	for {
+		msg, err := buf.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				// here it would be nice to notify
+				// the user through the scotty ui that
+				// the stream has disconnected/closed
+				break
+			}
+			s.errs <- fmt.Errorf("unable to read from %q: %w", s.label, err)
+			return
+		}
+		s.msgs <- msg
+	}
+}
+
+func (s *stream) waitForSync(conn net.Conn) error {
 
 	// error out if beam is not able to send the sync
 	// message within 5 seconds
@@ -32,11 +67,22 @@ func (s *stream) waitForSync() error {
 
 	// block until deadline is reached waiting
 	// for the sync
-	msg, err := buf.ReadString('\n')
+	msg, err := buf.ReadBytes('\n')
 	if err != nil {
 		return fmt.Errorf("unable to read SYNC message from connecting beam: %w", err)
 	}
 
-	meta := strings.Split(msg, ";")
+	type (
+		metadata struct {
+			Label string
+		}
+	)
 
+	var meta metadata
+	if err := json.Unmarshal(msg, &meta); err != nil {
+		return fmt.Errorf("SYNC message malformed: %w", err)
+	}
+
+	s.label = meta.Label
+	return nil
 }
