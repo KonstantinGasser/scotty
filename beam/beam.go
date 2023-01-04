@@ -60,6 +60,9 @@ func (s stream) sync() error {
 		return fmt.Errorf("malformed SYNC message: %w", err)
 	}
 
+	// append \n -> scotty is reading until \n
+	b = append(b, '\n')
+
 	if _, err := s.writer.Write(b); err != nil {
 		return fmt.Errorf("unable to write SYNC message to scotty: %w", err)
 	}

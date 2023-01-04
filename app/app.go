@@ -172,14 +172,17 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		app.width = msg.Width
 		app.height = msg.Height
+	case plexer.BeamNew:
+		_, cmd = app.footer.Update(msg)
+		cmds = append(cmds, cmd, app.consumeBeams)
 	case plexer.BeamError:
 		// any error received on the app.errs channel
 		_, cmd = app.footer.Update(msg)
-		cmds = append(cmds, cmd)
+		cmds = append(cmds, cmd, app.consumeErrs)
 	case plexer.BeamMessage:
 		// do something with the message like storing it somewhere
 		_, cmd = app.footer.Update(msg)
-		cmds = append(cmds, cmd)
+		cmds = append(cmds, cmd, app.consumeMsg)
 	}
 
 	return app, tea.Batch(cmds...)

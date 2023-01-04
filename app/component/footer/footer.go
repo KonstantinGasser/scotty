@@ -25,14 +25,17 @@ type Model struct {
 	// number of logs stream by all streams
 	// dropping a stream results in logCount - len(stream)
 	logCount int
+	// slice of beams which are currently connected to scotty
+	connectedBeams []string
 }
 
 func New(w, h int) *Model {
 	return &Model{
-		width:    w,
-		height:   h,
-		err:      nil,
-		logCount: 0,
+		width:          w,
+		height:         h,
+		err:            nil,
+		logCount:       0,
+		connectedBeams: nil,
 	}
 }
 
@@ -48,6 +51,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
+	case plexer.BeamNew:
+		m.connectedBeams = append(m.connectedBeams, styles.StatusBarBeamInfo(string(msg)))
 	case plexer.BeamError:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?
@@ -60,23 +65,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	if m.err != nil {
-		return footerStyle.Render(
-			lipgloss.JoinHorizontal(lipgloss.Left,
-				styles.StatusBarLogCount("beamed logs: 4092"),
-				styles.StatusBarBeamInfo("app_1"),
-				styles.StatusBarBeamInfo("app_2"),
-				styles.StatusBarBeamInfo("app_N"),
-				styles.ErrorInfo(m.err.Error()),
-			),
-		)
+	var items = []string{
+		styles.StatusBarLogCount(fmt.Sprintf("beamed logs: %d", m.logCount)),
 	}
+	items = append(items, m.connectedBeams...)
+
+	if m.err != nil {
+		items = append(items, styles.ErrorInfo(m.err.Error()))
+	}
+
 	return footerStyle.Render(
 		lipgloss.JoinHorizontal(lipgloss.Left,
-			styles.StatusBarLogCount(fmt.Sprintf("beamed logs: %d", m.logCount)),
-			styles.StatusBarBeamInfo("app_1"),
-			styles.StatusBarBeamInfo("app_2"),
-			styles.StatusBarBeamInfo("app_N"),
+			items...,
 		),
 	)
 }

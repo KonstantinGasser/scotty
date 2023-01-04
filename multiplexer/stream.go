@@ -78,7 +78,7 @@ func (s *stream) waitForSync() error {
 
 	type (
 		metadata struct {
-			Label string
+			Label string `json:"label"`
 		}
 	)
 
