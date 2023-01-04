@@ -33,10 +33,6 @@ var defaultBindings = bindings{
 		key.WithKeys("down", "j"),
 		key.WithHelp("↓/j", "move down"),
 	),
-	// View: key.NewBinding(
-	// 	key.WithKeys("v"),
-	// 	key.WithHelp("v", "view log"),
-	// ),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "toggle help"),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -47,11 +48,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	case error:
+	case plexer.BeamError:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?
 		m.err = msg
-	case []byte:
+	case plexer.BeamMessage:
 		m.logCount++
 	}
 

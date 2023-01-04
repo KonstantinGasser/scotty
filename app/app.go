@@ -7,6 +7,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/component/footer"
 	"github.com/KonstantinGasser/scotty/app/component/header"
+	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -106,17 +107,17 @@ type App struct {
 
 	// errs receives errors happening in the multiplexer
 	// while working/reading from streams
-	errs <-chan error
+	errs <-chan plexer.BeamError
 	// messages receives each message send by a stream,
 	// excluding SYNC messages from the client beam command
-	messages <-chan []byte
+	messages <-chan plexer.BeamMessage
 	// beams receives purely information about the fact
 	// that a new stream has connected. The received string
 	// is the label of the stream
-	beams <-chan string
+	beams <-chan plexer.BeamNew
 }
 
-func New(q chan<- struct{}, errs <-chan error, msgs <-chan []byte, beams <-chan string) (*App, error) {
+func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.BeamMessage, beams <-chan plexer.BeamNew) (*App, error) {
 
 	width, height, err := windowSize()
 	if err != nil {
@@ -171,8 +172,12 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		app.width = msg.Width
 		app.height = msg.Height
-	// any error received on the app.errs channel
-	case error:
+	case plexer.BeamError:
+		// any error received on the app.errs channel
+		_, cmd = app.footer.Update(msg)
+		cmds = append(cmds, cmd)
+	case plexer.BeamMessage:
+		// do something with the message like storing it somewhere
 		_, cmd = app.footer.Update(msg)
 		cmds = append(cmds, cmd)
 	}
