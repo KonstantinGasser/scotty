@@ -13,7 +13,7 @@ type stream struct {
 	label  string
 	errs   chan<- error
 	msgs   chan<- []byte
-	reader io.ReadCloser
+	reader net.Conn
 }
 
 func newStream(conn net.Conn, errs chan<- error, msgs chan<- []byte) (*stream, error) {
@@ -24,10 +24,7 @@ func newStream(conn net.Conn, errs chan<- error, msgs chan<- []byte) (*stream, e
 		reader: conn,
 	}
 
-	// we could use the stream.reader however we would lose
-	// control over timing out the wait. With the net.Conn
-	// we can utilize the net.Conn.SetReadDeadline
-	if err := s.waitForSync(conn); err != nil {
+	if err := s.waitForSync(); err != nil {
 		return nil, err
 	}
 
@@ -55,11 +52,11 @@ func (s *stream) handle() {
 	}
 }
 
-func (s *stream) waitForSync(conn net.Conn) error {
+func (s *stream) waitForSync() error {
 
 	// error out if beam is not able to send the sync
 	// message within 5 seconds
-	if err := conn.SetReadDeadline(time.Now().Add(time.Second * 5)); err != nil {
+	if err := s.reader.SetReadDeadline(time.Now().Add(time.Second * 5)); err != nil {
 		return fmt.Errorf("timeout while waiting for SYNC message of beam: %w", err)
 	}
 
