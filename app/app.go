@@ -182,7 +182,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// do something with the message like storing it somewhere
 		cmds = append(cmds, app.consumeMsg)
 	}
-
+	tea.Println(cmds)
 	// update other models
 	app.footer, cmd = app.footer.Update(msg)
 	cmds = append(cmds, cmd)
@@ -222,7 +222,7 @@ func (app *App) View() string {
 				Height(app.heightWithoutFooter()).
 				Render(
 					lipgloss.Place(
-						app.width, app.height,
+						app.width, app.heightWithoutFooter(),
 						lipgloss.Center, lipgloss.Center,
 						welcome,
 					),
