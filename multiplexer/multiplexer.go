@@ -11,7 +11,7 @@ type Socket struct {
 	// any error while accepting connections, creating the stream
 	// or reading from the stream will be piped to this channel
 	// so the UI can display errors
-	errors chan<- error
+	errors chan error
 	// any message (exclusive the SYNC message) of a stream
 	// will be send through this channel
 	messages chan []byte
@@ -32,7 +32,7 @@ func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
 
 	return &Socket{
 		quite:    q,
-		errors:   make(chan<- error),
+		errors:   make(chan error),
 		messages: make(chan []byte),
 		beams:    make(chan string),
 		listener: ln,
@@ -73,3 +73,7 @@ func (sock *Socket) Run() {
 		}(conn)
 	}
 }
+
+func (sock *Socket) Errors() <-chan error    { return sock.errors }
+func (sock *Socket) Messages() <-chan []byte { return sock.messages }
+func (sock *Socket) Beams() <-chan string    { return sock.beams }

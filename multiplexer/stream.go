@@ -37,6 +37,13 @@ func (s *stream) handle() {
 
 	var buf = bufio.NewReader(s.reader)
 	for {
+
+		// unblock I/O if the connection fails to send a message within a second and continue
+		// in the next round
+		if timeout := s.reader.SetReadDeadline(time.Now().Add(time.Second * 1)); timeout != nil {
+			continue
+		}
+
 		msg, err := buf.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {

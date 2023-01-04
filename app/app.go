@@ -76,6 +76,7 @@ const (
 )
 
 type App struct {
+	quite chan<- struct{}
 
 	// help view
 	help help.Model
@@ -102,9 +103,20 @@ type App struct {
 	// updates as it changes
 	width, height int
 	state         int
+
+	// errs receives errors happening in the multiplexer
+	// while working/reading from streams
+	errs <-chan error
+	// messages receives each message send by a stream,
+	// excluding SYNC messages from the client beam command
+	messages <-chan []byte
+	// beams receives purely information about the fact
+	// that a new stream has connected. The received string
+	// is the label of the stream
+	beams <-chan string
 }
 
-func New() (*App, error) {
+func New(q chan<- struct{}, errs <-chan error, msgs <-chan []byte, beams <-chan string) (*App, error) {
 
 	width, height, err := windowSize()
 	if err != nil {
@@ -112,6 +124,7 @@ func New() (*App, error) {
 	}
 
 	return &App{
+		quite:  q,
 		help:   help.New(),
 		keys:   defaultBindings,
 		header: header.New(width, height),
@@ -120,27 +133,48 @@ func New() (*App, error) {
 		width:  width,
 		height: height,
 		state:  welcome,
+
+		errs:     errs,
+		messages: msgs,
+		beams:    beams,
 	}, nil
 }
 
+/* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */
+func (app *App) consumeMsg() tea.Msg   { return <-app.messages }
+func (app *App) consumeErrs() tea.Msg  { return <-app.errs }
+func (app *App) consumeBeams() tea.Msg { return <-app.beams }
+
+// Init kicks off all the background listening jobs to receive
+// tea.Msg coming from outside the app.App such as the multiplexer.Socket
 func (app *App) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		app.consumeErrs,
+		app.consumeBeams,
+		app.consumeMsg,
+	)
 }
 
 func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
+		cmd  tea.Cmd
 	)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if quite := app.resolveKey(msg); quite != nil {
+			app.quite <- struct{}{}
 			return app, quite
 		}
 	case tea.WindowSizeMsg:
 		app.width = msg.Width
 		app.height = msg.Height
+	// any error received on the app.errs channel
+	case error:
+		_, cmd = app.footer.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	return app, tea.Batch(cmds...)

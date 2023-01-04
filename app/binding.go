@@ -51,7 +51,6 @@ func (app *App) resolveKey(msg tea.KeyMsg) tea.Cmd {
 
 	switch true {
 	case key.Matches(msg, app.keys.Quit):
-		// u.quite <- struct{}{}
 		return tea.Quit
 	case key.Matches(msg, app.keys.Help):
 		app.help.ShowAll = !app.help.ShowAll
