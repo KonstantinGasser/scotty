@@ -49,7 +49,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
-		// cmd  tea.Cmd
 	)
 
 	switch msg := msg.(type) {
@@ -71,8 +70,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
+
+	logText := "no logs beamed yet"
+	if m.logCount > 0 {
+		logText = "beamed logs: " + fmt.Sprint(m.logCount)
+	}
+
 	var items = []string{
-		styles.StatusBarLogCount(fmt.Sprintf("beamed logs: %d", m.logCount)),
+		styles.StatusBarLogCount(logText),
 		styles.Spacer(5).Render(""),
 	}
 
@@ -93,9 +98,10 @@ func (m *Model) View() string {
 		)
 	}
 
-	return footerStyle.Render(
-		lipgloss.JoinHorizontal(lipgloss.Left,
-			items...,
-		),
-	)
+	return footerStyle.
+		Render(
+			lipgloss.JoinHorizontal(lipgloss.Left,
+				items...,
+			),
+		)
 }

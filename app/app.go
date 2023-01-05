@@ -7,6 +7,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/component/footer"
 	"github.com/KonstantinGasser/scotty/app/component/header"
+	"github.com/KonstantinGasser/scotty/app/component/pager"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
@@ -55,7 +56,7 @@ var (
 				lipgloss.NewStyle().Bold(true).Render("queries:\n"),
 				"\tfilter stream(s): " + lipgloss.NewStyle().Bold(true).Render("filter beam=app_1 tracing_span='1e4851b8fe64ec763ad0'"),
 				"\tapply statistics: " + lipgloss.NewStyle().Bold(true).Render("filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
-				"\ttail -f a query:  " + lipgloss.NewStyle().Bold(true).Render("tail |\n\t\t\t  filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
+				"\ttail -f a query : " + lipgloss.NewStyle().Bold(true).Render("tail |\n\t\t\t  filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
 			}, "\n"),
 		)
 )
@@ -124,13 +125,21 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 		return nil, fmt.Errorf("unable to determine the initial dimensions of the terminal: %w", err)
 	}
 
+	footer := footer.New(width, height)
+
+	footerHeight := lipgloss.Height(footer.View())
+	logView := pager.NewLogger(width, height, footerHeight)
+
 	return &App{
 		quite:  q,
 		help:   help.New(),
 		keys:   defaultBindings,
 		header: header.New(width, height),
-		views:  make(map[int]tea.Model),
-		footer: footer.New(width, height),
+		views: map[int]tea.Model{
+			logTailView: logView, // have this pre-initialized as it will be need no matter what
+		},
+
+		footer: footer,
 		width:  width,
 		height: height,
 		state:  welcome,
@@ -180,12 +189,18 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, app.consumeErrs)
 	case plexer.BeamMessage:
 		// do something with the message like storing it somewhere
-		cmds = append(cmds, app.consumeMsg)
+		if app.state == welcome {
+			app.state = logTailView
+		}
 	}
-	tea.Println(cmds)
+
 	// update other models
+
 	app.footer, cmd = app.footer.Update(msg)
 	cmds = append(cmds, cmd)
+
+	app.views[logTailView], cmd = app.views[logTailView].Update(msg)
+	cmds = append(cmds, app.consumeMsg)
 
 	return app, tea.Batch(cmds...)
 }
@@ -193,46 +208,52 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (app *App) View() string {
 
 	if app.state == welcome {
-		maxWidth := max(
-			lipgloss.Width(welcomeLogo),
-			lipgloss.Width(welcomeUsage),
-			lipgloss.Width(welcomeQueries),
-		)
-
-		welcome := lipgloss.JoinVertical(lipgloss.Left,
-			lipgloss.PlaceHorizontal(
-				maxWidth,
-				lipgloss.Center,
-				welcomeLogo,
-			),
-			lipgloss.PlaceHorizontal(
-				maxWidth,
-				lipgloss.Left,
-				welcomeUsage,
-			),
-			lipgloss.PlaceHorizontal(
-				maxWidth,
-				lipgloss.Left,
-				welcomeQueries,
-			),
-		)
-
-		return lipgloss.JoinVertical(lipgloss.Left,
-			lipgloss.NewStyle().
-				Height(app.heightWithoutFooter()).
-				Render(
-					lipgloss.Place(
-						app.width, app.heightWithoutFooter(),
-						lipgloss.Center, lipgloss.Center,
-						welcome,
-					),
-				),
-			app.footer.View(),
-		)
+		return app.welcomeView()
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		app.header.View(),
+		app.views[app.state].View(),
+		app.footer.View(),
+	)
+}
+
+// welcomeView is only concerned about what should be shown
+// displayed after scotty has been started.
+func (app *App) welcomeView() string {
+	maxWidth := max(
+		lipgloss.Width(welcomeLogo),
+		lipgloss.Width(welcomeUsage),
+		lipgloss.Width(welcomeQueries),
+	)
+
+	welcome := lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Center,
+			welcomeLogo,
+		),
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Left,
+			welcomeUsage,
+		),
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Left,
+			welcomeQueries,
+		),
+	)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().
+			Height(app.heightWithoutFooter()).
+			Render(
+				lipgloss.Place(
+					app.width, app.heightWithoutFooter(),
+					lipgloss.Center, lipgloss.Center,
+					welcome,
+				),
+			),
 		app.footer.View(),
 	)
 }
