@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/component/footer"
-	"github.com/KonstantinGasser/scotty/app/component/header"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/help"
@@ -131,10 +130,10 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 	logView := pager.NewLogger(width, height, footerHeight)
 
 	return &App{
-		quite:  q,
-		help:   help.New(),
-		keys:   defaultBindings,
-		header: header.New(width, height),
+		quite: q,
+		help:  help.New(),
+		keys:  defaultBindings,
+		// header: header.New(width, height),
 		views: map[int]tea.Model{
 			logTailView: logView, // have this pre-initialized as it will be need no matter what
 		},
@@ -142,7 +141,7 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 		footer: footer,
 		width:  width,
 		height: height,
-		state:  welcome,
+		state:  logTailView,
 
 		errs:     errs,
 		messages: msgs,
@@ -184,14 +183,16 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case plexer.BeamNew:
 		cmds = append(cmds, app.consumeBeams)
-	case plexer.BeamError:
-		// any error received on the app.errs channel
+	case plexer.BeamError: // any error received on the app.errs channel
 		cmds = append(cmds, app.consumeErrs)
-	case plexer.BeamMessage:
-		// do something with the message like storing it somewhere
+	case plexer.BeamMessage: // do something with the message like storing it somewhere
+
+		// enable tailing of logs view
 		if app.state == welcome {
 			app.state = logTailView
 		}
+
+		cmds = append(cmds, app.consumeMsg)
 	}
 
 	// update other models
@@ -199,8 +200,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	app.footer, cmd = app.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
-	app.views[logTailView], cmd = app.views[logTailView].Update(msg)
-	cmds = append(cmds, app.consumeMsg)
+	app.views[app.state], cmd = app.views[app.state].Update(msg)
+	cmds = append(cmds, cmd)
 
 	return app, tea.Batch(cmds...)
 }

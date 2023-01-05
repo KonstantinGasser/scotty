@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"time"
 )
 
 type stream struct {
@@ -38,12 +37,6 @@ func (s *stream) handle() {
 	var buf = bufio.NewReader(s.reader)
 	for {
 
-		// unblock I/O if the connection fails to send a message within a second and continue
-		// in the next round
-		if timeout := s.reader.SetReadDeadline(time.Now().Add(time.Second * 1)); timeout != nil {
-			continue
-		}
-
 		msg, err := buf.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -63,9 +56,9 @@ func (s *stream) waitForSync() error {
 
 	// error out if beam is not able to send the sync
 	// message within 5 seconds
-	if err := s.reader.SetReadDeadline(time.Now().Add(time.Second * 5)); err != nil {
-		return fmt.Errorf("timeout while waiting for SYNC message of beam: %w", err)
-	}
+	// if err := s.reader.SetReadDeadline(time.Now().Add(time.Second * 5)); err != nil {
+	// 	return fmt.Errorf("timeout while waiting for SYNC message of beam: %w", err)
+	// }
 
 	var buf = bufio.NewReader(s.reader)
 

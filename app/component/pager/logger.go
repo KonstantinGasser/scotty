@@ -11,15 +11,17 @@ import (
 )
 
 const (
-	marginLeft   = 2
-	marginRight  = 2
-	marginTop    = 1
-	marginBottom = 1
+	marginLeft   = 0
+	marginRight  = 10
+	marginTop    = 30
+	marginBottom = 0
 )
 
 var (
 	pagerStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
+			Margin(1, 1).
+			Padding(1).
 			BorderForeground(
 			styles.ColorBorder,
 		)
@@ -63,9 +65,16 @@ type Logger struct {
 
 func NewLogger(width, height, offsetY int) *Logger {
 
-	w, h := width-(marginLeft+marginRight), height-(marginTop+marginBottom+offsetY)
-	vp := viewport.New(w, h)
+	w, h := width, height-offsetY
 
+	vp := viewport.New(w, h)
+	vp.Height = h
+	// no header we can render content in the first row
+	vp.YPosition = 0
+	vp.HighPerformanceRendering = true
+	vp.MouseWheelEnabled = true
+
+	// vp.YPosition = 1
 	return &Logger{
 		vp:      vp,
 		offsetY: offsetY,
@@ -86,24 +95,37 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		log.vp, cmd = log.vp.Update(msg)
+		return log, cmd
 	case tea.WindowSizeMsg:
-		log.width = msg.Width - (marginLeft + marginRight)
+		log.width = msg.Width
 		log.height = msg.Height - log.offsetY
 
-		log.vp, cmd = log.vp.Update(msg)
-		cmds = append(cmds, cmd)
-	case plexer.BeamMessage:
-		log.serialized = append(log.serialized, string(msg))
+		// update viewport width an height
+		log.vp.Width = log.width
+		log.vp.Height = log.height
 
+		cmds = append(cmds, tea.SyncScrollArea(log.serialized, 0, log.height))
+		return log, tea.Batch(cmds...)
+
+	case plexer.BeamMessage:
+
+		log.serialized = append(log.serialized, string(msg))
 		log.vp.SetContent(strings.Join(log.serialized, ""))
 
+		log.vp.LineDown(1)
+		cmds = append(cmds, cmd, viewport.Sync(log.vp))
+
+		return log, tea.Batch(cmds...)
 	}
+
+	log.vp, cmd = log.vp.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return log, tea.Batch(cmds...)
 }
 
 func (log *Logger) View() string {
-	return pagerStyle.Render(
-		log.vp.View(),
-	)
+	return log.vp.View()
 }
