@@ -111,7 +111,7 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case plexer.BeamMessage:
 
-		log.serialized = append(log.serialized, string(msg))
+		log.serialized = append(log.serialized, string(msg.Data))
 		log.vp.SetContent(strings.Join(log.serialized, ""))
 
 		log.vp.LineDown(1)

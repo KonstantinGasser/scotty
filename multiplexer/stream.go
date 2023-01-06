@@ -48,7 +48,10 @@ func (s *stream) handle() {
 			s.errs <- BeamError(fmt.Errorf("unable to read from %q: %w", s.label, err))
 			return
 		}
-		s.msgs <- BeamMessage(msg)
+		s.msgs <- BeamMessage{
+			Label: s.label,
+			Data:  msg,
+		}
 	}
 }
 
