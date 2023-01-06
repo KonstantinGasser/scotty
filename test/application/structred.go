@@ -24,20 +24,21 @@ func main() {
 	}
 
 	sl.Info("Hello Scotty", zap.String("state", "ready to beam"))
+	var i int
 	for {
 
-		switch rand.Intn(info) {
+		switch rand.Intn(info + 1) {
 		case erro:
-
-			sl.Error("unable to do X", zap.Error(fmt.Errorf("unable to do X")), zap.Time("ts", time.Now()))
+			sl.Error("unable to do X", zap.Int("index", i), zap.Error(fmt.Errorf("unable to do X")), zap.Time("ts", time.Now()))
 		case warn:
-			sl.Warn("caution this indicates X", zap.Time("ts", time.Now()))
+			sl.Warn("caution this indicates X", zap.Int("index", i), zap.Time("ts", time.Now()))
 		case debug:
-			sl.Debug("depth of the tree", zap.Int("depth", rand.Int()))
+			sl.Debug("depth of the tree", zap.Int("index", i), zap.Int("depth", rand.Int()))
 		case info:
-			sl.Info("route XYZ called", zap.String("remote-id", "127.0.0.1:6598"))
+			sl.Info("route XYZ called", zap.Int("index", i), zap.String("remote-id", "127.0.0.1:6598"))
 		}
 
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(250)))
+		i++
+		time.Sleep(time.Millisecond * 100)
 	}
 }

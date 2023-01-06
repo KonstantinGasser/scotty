@@ -71,7 +71,7 @@ func NewLogger(width, height, offsetY int) *Logger {
 	vp.Height = h
 	// no header we can render content in the first row
 	vp.YPosition = 0
-	vp.HighPerformanceRendering = true
+	// vp.HighPerformanceRendering = true
 	vp.MouseWheelEnabled = true
 
 	// vp.YPosition = 1
@@ -106,7 +106,7 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		log.vp.Width = log.width
 		log.vp.Height = log.height
 
-		cmds = append(cmds, tea.SyncScrollArea(log.serialized, 0, log.height))
+		// cmds = append(cmds, tea.SyncScrollArea(log.serialized, 0, log.height))
 		return log, tea.Batch(cmds...)
 
 	case plexer.BeamMessage:
@@ -115,7 +115,7 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		log.vp.SetContent(strings.Join(log.serialized, ""))
 
 		log.vp.LineDown(1)
-		cmds = append(cmds, cmd, viewport.Sync(log.vp))
+		// cmds = append(cmds, cmd, viewport.Sync(log.vp))
 
 		return log, tea.Batch(cmds...)
 	}
