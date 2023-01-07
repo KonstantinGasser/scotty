@@ -139,11 +139,12 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case plexer.BeamError: // any error received on the app.errs channel
 		cmds = append(cmds, app.consumeErrs)
 	case plexer.BeamMessage: // do something with the message like storing it somewhere
+		cmds = append(cmds, app.consumeMsg)
 
 		// enable tailing of logs view
-		// if app.state == welcomeView {
-		// 	app.state = logTailView
-		// }
+		if app.state == welcomeView {
+			app.state = logTailView
+		}
 	}
 
 	// update other models
