@@ -2,6 +2,7 @@ package footer
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -13,6 +14,9 @@ import (
 var (
 	footerStyle = lipgloss.NewStyle().
 			Margin(0, 2)
+		// .
+		// MarginBottom(1).
+		// Height(3)
 
 	beamSpacer = styles.Spacer(1).Render("")
 )
@@ -77,7 +81,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 		bg, fg := styles.RandColor()
-		m.mtx.RLock()
+		// m.mtx.RLock()
 		m.connectedBeams[string(msg)] = &stream{
 			colorBg: bg,
 			colorFg: fg,
@@ -85,10 +89,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Background(bg).
 				Foreground(fg).
 				Padding(0, 1).
+				Bold(true).
 				Render,
 			count: 0,
 		}
-		m.mtx.RUnlock()
+		// m.mtx.RUnlock()
 
 	case plexer.BeamError:
 		// QUESTION @KonstantinGasser:
@@ -105,28 +110,28 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) View() string {
 
-	logText := "no logs beamed yet"
-	if m.logCount > 0 {
-		logText = "beamed logs: " + fmt.Sprint(m.logCount)
-	}
+	var items = []string{}
 
-	var items = []string{
-		styles.StatusBarLogCount(logText),
-		styles.Spacer(5).Render(""),
+	if len(m.connectedBeams) <= 0 {
+		txt := "beam the logs up, scotty is ready"
+		items = append(items,
+			styles.StatusBarLogCount(txt),
+		)
 	}
 
 	// add a little space between beam labels
 	var i int
+	var labels []string
 	for label, info := range m.connectedBeams {
 		if i < len(m.connectedBeams) {
-			items = append(items, beamSpacer, info.style(
+			labels = append(items, beamSpacer, info.style(
 				label+":"+fmt.Sprint(info.count),
 			))
 			i++
 			continue
 		}
 		// not space after last one thou
-		items = append(items, info.style(
+		labels = append(items, info.style(
 			label+":"+fmt.Sprint(info.count),
 		))
 		i++
@@ -142,7 +147,8 @@ func (m *Model) View() string {
 	// maybe for each stream we can accept O(n) tc
 	// when checking if a stream is already present
 	// ...
-	// ...
+	sort.Strings(labels)
+	items = append(items, labels...)
 
 	if m.err != nil {
 		items = append(items,

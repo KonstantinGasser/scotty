@@ -19,12 +19,12 @@ const (
 
 var (
 	pagerStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			Margin(1, 1).
-			Padding(1).
-			BorderForeground(
-			styles.ColorBorder,
-		)
+		// Border(lipgloss.RoundedBorder()).
+		Margin(1, 1).
+		Padding(1)
+		// 	BorderForeground(
+		// 	styles.ColorBorder,
+		// )
 
 	pagerStyleActive = pagerStyle.Copy().
 				UnsetBorderForeground().
@@ -115,7 +115,7 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		log.vp.SetContent(strings.Join(log.serialized, ""))
 
 		log.vp.LineDown(1)
-		// cmds = append(cmds, cmd, viewport.Sync(log.vp))
+		// log.vp.GotoBottom()
 
 		return log, tea.Batch(cmds...)
 	}
@@ -127,5 +127,7 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (log *Logger) View() string {
-	return log.vp.View()
+	return pagerStyle.Render(
+		log.vp.View(),
+	)
 }

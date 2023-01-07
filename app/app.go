@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/KonstantinGasser/scotty/app/component/footer"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
@@ -88,7 +87,7 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 		keys:  defaultBindings,
 		// header: header.New(width, height),
 		views: map[int]tea.Model{
-			welcomeView: welcome.New(width, height),
+			welcomeView: welcome.New(width, height, footerHeight),
 			logTailView: logView, // have this pre-initialized as it will be need no matter what
 		},
 
@@ -142,9 +141,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case plexer.BeamMessage: // do something with the message like storing it somewhere
 
 		// enable tailing of logs view
-		if app.state == welcomeView {
-			app.state = logTailView
-		}
+		// if app.state == welcomeView {
+		// 	app.state = logTailView
+		// }
 	}
 
 	// update other models
@@ -163,18 +162,4 @@ func (app *App) View() string {
 		app.views[app.state].View(),
 		app.footer.View(),
 	)
-}
-
-func (app *App) heightWithoutFooter() int {
-	return app.height - lipgloss.Height(app.footer.View())
-}
-
-func max(vs ...int) int {
-
-	var high int
-	for _, v := range vs {
-		high = int(math.Max(float64(high), float64(v)))
-	}
-
-	return high
 }

@@ -1,6 +1,7 @@
 package welcome
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -57,12 +58,14 @@ var (
 
 type Model struct {
 	width, height int
+	offsetY       int
 }
 
-func New(width int, height int) *Model {
+func New(width int, height int, offsetY int) *Model {
 	return &Model{
-		width:  width,
-		height: height,
+		width:   width,
+		height:  height - offsetY,
+		offsetY: offsetY,
 	}
 }
 
@@ -75,17 +78,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width - 2 // account for margin
-		m.height = msg.Height
+		m.height = msg.Height - m.offsetY
 	}
 
 	return m, nil
 }
 
 func (m *Model) View() string {
+
+	tmp := lipgloss.NewStyle().Render(fmt.Sprintf("Width: %d, Height: %d, OffsetY: %d", m.width, m.height, m.offsetY))
 	maxWidth := max(
 		lipgloss.Width(welcomeLogo),
 		lipgloss.Width(welcomeUsage),
-		lipgloss.Width(welcomeQueries),
+		lipgloss.Width(tmp),
 	)
 
 	welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -102,12 +107,12 @@ func (m *Model) View() string {
 		lipgloss.PlaceHorizontal(
 			maxWidth,
 			lipgloss.Left,
-			welcomeQueries,
+			tmp,
 		),
 	)
 
 	return lipgloss.NewStyle().
-		Height(m.height).
+		Height(m.height - m.offsetY).
 		Render(
 			lipgloss.Place(
 				m.width, m.height,

@@ -13,7 +13,7 @@ const (
 	ColorLogo              = lipgloss.Color("93")
 	ColorBorder            = lipgloss.Color("0")
 	ColorBorderActive      = ColorLogo // tight to the logo color
-	ColorStatusBarLogCount = lipgloss.Color("93")
+	ColorStatusBarLogCount = lipgloss.Color("#FF4C94")
 	ColorStatusBarBeamInfo = lipgloss.Color("22")
 	ColorErrorBackground   = lipgloss.Color("160")
 )
