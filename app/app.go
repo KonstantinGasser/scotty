@@ -3,67 +3,20 @@ package app
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/component/footer"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
+	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	welcomeLogo = lipgloss.NewStyle().
-			MarginBottom(2).
-			Render(
-			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4C94")).Render(
-					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
-				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#EF46AC")).Render(
-					"██╔════╝██╔════╝██╔═══██╗╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝",
-				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#D840C0")).Render(
-					"███████╗██║     ██║   ██║   ██║      ██║    ╚████╔╝ ",
-				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#BE38D5")).Render(
-					"╚════██║██║     ██║   ██║   ██║      ██║     ╚██╔╝ ",
-				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#BE38D5")).Render(
-					"███████║╚██████╗╚██████╔╝   ██║      ██║      ██║",
-				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#9F2DEB")).Render(
-					"╚══════╝ ╚═════╝ ╚═════╝    ╚═╝      ╚═╝      ╚═╝",
-				),
-			}, "\n"),
-		)
-
-	welcomeUsage = lipgloss.NewStyle().
-			MarginBottom(2).
-			Render(
-			strings.Join([]string{
-				lipgloss.NewStyle().Bold(true).Render("usage:\n"),
-				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam"),
-				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam"),
-			}, "\n"),
-		)
-
-	welcomeQueries = lipgloss.NewStyle().
-			Render(
-			strings.Join([]string{
-				lipgloss.NewStyle().Bold(true).Render("queries:\n"),
-				"\tfilter stream(s): " + lipgloss.NewStyle().Bold(true).Render("filter beam=app_1 tracing_span='1e4851b8fe64ec763ad0'"),
-				"\tapply statistics: " + lipgloss.NewStyle().Bold(true).Render("filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
-				"\ttail -f a query : " + lipgloss.NewStyle().Bold(true).Render("tail |\n\t\t\t  filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
-			}, "\n"),
-		)
-)
-
 const (
 	// scotty has just been started
 	// show welcome page
-	welcome = iota
+	welcomeView = iota
 	// one or more log streams have connected
 	// and are streaming logs
 	// show logs in tailing window
@@ -135,13 +88,14 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 		keys:  defaultBindings,
 		// header: header.New(width, height),
 		views: map[int]tea.Model{
+			welcomeView: welcome.New(width, height),
 			logTailView: logView, // have this pre-initialized as it will be need no matter what
 		},
 
 		footer: footer,
 		width:  width,
 		height: height,
-		state:  logTailView,
+		state:  welcomeView,
 
 		errs:     errs,
 		messages: msgs,
@@ -188,11 +142,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case plexer.BeamMessage: // do something with the message like storing it somewhere
 
 		// enable tailing of logs view
-		if app.state == welcome {
+		if app.state == welcomeView {
 			app.state = logTailView
 		}
-
-		cmds = append(cmds, app.consumeMsg)
 	}
 
 	// update other models
@@ -207,54 +159,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (app *App) View() string {
-
-	if app.state == welcome {
-		return app.welcomeView()
-	}
-
 	return lipgloss.JoinVertical(lipgloss.Left,
 		app.views[app.state].View(),
-		app.footer.View(),
-	)
-}
-
-// welcomeView is only concerned about what should be shown
-// displayed after scotty has been started.
-func (app *App) welcomeView() string {
-	maxWidth := max(
-		lipgloss.Width(welcomeLogo),
-		lipgloss.Width(welcomeUsage),
-		lipgloss.Width(welcomeQueries),
-	)
-
-	welcome := lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.PlaceHorizontal(
-			maxWidth,
-			lipgloss.Center,
-			welcomeLogo,
-		),
-		lipgloss.PlaceHorizontal(
-			maxWidth,
-			lipgloss.Left,
-			welcomeUsage,
-		),
-		lipgloss.PlaceHorizontal(
-			maxWidth,
-			lipgloss.Left,
-			welcomeQueries,
-		),
-	)
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.NewStyle().
-			Height(app.heightWithoutFooter()).
-			Render(
-				lipgloss.Place(
-					app.width, app.heightWithoutFooter(),
-					lipgloss.Center, lipgloss.Center,
-					welcome,
-				),
-			),
 		app.footer.View(),
 	)
 }

@@ -28,14 +28,14 @@ func RandColor() (lipgloss.Color, lipgloss.Color) {
 
 	var foreground lipgloss.Color = lipgloss.Color("#000000")
 
-	delta := readableForeground(r, g, b)
+	delta := colorDelta(r, g, b)
 	if delta == 1 {
 		foreground = lipgloss.Color("#ffffff")
 	}
 	return color, foreground
 }
 
-func readableForeground(r, g, b uint32) int {
+func colorDelta(r, g, b uint32) int {
 
 	r = uint32(math.Pow(float64(r/255), 2.2))
 	g = uint32(math.Pow(float64(g/255), 2.2))
@@ -43,7 +43,11 @@ func readableForeground(r, g, b uint32) int {
 
 	delta := float64(0.2126)*float64(r) + float64(0.07151)*float64(g) + float64(0.0721)*float64(b)
 
-	return int(math.Ceil(delta))
+	if delta < 0.5 {
+		return 0
+	}
+
+	return 1
 }
 
 func init() {
