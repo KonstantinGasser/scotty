@@ -103,6 +103,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// plexer.BeamMessage needs to be extended with
 		// information about the stream such as the label of it
 		// only then we can increase the respective count
+		m.connectedBeams[msg.Label].count++
 	}
 
 	return m, tea.Batch(cmds...)

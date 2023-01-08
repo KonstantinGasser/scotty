@@ -65,12 +65,11 @@ type Logger struct {
 
 func NewLogger(width, height, offsetY int) *Logger {
 
-	w, h := width, height-offsetY
+	w, h := width-1, height-offsetY-1 // -1 to margin top for testing
 
 	vp := viewport.New(w, h)
 	vp.Height = h
 	// no header we can render content in the first row
-	vp.YPosition = 0
 	// vp.HighPerformanceRendering = true
 	vp.MouseWheelEnabled = true
 
@@ -99,8 +98,8 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		log.vp, cmd = log.vp.Update(msg)
 		return log, cmd
 	case tea.WindowSizeMsg:
-		log.width = msg.Width
-		log.height = msg.Height - log.offsetY
+		log.width = msg.Width - 1
+		log.height = msg.Height - log.offsetY - 1
 
 		// update viewport width an height
 		log.vp.Width = log.width
@@ -111,11 +110,18 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case plexer.BeamMessage:
 
-		log.serialized = append(log.serialized, string(msg.Data))
-		log.vp.SetContent(strings.Join(log.serialized, ""))
+		wrapped := string(msg.Data)
 
+		if len(wrapped) > log.vp.Width {
+			wrapped = wrapped[:log.vp.Width] + "\n" + wrapped[log.vp.Width:]
+		}
+
+		log.serialized = append(log.serialized, wrapped)
+		// this currently is an endless growing slice of strings
+		// idea here is it to only get the lines from the "store"
+		// which are currently in the viewport
+		log.vp.SetContent(strings.Join(log.serialized, ""))
 		log.vp.LineDown(1)
-		// log.vp.GotoBottom()
 
 		return log, tea.Batch(cmds...)
 	}
