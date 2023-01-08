@@ -3,7 +3,6 @@ package pager
 import (
 	"strings"
 
-	"github.com/KonstantinGasser/scotty/app/styles"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,18 +18,8 @@ const (
 
 var (
 	pagerStyle = lipgloss.NewStyle().
-		// Border(lipgloss.RoundedBorder()).
-		Margin(1, 1).
+		Margin(0, 1).
 		Padding(1)
-		// 	BorderForeground(
-		// 	styles.ColorBorder,
-		// )
-
-	pagerStyleActive = pagerStyle.Copy().
-				UnsetBorderForeground().
-				BorderForeground(
-			styles.ColorBorderActive,
-		)
 )
 
 // Logger implements the tea.Model interface.
@@ -41,10 +30,10 @@ type Logger struct {
 
 	// underlying model which handles
 	// scrolling and rendering of the logs
-	vp viewport.Model
+	view viewport.Model
 
 	// serialized is a slice where each value is
-	// the string representation of a log.
+	// the string representation of a pager.
 	// Values in this slice will be shown in the terminal
 	// like tail -f would do
 	//
@@ -67,26 +56,26 @@ func NewLogger(width, height, offsetY int) *Logger {
 
 	w, h := width-1, height-offsetY-1 // -1 to margin top for testing
 
-	vp := viewport.New(w, h)
-	vp.Height = h
+	view := viewport.New(w, h)
+	view.Height = h
 	// no header we can render content in the first row
-	// vp.HighPerformanceRendering = true
-	vp.MouseWheelEnabled = true
+	// view.HighPerformanceRendering = true
+	view.MouseWheelEnabled = true
 
-	// vp.YPosition = 1
+	// view.YPosition = 1
 	return &Logger{
-		vp:      vp,
+		view:    view,
 		offsetY: offsetY,
 		width:   w,
 		height:  h,
 	}
 }
 
-func (log *Logger) Init() tea.Cmd {
+func (pager *Logger) Init() tea.Cmd {
 	return nil
 }
 
-func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -95,45 +84,55 @@ func (log *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		log.vp, cmd = log.vp.Update(msg)
-		return log, cmd
+		pager.view, cmd = pager.view.Update(msg)
+		return pager, cmd
 	case tea.WindowSizeMsg:
-		log.width = msg.Width - 1
-		log.height = msg.Height - log.offsetY - 1
+		pager.width = msg.Width - 1
+		pager.height = msg.Height - pager.offsetY - 1
 
 		// update viewport width an height
-		log.vp.Width = log.width
-		log.vp.Height = log.height
+		pager.view.Width = pager.width
+		pager.view.Height = pager.height
 
-		// cmds = append(cmds, tea.SyncScrollArea(log.serialized, 0, log.height))
-		return log, tea.Batch(cmds...)
+		// cmds = append(cmds, tea.SyncScrollArea(pager.serialized, 0, pager.height))
+		return pager, tea.Batch(cmds...)
 
 	case plexer.BeamMessage:
+		// eventually we will do no data processing
+		// but only consume logs from the "store".
+		// The "store" should offer an API to retrieve
+		// [N,M) logs such that the pager.Logger only ever
+		// has to render the current viewport logs.
+		// Similar to a sliding window N,M will be shifted up/down
+		// by the mouse wheel delta, however N-M stays constant unless
+		// the height is changed by tea.WindowSizeMsg
 
-		wrapped := string(msg.Data)
+		var wrapped = string(msg.Data)
+		var scrollDelta = 1
 
-		if len(wrapped) > log.vp.Width {
-			wrapped = wrapped[:log.vp.Width] + "\n" + wrapped[log.vp.Width:]
+		if wrap := len(wrapped) > pager.view.Width; wrap {
+			wrapped = wrapped[:pager.view.Width] + "\n" + wrapped[pager.view.Width:]
+			scrollDelta = 2
 		}
 
-		log.serialized = append(log.serialized, wrapped)
+		pager.serialized = append(pager.serialized, wrapped)
 		// this currently is an endless growing slice of strings
 		// idea here is it to only get the lines from the "store"
 		// which are currently in the viewport
-		log.vp.SetContent(strings.Join(log.serialized, ""))
-		log.vp.LineDown(1)
+		pager.view.SetContent(strings.Join(pager.serialized, ""))
+		pager.view.LineDown(scrollDelta)
 
-		return log, tea.Batch(cmds...)
+		return pager, tea.Batch(cmds...)
 	}
 
-	log.vp, cmd = log.vp.Update(msg)
+	pager.view, cmd = pager.view.Update(msg)
 	cmds = append(cmds, cmd)
 
-	return log, tea.Batch(cmds...)
+	return pager, tea.Batch(cmds...)
 }
 
-func (log *Logger) View() string {
+func (pager *Logger) View() string {
 	return pagerStyle.Render(
-		log.vp.View(),
+		pager.view.View(),
 	)
 }

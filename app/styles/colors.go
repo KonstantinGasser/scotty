@@ -26,16 +26,16 @@ func RandColor() (lipgloss.Color, lipgloss.Color) {
 
 	r, g, b, _ := color.RGBA()
 
-	var foreground lipgloss.Color = lipgloss.Color("#000000")
+	var foreground lipgloss.Color = lipgloss.Color("#ffffff")
 
-	delta := colorDelta(r, g, b)
-	if delta == 1 {
-		foreground = lipgloss.Color("#ffffff")
+	ratio := brightnessRation(r, g, b)
+	if ratio == 1 {
+		foreground = lipgloss.Color("#000000")
 	}
 	return color, foreground
 }
 
-func colorDelta(r, g, b uint32) int {
+func brightnessRation(r, g, b uint32) int {
 
 	r = uint32(math.Pow(float64(r/255), 2.2))
 	g = uint32(math.Pow(float64(g/255), 2.2))

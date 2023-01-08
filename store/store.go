@@ -4,6 +4,29 @@ import "github.com/bits-and-blooms/bloom/v3"
 
 type Store struct{}
 
+// Insert appends the given value to the store.
+// Depending on the label of the value (refers to the table)
+// the value is forwarded to the respective table to handle the insert.
+// All present fields within value are added to the tables bloom-filter
+func (s *Store) Insert(v map[string]interface{}) {
+
+}
+
+// Slice returns N values
+func (s *Store) Slice(start int, end int) []map[string]interface{} {
+	return nil
+}
+
+type Query struct{}
+
+func (s *Store) Query() *Query {
+	return nil
+}
+
+func (q *Query) Exec() error {
+	return nil
+}
+
 type Entry struct {
 	Key   string
 	Value any
@@ -27,6 +50,20 @@ type Table struct {
 
 /*
 
+BIG QUESTION: @KonstantinGasser:
+so now each stream has a stable in which the respective
+logs are stored; great. However, what's your plan on retrieving N elements
+across all tables? The question to answer is with the data separated by streams
+we need to looks up N data from M tables where the 1..N must be in sequential
+order the logs where received by scotty.
+The store somehow needs to keep an list of the ordered values.
+
+Follow-up question once a stream disconnects we want to be able to remove all current
+values belonging to the stream which means the store needs an somewhat good and performant
+way to delete all of the these values. Using an array (ordered by the ts arrival at scotty)
+we will have O(n) - keep in mind it might happen regularly but when it happens time complexity
+is not killing us
+
 Using tables per stream
 
 Table: app_1
@@ -48,5 +85,8 @@ if it is worth scanning a particular table or not
 	any_1 : !ok
 	any_2 : ok
 }
+
+If no indices are provided try to guess some??
+-- educated guess could be "level", "error"?
 
 */

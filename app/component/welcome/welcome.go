@@ -1,7 +1,6 @@
 package welcome
 
 import (
-	"fmt"
 	"math"
 	"strings"
 
@@ -40,8 +39,8 @@ var (
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Render("usage:\n"),
-				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam"),
-				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam"),
+				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
+				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
 			}, "\n"),
 		)
 
@@ -86,11 +85,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) View() string {
 
-	tmp := lipgloss.NewStyle().Render(fmt.Sprintf("Width: %d, Height: %d, OffsetY: %d", m.width, m.height, m.offsetY))
 	maxWidth := max(
 		lipgloss.Width(welcomeLogo),
 		lipgloss.Width(welcomeUsage),
-		lipgloss.Width(tmp),
+		lipgloss.Width(welcomeQueries),
 	)
 
 	welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -107,7 +105,7 @@ func (m *Model) View() string {
 		lipgloss.PlaceHorizontal(
 			maxWidth,
 			lipgloss.Left,
-			tmp,
+			welcomeQueries,
 		),
 	)
 
