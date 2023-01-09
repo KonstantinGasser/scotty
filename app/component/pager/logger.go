@@ -22,6 +22,10 @@ var (
 		Padding(1)
 )
 
+type LogTailer interface {
+	Tail(start int, end int) string
+}
+
 // Logger implements the tea.Model interface.
 // Furthermore, Logger allows to tail logs.
 // Logger does not not store the logs its only
@@ -32,16 +36,9 @@ type Logger struct {
 	// scrolling and rendering of the logs
 	view viewport.Model
 
-	// serialized is a slice where each value is
-	// the string representation of a pager.
-	// Values in this slice will be shown in the terminal
-	// like tail -f would do
-	//
-	// THOUGHT @KonstantinGasser:
-	// what should happen when a stream disconnects in case you restart a service?
-	// These logs would need to be deleted
-	// -> Refers to the overall question of how to store the logs; define requirements first pls
-	serialized []string
+	// store allows to retrieve logs ranging
+	// from [start, end)
+	store LogTailer
 
 	// describes any space in the Y-Axes which must be subtracted
 	// from the height - when the terminal is resized we cannot simply
@@ -107,20 +104,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// by the mouse wheel delta, however N-M stays constant unless
 		// the height is changed by tea.WindowSizeMsg
 
-		var wrapped = string(msg.Data)
-		var scrollDelta = 1
+		pager.view.SetContent(pager.store.Tail(0, 0))
 
-		if wrap := len(wrapped) > pager.view.Width; wrap {
-			wrapped = wrapped[:pager.view.Width] + "\n" + wrapped[pager.view.Width:]
-			scrollDelta = 2
-		}
-
-		pager.serialized = append(pager.serialized, wrapped)
-		// this currently is an endless growing slice of strings
-		// idea here is it to only get the lines from the "store"
-		// which are currently in the viewport
-		pager.view.SetContent(strings.Join(pager.serialized, ""))
-		pager.view.LineDown(scrollDelta)
+		pager.view.LineDown(strings.Count("\n", string(msg.Data)))
 
 		return pager, tea.Batch(cmds...)
 	}
