@@ -1,8 +1,41 @@
 package store
 
-import "github.com/bits-and-blooms/bloom/v3"
+import (
+	"sync"
+	"unsafe"
 
-type Store struct{}
+	"github.com/bits-and-blooms/bloom/v3"
+)
+
+type Store struct {
+	// guards the index log and tables map
+	mtx sync.RWMutex
+	// index is an append-only immutable slice
+	// to which each log to any table is stored
+	// in the order received by scotty.
+	// This index allows to yield back logs from
+	// N tables of an range [x,z).
+	// The index does not store the actual data but
+	// rather the reference (memory address).
+	// A drawback to overcome are tombstone elements
+	// which are a result of tables being dropped after
+	// a stream disconnects. In the future we should
+	// implement a background task which removes tombstone
+	// elements from the index effectively doing a indexing
+	// by removing nil pointer.
+	// Keeping track of the index is required to display
+	// N logs (where N most likely corresponds to viewport.Height)
+	// starting from [x,z). This allows to an O(1) constant time
+	// to retrieve N logs rather then mashing the tables together
+	// and sorting them by time-of-arrival
+	index []unsafe.Pointer
+
+	// tables hold stream specific logs. Each log must belong
+	// to on table. A table must exists when the first log is
+	// received - table creation should happen when a beam syncs
+	// scotty
+	tables map[string]Table
+}
 
 // Insert appends the given value to the store.
 // Depending on the label of the value (refers to the table)
@@ -63,6 +96,13 @@ values belonging to the stream which means the store needs an somewhat good and 
 way to delete all of the these values. Using an array (ordered by the ts arrival at scotty)
 we will have O(n) - keep in mind it might happen regularly but when it happens time complexity
 is not killing us
+
+TLCT ()
+What about an append-log type of thing?
+Say each log which is streamed at added to the append-log,
+reads are done from the back. each entry keeps a pointer to a specific log
+in memory and if we drop a table gc will take care of the rest?? Ok sure we cannot
+trust gc in a time sense means a nil check of the pointer is required
 
 Using tables per stream
 

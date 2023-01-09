@@ -14,6 +14,10 @@ As a secondary goal `scotty` tries parsing your logs (if they are structured) in
 
 By using *unix pipes* to pipe your program output into `beam` you are free to append commands prior to calling `beam`. By default `beam` will try to connect to a *unix socket* however, since applications nowadays usually are shipped within replicated environments (such as ***docker***) `scotty` will also allow you to beam **sorry stream** your logs via a `tcp:ip` connection. 
 
+<p align="center">
+    <img src="resources/welcome.png" alt="scotty gopher :)" width="650px" height="auto"></img>
+</p>
+
 
 ## Installation
 
