@@ -14,6 +14,8 @@ const (
 	marginRight  = 10
 	marginTop    = 30
 	marginBottom = 0
+
+	footerHeight = 3
 )
 
 var (
@@ -38,20 +40,18 @@ type Logger struct {
 
 	// store allows to retrieve logs ranging
 	// from [start, end)
-	store LogTailer
+	tailer LogTailer
 
-	// describes any space in the Y-Axes which must be subtracted
-	// from the height - when the terminal is resized we cannot simply
-	// take the tea.WindowSizeMsg.Height but need to account for the offset
-	offsetY int
 	// available tty width and height
 	// updates if changes
 	width, height int
+
+	footer tea.Model
 }
 
-func NewLogger(width, height, offsetY int) *Logger {
+func NewLogger(width, height int) *Logger {
 
-	w, h := width-1, height-offsetY-1 // -1 to margin top for testing
+	w, h := width-1, height-footerHeight // -1 to margin top for testing
 
 	view := viewport.New(w, h)
 	view.Height = h
@@ -61,10 +61,10 @@ func NewLogger(width, height, offsetY int) *Logger {
 
 	// view.YPosition = 1
 	return &Logger{
-		view:    view,
-		offsetY: offsetY,
-		width:   w,
-		height:  h,
+		view:   view,
+		width:  w,
+		height: h,
+		footer: newFooter(w, h),
 	}
 }
 
@@ -84,15 +84,12 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.view, cmd = pager.view.Update(msg)
 		return pager, cmd
 	case tea.WindowSizeMsg:
-		pager.width = msg.Width - 1
-		pager.height = msg.Height - pager.offsetY - 1
+		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
+		pager.height = msg.Height - 1 // by now I have already no plan why it needs to be one - only now 2 messed things up
 
 		// update viewport width an height
 		pager.view.Width = pager.width
 		pager.view.Height = pager.height
-
-		// cmds = append(cmds, tea.SyncScrollArea(pager.serialized, 0, pager.height))
-		return pager, tea.Batch(cmds...)
 
 	case plexer.BeamMessage:
 		// eventually we will do no data processing
@@ -104,7 +101,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// by the mouse wheel delta, however N-M stays constant unless
 		// the height is changed by tea.WindowSizeMsg
 
-		pager.view.SetContent(pager.store.Tail(0, 0))
+		pager.view.SetContent(pager.tailer.Tail(0, 0))
 
 		pager.view.LineDown(strings.Count("\n", string(msg.Data)))
 
@@ -114,11 +111,17 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	pager.view, cmd = pager.view.Update(msg)
 	cmds = append(cmds, cmd)
 
+	pager.footer, cmd = pager.footer.Update(msg)
+	cmds = append(cmds, cmd)
+
 	return pager, tea.Batch(cmds...)
 }
 
 func (pager *Logger) View() string {
-	return pagerStyle.Render(
-		pager.view.View(),
+	return lipgloss.JoinVertical(lipgloss.Left,
+		pagerStyle.Render(
+			pager.view.View(),
+		),
+		pager.footer.View(),
 	)
 }

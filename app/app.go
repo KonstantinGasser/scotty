@@ -3,13 +3,11 @@ package app
 import (
 	"fmt"
 
-	"github.com/KonstantinGasser/scotty/app/component/footer"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 const (
@@ -35,12 +33,6 @@ type App struct {
 	help help.Model
 
 	keys bindings
-	// header: shows logo
-	header tea.Model
-
-	// footer: displays stats (log/stream count)
-	// has input field for query
-	footer tea.Model
 
 	// views is a map of tea.Model which can be either of type component/pager
 	// or component/view and represent the views which should be displayed
@@ -76,25 +68,19 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 		return nil, fmt.Errorf("unable to determine the initial dimensions of the terminal: %w", err)
 	}
 
-	footer := footer.New(width, height)
-
-	footerHeight := lipgloss.Height(footer.View())
-	logView := pager.NewLogger(width, height, footerHeight)
-
 	return &App{
 		quite: q,
 		help:  help.New(),
 		keys:  defaultBindings,
-		// header: header.New(width, height),
+
 		views: map[int]tea.Model{
-			welcomeView: welcome.New(width, height, footerHeight),
-			logTailView: logView, // have this pre-initialized as it will be need no matter what
+			welcomeView: welcome.New(width, height),
+			logTailView: pager.NewLogger(width, height), // have this pre-initialized as it will be need no matter what
 		},
 
-		footer: footer,
 		width:  width,
 		height: height,
-		state:  welcomeView,
+		state:  logTailView,
 
 		errs:     errs,
 		messages: msgs,
@@ -147,11 +133,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// update other models
-
-	app.footer, cmd = app.footer.Update(msg)
-	cmds = append(cmds, cmd)
-
+	// update current model
 	app.views[app.state], cmd = app.views[app.state].Update(msg)
 	cmds = append(cmds, cmd)
 
@@ -159,8 +141,5 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (app *App) View() string {
-	return lipgloss.JoinVertical(lipgloss.Left,
-		app.views[app.state].View(),
-		app.footer.View(),
-	)
+	return app.views[app.state].View()
 }

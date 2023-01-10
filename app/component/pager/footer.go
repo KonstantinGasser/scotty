@@ -1,4 +1,4 @@
-package footer
+package pager
 
 import (
 	"fmt"
@@ -14,9 +14,6 @@ import (
 var (
 	footerStyle = lipgloss.NewStyle().
 			Margin(0, 2)
-		// .
-		// MarginBottom(1).
-		// Height(3)
 
 	beamSpacer = styles.Spacer(1).Render("")
 )
@@ -28,7 +25,7 @@ type stream struct {
 	count   int
 }
 
-type Model struct {
+type footer struct {
 	width, height int
 
 	// any error happing anywhere
@@ -46,8 +43,8 @@ type Model struct {
 	connectedBeams map[string]*stream
 }
 
-func New(w, h int) *Model {
-	return &Model{
+func newFooter(w, h int) *footer {
+	return &footer{
 		width:  w,
 		height: h,
 		err:    nil,
@@ -58,11 +55,11 @@ func New(w, h int) *Model {
 	}
 }
 
-func (m *Model) Init() tea.Cmd {
+func (f *footer) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -70,19 +67,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width - 2 // account for margin
-		m.height = msg.Height
-		return m, nil
+		f.width = msg.Width - 2 // account for margin
+		f.height = msg.Height
+		return f, nil
 	case plexer.BeamNew:
-		m.mtx.RLock()
-		if beam, ok := m.connectedBeams[string(msg)]; ok {
+		f.mtx.RLock()
+		if beam, ok := f.connectedBeams[string(msg)]; ok {
 			beam.count = 0
-			m.mtx.RUnlock()
+			f.mtx.RUnlock()
 			break
 		}
 		bg, fg := styles.RandColor()
-		// m.mtx.RLock()
-		m.connectedBeams[string(msg)] = &stream{
+		// f.mtx.RLock()
+		f.connectedBeams[string(msg)] = &stream{
 			colorBg: bg,
 			colorFg: fg,
 			style: lipgloss.NewStyle().
@@ -93,27 +90,27 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Render,
 			count: 0,
 		}
-		// m.mtx.RUnlock()
+		// f.mtx.RUnlock()
 
 	case plexer.BeamError:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?
-		m.err = msg
+		f.err = msg
 	case plexer.BeamMessage:
 		// plexer.BeamMessage needs to be extended with
 		// information about the stream such as the label of it
 		// only then we can increase the respective count
-		m.connectedBeams[msg.Label].count++
+		f.connectedBeams[msg.Label].count++
 	}
 
-	return m, tea.Batch(cmds...)
+	return f, tea.Batch(cmds...)
 }
 
-func (m *Model) View() string {
+func (f *footer) View() string {
 
 	var items = []string{}
 
-	if len(m.connectedBeams) <= 0 {
+	if len(f.connectedBeams) <= 0 {
 		txt := "beam the logs up, scotty is ready"
 		items = append(items,
 			styles.StatusBarLogCount(txt),
@@ -123,8 +120,8 @@ func (m *Model) View() string {
 	// add a little space between beam labels
 	var i int
 	var labels []string
-	for label, info := range m.connectedBeams {
-		if i < len(m.connectedBeams) {
+	for label, info := range f.connectedBeams {
+		if i < len(f.connectedBeams) {
 			labels = append(items, beamSpacer, info.style(
 				label+":"+fmt.Sprint(info.count),
 			))
@@ -151,10 +148,10 @@ func (m *Model) View() string {
 	sort.Strings(labels)
 	items = append(items, labels...)
 
-	if m.err != nil {
+	if f.err != nil {
 		items = append(items,
 			styles.Spacer(2).Render(""), // add some space next to the beams
-			styles.ErrorInfo(m.err.Error()),
+			styles.ErrorInfo(f.err.Error()),
 		)
 	}
 
