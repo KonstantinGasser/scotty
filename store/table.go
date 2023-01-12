@@ -1,11 +1,23 @@
 package store
 
-import "github.com/bits-and-blooms/bloom/v3"
+import (
+	"github.com/bits-and-blooms/bloom/v3"
+)
 
 type Entry struct {
 	Key   string
 	Value any
 }
+
+// since we do not need to parse the []bytes to a struct
+// we can remove the impact of the reflections used in the
+// encoding/json and use something like this:
+// https://github.com/tidwall/gjson which allows to parse (can also return all keys which is good cause bloom)
+// []byte to map[string]interface
+// func NewEntry(v []byte) Entry {
+
+// 	// err :=
+// }
 
 type Table struct {
 	// identifies a table with a unique name such as
@@ -16,11 +28,12 @@ type Table struct {
 	// present in the table with at least one entry.
 	// Due to the nature of bloom filter the answer to
 	// the asked question might be false positive.
+	// checks only for top level keys in the JSON
 	catalog bloom.BloomFilter
 	// entries is a slice implemented as a ring-buffer
 	// for a fixed memory allocation where each entry
 	// represents a single log parsed to a structured form
-	entires []Entry
+	entires []Entry // shouldn't this be [][]Entry? -> further reminder to get the storing straight..
 }
 
 /*

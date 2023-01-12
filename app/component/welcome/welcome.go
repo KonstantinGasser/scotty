@@ -108,7 +108,6 @@ func (m *Model) View() string {
 	)
 
 	return lipgloss.NewStyle().
-		Height(m.height).
 		Render(
 			lipgloss.Place(
 				m.width, m.height,

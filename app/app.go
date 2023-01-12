@@ -80,7 +80,7 @@ func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.Bea
 
 		width:  width,
 		height: height,
-		state:  logTailView,
+		state:  welcomeView,
 
 		errs:     errs,
 		messages: msgs,
@@ -120,10 +120,6 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.width = msg.Width
 		app.height = msg.Height
 
-	case plexer.BeamNew:
-		cmds = append(cmds, app.consumeBeams)
-	case plexer.BeamError: // any error received on the app.errs channel
-		cmds = append(cmds, app.consumeErrs)
 	case plexer.BeamMessage: // do something with the message like storing it somewhere
 		cmds = append(cmds, app.consumeMsg)
 

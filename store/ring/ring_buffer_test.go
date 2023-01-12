@@ -8,7 +8,7 @@ import (
 func TestInsert(t *testing.T) {
 
 	cap := 20
-	rb := New(cap)
+	rb := New[string](uint32(cap))
 
 	for i := 0; i < cap; i++ {
 		rb.Write(fmt.Sprint(i))
