@@ -76,7 +76,7 @@ func (s *Store) Insert(v []byte) {
 // Window returns all captured logs within the passed
 // boundaries [top, bottom). If top >= bottom or top exceeds
 // the buffer cap or the bottom < 0 Window returns an empty slice.
-func (s *Store) Window(top int, bottom int) []Log {
+func (s *Store) Window(top uint32, bottom uint32) []Log {
 	return s.tail.Seek(top, bottom)
 }
 
