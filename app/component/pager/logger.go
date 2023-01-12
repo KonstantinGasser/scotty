@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
+	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -24,10 +25,6 @@ var (
 		Padding(1)
 )
 
-type LogTailer interface {
-	Tail(start int, end int) string
-}
-
 // Logger implements the tea.Model interface.
 // Furthermore, Logger allows to tail logs.
 // Logger does not not store the logs its only
@@ -40,8 +37,7 @@ type Logger struct {
 
 	// store allows to retrieve logs ranging
 	// from [start, end)
-	tailer LogTailer
-
+	store store.Store
 	// available tty width and height
 	// updates if changes
 	width, height int
@@ -101,7 +97,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// by the mouse wheel delta, however N-M stays constant unless
 		// the height is changed by tea.WindowSizeMsg
 
-		pager.view.SetContent(pager.tailer.Tail(0, 0))
+		var content = ""
+
+		pager.view.SetContent(content)
 
 		pager.view.LineDown(strings.Count("\n", string(msg.Data)))
 

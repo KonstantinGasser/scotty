@@ -42,7 +42,7 @@ type Log struct {
 }
 
 type Store struct {
-	// guards the index log and tables map
+	// guards the tail buffer
 	mtx sync.RWMutex
 
 	// tail holds up to max_buf_size of the latest logs and is
@@ -65,12 +65,20 @@ type Store struct {
 	// tables map[string]Table
 }
 
-// Insert appends the given value to the store.
-// Depending on the label of the value (refers to the table)
-// the value is forwarded to the respective table to handle the insert.
-// All present fields within value are added to the tables bloom-filter
-func (s *Store) Insert(v []byte) {
-
+// Inserts immediately adds the log to the tail
+// buffer for immediate consumption.
+//
+// *Not implemented yet*
+// After that the log is dispatched and delegated
+// to the correct table to be indexed and inserted
+// in the table - this might not happen ASAP
+func (s *Store) Insert(identifier string, data []byte) {
+	s.mtx.RLocker()
+	s.tail.Write(Log{
+		Stream: identifier,
+		Data:   data,
+	})
+	s.mtx.RUnlock()
 }
 
 // Window returns all captured logs within the passed
@@ -78,6 +86,10 @@ func (s *Store) Insert(v []byte) {
 // the buffer cap or the bottom < 0 Window returns an empty slice.
 func (s *Store) Window(top uint32, bottom uint32) []Log {
 	return s.tail.Seek(top, bottom)
+}
+
+func (s *Store) Tail(n uint32) []Log {
+	return s.tail.Tail(n)
 }
 
 func (s *Store) Query() *Query {

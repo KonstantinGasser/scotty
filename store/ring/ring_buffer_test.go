@@ -77,5 +77,40 @@ func TestTail(t *testing.T) {
 	if ok := slices.Compare(last10Values, comparable[len(comparable)-10:]); ok != 0 {
 		t.Fatalf("tail-last-10: Got: %v\nWant: %v", last10Values, comparable[len(comparable)-10:])
 	}
+}
 
+type Log struct {
+	Stream string
+	Data   []byte
+}
+
+func BenchmarkWrite(b *testing.B) {
+
+	var cap uint32 = 1 << 13
+	var limit = 1000000
+
+	var log = Log{
+		Stream: "write-log-struct",
+		Data: []byte(`
+		{
+			"level":"error",
+			"ts":1673553753.136611,
+			"caller":"application/structred.go:32",
+			"msg":"unable to do X",
+			"index":2,
+			"error":"unable to do X",
+			"ts":1673553753.136579,
+			"stacktrace":"main.main
+				/Users/konstantingasser/coffeecode/scotty/test/application/structred.go:32
+				runtime.main
+					/usr/local/go/src/runtime/proc.go:250"
+		}
+		`),
+	}
+
+	rb := New[Log](cap)
+
+	for i := 0; i < limit; i++ {
+		rb.Write(log)
+	}
 }
