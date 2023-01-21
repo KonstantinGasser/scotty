@@ -1,7 +1,11 @@
 package pager
 
 import (
+	"strings"
+
+	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
+	"github.com/KonstantinGasser/scotty/ring"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,7 +31,8 @@ var (
 // Logger does not not store the logs its only
 // porose is it to display them.
 type Logger struct {
-
+	buffer *ring.Buffer
+	writer *strings.Builder
 	// underlying model which handles
 	// scrolling and rendering of the logs
 	view viewport.Model
@@ -51,6 +56,8 @@ func NewLogger(width, height int) *Logger {
 
 	// view.YPosition = 1
 	return &Logger{
+		buffer: ring.New(uint32(12)),
+		writer: &strings.Builder{},
 		view:   view,
 		width:  w,
 		height: h,
@@ -82,18 +89,20 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.view.Height = pager.height
 
 	case plexer.BeamMessage:
-		// eventually we will do no data processing
-		// but only consume logs from the "store".
-		// The "store" should offer an API to retrieve
-		// [N,M) logs such that the pager.Logger only ever
-		// has to render the current viewport logs.
-		// Similar to a sliding window N,M will be shifted up/down
-		// by the mouse wheel delta, however N-M stays constant unless
-		// the height is changed by tea.WindowSizeMsg
 
-		label := []byte("[" + msg.Label + "]")
+		p := []byte("[" + msg.Label + "] ")
+		pager.buffer.Append(append(p, msg.Data...))
 
-		pager.view.SetContent("")
+		err := pager.buffer.Window(
+			pager.writer,
+			pager.height,
+			nil,
+		)
+		if err != nil {
+			debug.Debug(err.Error())
+		}
+		pager.view.SetContent(pager.writer.String())
+		pager.writer.Reset()
 
 		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
 		pager.view.LineDown(1)

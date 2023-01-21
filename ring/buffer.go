@@ -7,7 +7,6 @@ import (
 type Buffer struct {
 	capacity uint32
 	write    uint32
-	read     uint32
 	data     [][]byte
 }
 
@@ -26,7 +25,6 @@ func New(factor uint32) *Buffer {
 	return &Buffer{
 		capacity: 1 << factor,
 		write:    0,
-		read:     0,
 		data:     make([][]byte, 1<<factor),
 	}
 }

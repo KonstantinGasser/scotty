@@ -70,24 +70,44 @@ func TestWindowN(t *testing.T) {
 		n     int
 		input [][]byte
 		want  string
+		fn    func([]byte) []byte
 	}{
 		{
 			name:  "window last entry (N=1); buffer half full",
 			n:     1,
 			input: makeByteSliceN(int((1<<factor)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
 			want:  "7", // last entry in the buffer is 7 (1<<factor/2 = 8)
+			fn:    nil,
 		},
 		{
-			name:  "window  entries (N=4); buffer half full",
+			name:  "window entries (N=4); buffer half full",
 			n:     4,
 			input: makeByteSliceN(int((1<<factor)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
-			want:  "4567", // last entry in the buffer is 7 (1<<factor/2 = 8)
+			want:  "4567", // last 4 entries in the buffer
+			fn:    nil,
+		},
+		{
+			name:  "window entries (N=6); buffer overflow by 4",
+			n:     6,
+			input: makeByteSliceN(int((1<<factor)+4), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+			want:  "141516171819",
+			fn:    nil,
+		},
+		{
+			name:  "window entries (N=6); buffer overflow by 4; custom func",
+			n:     6,
+			input: makeByteSliceN(int((1<<factor)+4), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+			want:  "14,15,16,17,18,19,",
+			fn: func(v []byte) []byte {
+				return append(v, byte(','))
+			},
 		},
 	}
 
 	var buf *Buffer
 
 	var w *strings.Builder
+
 	for _, tc := range tt {
 
 		// prepare buffer for reading
@@ -98,7 +118,7 @@ func TestWindowN(t *testing.T) {
 
 		w = &strings.Builder{}
 
-		if err := buf.Window(w, tc.n, nil); err != nil {
+		if err := buf.Window(w, tc.n, tc.fn); err != nil {
 			t.Fatalf("[%s] unable to Window buffer, got an unexpected error: %v", tc.name, err)
 		}
 
