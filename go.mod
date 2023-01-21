@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/glycerine/rbuf v0.0.0-20190314090850-75b78581bebe // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 )
