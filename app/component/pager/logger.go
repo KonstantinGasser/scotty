@@ -1,12 +1,7 @@
 package pager
 
 import (
-	"bytes"
-	"fmt"
-	"time"
-
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
-	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -59,7 +54,6 @@ func NewLogger(width, height int) *Logger {
 		view:   view,
 		width:  w,
 		height: h,
-		store:  store.New(),
 		footer: newFooter(w, h),
 	}
 }
@@ -99,16 +93,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		label := []byte("[" + msg.Label + "]")
 
-		pager.store.Insert(bytes.Join([][]byte{label, msg.Data}, []byte(" ")))
-
-		var content = ""
-
-		for i := range pager.store.Tail(uint32(pager.height)) {
-			// debug.Debug(string(item))
-			content += fmt.Sprintf("[%d] %d:%d\n", time.Now().UnixNano(), i, pager.height)
-		}
-
-		pager.view.SetContent(content)
+		pager.view.SetContent("")
 
 		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
 		pager.view.LineDown(1)

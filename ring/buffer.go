@@ -39,16 +39,23 @@ func (buf *Buffer) Append(p []byte) {
 // Window write up to N of the last appended items to the io.Writer
 // To modify items before writing them to the writer, a function can be provided.
 //
-func (buf Buffer) Window(w io.Writer, n uint32, fn func([]byte) []byte) error {
+func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 
-	var window int
+	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
+	var offset = writeIndex - n
 
-	if n < buf.read {
-		window = int(buf.read - n)
-	}
+	for i := offset; i < writeIndex; i++ { // this loops over range [offset, writeIndex)
 
-	for i := window; i < int(buf.read); i++ {
-		w.Write(buf.data[i])
+		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+
+		val := buf.data[index]
+		if fn != nil {
+			val = fn(val)
+		}
+
+		if _, err := w.Write(val); err != nil {
+			return err
+		}
 	}
 
 	return nil
