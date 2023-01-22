@@ -18,6 +18,20 @@ func makeByteSliceN(n int, fn func(i int) []byte) [][]byte {
 	return out
 }
 
+func makeStringN(n int, fn func(i int) string) string {
+
+	var out = ""
+	for i := 0; i < n; i++ {
+		if fn != nil {
+			out += fn(i)
+			continue
+		}
+		out += fmt.Sprint(i)
+	}
+
+	return out
+}
+
 func TestAppend(t *testing.T) {
 
 	var factor uint32 = 2
@@ -126,4 +140,115 @@ func TestWindowN(t *testing.T) {
 			t.Fatalf("[%s] windowed string differs. want: %q, got: %q", tc.name, tc.want, w.String())
 		}
 	}
+}
+
+func TestScrollUp(t *testing.T) {
+
+	tt := []struct {
+		name        string
+		factor      uint32
+		scrollDelta int
+		n           int
+		input       [][]byte
+		want        string
+		fn          func([]byte) []byte
+	}{
+		// {
+		// 	name:        "scroll-up (delta=3) (N=4); buffer half full",
+		// 	factor:      4, // cap => 16
+		// 	scrollDelta: 3,
+		// 	n:           2,
+		// 	// filled -> 16 / 2 = 8
+		// 	input: makeByteSliceN(int((1<<4)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+		// 	want:  "34",
+		// 	fn:    nil,
+		// },
+		// {
+		// 	name:        "scroll-up (delta=1) (N=1); buffer overflowed by 2",
+		// 	factor:      2, // cap => 4
+		// 	scrollDelta: 1,
+		// 	n:           2,
+		// 	// overflowed by 16
+		// 	input: makeByteSliceN(int((1<<2)+2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+		// 	want: makeStringN((1<<2)+2, func(i int) string {
+		// 		if i < ((1<<2)+2)-2 {
+		// 			return ""
+		// 		}
+		// 		return fmt.Sprintf("%d,", i-1)
+		// 	}), // string rep of i from 0-126 concatenated
+		// 	fn: func(v []byte) []byte {
+		// 		return append(v, byte(','))
+		// 	},
+		// },
+		{
+			name:        "scroll-up (delta=1) (N=50); buffer overflowed by 127",
+			factor:      12, // cap => 4096
+			scrollDelta: 1,
+			n:           50,
+			// overflowed by 127
+			input: makeByteSliceN(int((1<<12)+127), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+			want: makeStringN((1<<12)+127, func(i int) string {
+				if i < ((1<<12)+127)-50 {
+					return ""
+				}
+				return fmt.Sprintf("%d,", i-1)
+			}), // string rep of i from 0-126 concatenated
+			fn: func(v []byte) []byte {
+				return append(v, byte(','))
+			},
+		},
+	}
+
+	var buf *Buffer
+	var w = &strings.Builder{}
+	for _, tc := range tt {
+		buf = New(tc.factor)
+
+		for _, val := range tc.input {
+			buf.Append(val)
+		}
+
+		if err := buf.ScrollUp(w, tc.scrollDelta, tc.n, tc.fn); err != nil {
+			t.Fatalf("[%s] unable to ScrollUp buffer, got an unexpected error: %v", tc.name, err)
+		}
+
+		if w.String() != tc.want {
+			t.Fatalf("[%s] scrolled-up string differs.\nwant: %q\ngot: %q", tc.name, tc.want, w.String())
+		}
+
+		w.Reset()
+	}
+}
+
+func BenchmarkAppend(b *testing.B) {
+	b.ReportAllocs()
+
+	buf := New(12)
+
+	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
+
+	for i := 0; i < b.N; i++ {
+		buf.Append(payload)
+	}
+}
+
+func BenchmarkWindowN(b *testing.B) {
+
+	buf := New(12)
+
+	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
+
+	for i := 0; i < (1<<12)+128; i++ {
+		buf.Append(payload)
+	}
+
+	b.ReportAllocs()
+	b.Run("windowing", func(bench *testing.B) {
+		var w = &strings.Builder{}
+		size := 50 // pager height in full screen on 16'' monitor
+
+		for i := 0; i < bench.N; i++ {
+			buf.Window(w, size, nil)
+		}
+	})
 }

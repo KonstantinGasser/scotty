@@ -39,10 +39,33 @@ func (buf *Buffer) Append(p []byte) {
 //
 func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 
+	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
 	var offset = writeIndex - n
 
 	for i := offset; i < writeIndex; i++ { // this loops over range [offset, writeIndex)
+
+		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+
+		val := buf.data[index]
+		if fn != nil {
+			val = fn(val)
+		}
+
+		if _, err := w.Write(val); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func([]byte) []byte) error {
+
+	var writeIndex, cap int = int(buf.write), int(buf.capacity)
+	var offset = writeIndex - n - delta
+
+	for i := offset; i < writeIndex-delta; i++ { // this loops over range [offset, writeIndex)
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
