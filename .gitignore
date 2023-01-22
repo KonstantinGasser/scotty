@@ -3,4 +3,5 @@ beam
 .DS_Store
 .vscode
 */*.out
-*.log
+*.logi
+**/*.test
