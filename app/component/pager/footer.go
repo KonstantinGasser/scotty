@@ -70,27 +70,24 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		f.width = msg.Width - 2 // account for margin
 		f.height = msg.Height
 		return f, nil
-	case plexer.BeamNew:
-		f.mtx.RLock()
-		if beam, ok := f.connectedBeams[string(msg)]; ok {
+	case beamConnected:
+		if beam, ok := f.connectedBeams[msg.label]; ok {
 			beam.count = 0
-			f.mtx.RUnlock()
 			break
 		}
-		bg, fg := styles.RandColor()
-		// f.mtx.RLock()
-		f.connectedBeams[string(msg)] = &stream{
-			colorBg: bg,
+
+		fg := styles.InverseColor(msg.color)
+		f.connectedBeams[msg.label] = &stream{
+			colorBg: msg.color,
 			colorFg: fg,
 			style: lipgloss.NewStyle().
-				Background(bg).
+				Background(msg.color).
 				Foreground(fg).
 				Padding(0, 1).
 				Bold(true).
 				Render,
 			count: 0,
 		}
-		// f.mtx.RUnlock()
 
 	case plexer.BeamError:
 		// QUESTION @KonstantinGasser:

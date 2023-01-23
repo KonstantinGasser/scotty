@@ -10,7 +10,7 @@ type Buffer struct {
 	data     [][]byte
 }
 
-// New initiates are new ring buffer with a set capacity.
+// New initiates a new ring buffer with a set capacity.
 // The provided factor can be any number however one must
 // note that the capacity is the result of 1 << factor to
 // ensure an end capacity of the power of 2.
@@ -57,7 +57,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 		// is appended to whenever write is called. However, this
 		// is a potential bottleneck as runtime.growslice and
 		// runtime.memmove will be called more frequently to adjust the
-		// strings.Builder buffer.
+		// strings.Builder/bytes.Buffer buffer.
 		if _, err := w.Write(val); err != nil {
 			return err
 		}

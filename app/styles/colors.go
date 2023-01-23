@@ -50,6 +50,19 @@ func brightnessRation(r, g, b uint32) int {
 	return 1
 }
 
+func InverseColor(c lipgloss.Color) lipgloss.Color {
+
+	r, g, b, _ := c.RGBA()
+
+	var inverse lipgloss.Color = lipgloss.Color("#ffffff")
+
+	ratio := brightnessRation(r, g, b)
+	if ratio == 1 {
+		inverse = lipgloss.Color("#000000")
+	}
+	return inverse
+}
+
 func init() {
 	rand.Seed(time.Now().Unix())
 }

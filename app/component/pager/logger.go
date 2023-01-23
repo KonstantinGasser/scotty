@@ -3,6 +3,7 @@ package pager
 import (
 	"bytes"
 
+	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/ring"
@@ -26,6 +27,11 @@ var (
 		Padding(1)
 )
 
+type beamConnected struct {
+	label string
+	color lipgloss.Color
+}
+
 // Logger implements the tea.Model interface.
 // Furthermore, Logger allows to tail logs.
 // Logger does not not store the logs its only
@@ -33,6 +39,8 @@ var (
 type Logger struct {
 	buffer ring.Buffer
 	writer bytes.Buffer
+
+	beams map[string]lipgloss.Color
 	// underlying model which handles
 	// scrolling and rendering of the logs
 	view viewport.Model
@@ -58,6 +66,8 @@ func NewLogger(width, height int) *Logger {
 	return &Logger{
 		buffer: ring.New(uint32(12)),
 		writer: bytes.Buffer{},
+
+		beams:  map[string]lipgloss.Color{},
 		view:   view,
 		width:  w,
 		height: h,
@@ -93,6 +103,24 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// update viewport width an height
 		pager.view.Width = pager.width
 		pager.view.Height = pager.height
+
+	case plexer.BeamNew:
+
+		if _, ok := pager.beams[string(msg)]; ok {
+			// means beam existed before but was restarted/disconnected/etc.
+			// as such color is already defined - ignore call
+			// only after restart of scotty color is redefined
+			break
+		}
+
+		color, _ := styles.RandColor()
+		pager.beams[string(msg)] = color
+
+		pager.footer, _ = pager.footer.Update(beamConnected{
+			label: string(msg),
+			color: color,
+		})
+		return pager, tea.Batch(cmds...)
 
 	case plexer.BeamMessage:
 
