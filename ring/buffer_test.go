@@ -1,6 +1,7 @@
 package ring
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -58,7 +59,7 @@ func TestAppend(t *testing.T) {
 		},
 	}
 
-	var buf *Buffer
+	var buf Buffer
 	for _, tc := range tt {
 
 		buf = New(factor)
@@ -118,9 +119,8 @@ func TestWindowN(t *testing.T) {
 		},
 	}
 
-	var buf *Buffer
-
-	var w *strings.Builder
+	var buf Buffer
+	var w strings.Builder
 
 	for _, tc := range tt {
 
@@ -130,9 +130,9 @@ func TestWindowN(t *testing.T) {
 			buf.Append(v)
 		}
 
-		w = &strings.Builder{}
+		w = strings.Builder{}
 
-		if err := buf.Window(w, tc.n, tc.fn); err != nil {
+		if err := buf.Window(&w, tc.n, tc.fn); err != nil {
 			t.Fatalf("[%s] unable to Window buffer, got an unexpected error: %v", tc.name, err)
 		}
 
@@ -153,33 +153,33 @@ func TestScrollUp(t *testing.T) {
 		want        string
 		fn          func([]byte) []byte
 	}{
-		// {
-		// 	name:        "scroll-up (delta=3) (N=4); buffer half full",
-		// 	factor:      4, // cap => 16
-		// 	scrollDelta: 3,
-		// 	n:           2,
-		// 	// filled -> 16 / 2 = 8
-		// 	input: makeByteSliceN(int((1<<4)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
-		// 	want:  "34",
-		// 	fn:    nil,
-		// },
-		// {
-		// 	name:        "scroll-up (delta=1) (N=1); buffer overflowed by 2",
-		// 	factor:      2, // cap => 4
-		// 	scrollDelta: 1,
-		// 	n:           2,
-		// 	// overflowed by 16
-		// 	input: makeByteSliceN(int((1<<2)+2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
-		// 	want: makeStringN((1<<2)+2, func(i int) string {
-		// 		if i < ((1<<2)+2)-2 {
-		// 			return ""
-		// 		}
-		// 		return fmt.Sprintf("%d,", i-1)
-		// 	}), // string rep of i from 0-126 concatenated
-		// 	fn: func(v []byte) []byte {
-		// 		return append(v, byte(','))
-		// 	},
-		// },
+		{
+			name:        "scroll-up (delta=3) (N=4); buffer half full",
+			factor:      4, // cap => 16
+			scrollDelta: 3,
+			n:           2,
+			// filled -> 16 / 2 = 8
+			input: makeByteSliceN(int((1<<4)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+			want:  "34",
+			fn:    nil,
+		},
+		{
+			name:        "scroll-up (delta=1) (N=1); buffer overflowed by 2",
+			factor:      2, // cap => 4
+			scrollDelta: 1,
+			n:           2,
+			// overflowed by 16
+			input: makeByteSliceN(int((1<<2)+2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
+			want: makeStringN((1<<2)+2, func(i int) string {
+				if i < ((1<<2)+2)-2 {
+					return ""
+				}
+				return fmt.Sprintf("%d,", i-1)
+			}), // string rep of i from 0-126 concatenated
+			fn: func(v []byte) []byte {
+				return append(v, byte(','))
+			},
+		},
 		{
 			name:        "scroll-up (delta=1) (N=50); buffer overflowed by 127",
 			factor:      12, // cap => 4096
@@ -199,7 +199,7 @@ func TestScrollUp(t *testing.T) {
 		},
 	}
 
-	var buf *Buffer
+	var buf Buffer
 	var w = &strings.Builder{}
 	for _, tc := range tt {
 		buf = New(tc.factor)
@@ -244,11 +244,101 @@ func BenchmarkWindowN(b *testing.B) {
 
 	b.ReportAllocs()
 	b.Run("windowing", func(bench *testing.B) {
-		var w = &strings.Builder{}
+		var w = strings.Builder{}
 		size := 50 // pager height in full screen on 16'' monitor
 
 		for i := 0; i < bench.N; i++ {
-			buf.Window(w, size, nil)
+			err := buf.Window(&w, size, nil)
+			if err != nil {
+				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
+			}
+		}
+	})
+}
+
+func BenchmarkWindowNWithPreGrow(b *testing.B) {
+
+	buf := New(12)
+
+	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
+
+	for i := 0; i < (1<<12)+128; i++ {
+		buf.Append(payload)
+	}
+
+	b.ReportAllocs()
+	b.Run("windowing-with-preGrow", func(bench *testing.B) {
+		var w = strings.Builder{}
+		size := 50         // pager height in full screen on 16'' monitor
+		screenWidth := 200 // this will be available in the pager.Logger based on that we can determine the final max size of the string
+
+		w.Grow((size * screenWidth) * 2)
+		for i := 0; i < bench.N; i++ {
+			err := buf.Window(&w, size, func(v []byte) []byte {
+				if len(v) > screenWidth {
+					return v[:screenWidth]
+				}
+				return v
+			})
+			if err != nil {
+				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
+			}
+		}
+	})
+}
+
+func BenchmarkWindowNWithBytesBuffer(b *testing.B) {
+
+	buf := New(12)
+
+	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
+
+	for i := 0; i < (1<<12)+128; i++ {
+		buf.Append(payload)
+	}
+
+	b.ReportAllocs()
+	b.Run("windowing-with-bytes_buf", func(bench *testing.B) {
+		var w = bytes.Buffer{}
+		size := 50 // pager height in full screen on 16'' monitor
+
+		for i := 0; i < bench.N; i++ {
+			err := buf.Window(&w, size, nil)
+			if err != nil {
+				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
+			}
+		}
+	})
+}
+
+func BenchmarkWindowNWithBytesBufferGrow(b *testing.B) {
+
+	buf := New(12)
+
+	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
+
+	for i := 0; i < (1<<12)+128; i++ {
+		buf.Append(payload)
+	}
+
+	b.ReportAllocs()
+	b.Run("windowing-with-bytes_buf-growN", func(bench *testing.B) {
+		size := 50         // pager height in full screen on 16'' monitor
+		screenWidth := 200 // this will be available in the pager.Logger based on that we can determine the final max size of the string
+
+		var w = bytes.Buffer{}
+		w.Grow(size * screenWidth)
+
+		for i := 0; i < bench.N; i++ {
+			err := buf.Window(&w, size, func(v []byte) []byte {
+				if len(v) > screenWidth {
+					return v[:screenWidth]
+				}
+				return v
+			})
+			if err != nil {
+				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
+			}
 		}
 	})
 }

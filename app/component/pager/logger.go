@@ -1,7 +1,7 @@
 package pager
 
 import (
-	"strings"
+	"bytes"
 
 	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
@@ -31,8 +31,8 @@ var (
 // Logger does not not store the logs its only
 // porose is it to display them.
 type Logger struct {
-	buffer *ring.Buffer
-	writer *strings.Builder
+	buffer ring.Buffer
+	writer bytes.Buffer
 	// underlying model which handles
 	// scrolling and rendering of the logs
 	view viewport.Model
@@ -57,7 +57,7 @@ func NewLogger(width, height int) *Logger {
 	// view.YPosition = 1
 	return &Logger{
 		buffer: ring.New(uint32(12)),
-		writer: &strings.Builder{},
+		writer: bytes.Buffer{},
 		view:   view,
 		width:  w,
 		height: h,
@@ -79,6 +79,12 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		pager.view, cmd = pager.view.Update(msg)
+		switch msg.Type {
+		case tea.MouseWheelUp:
+			break
+		case tea.MouseWheelDown:
+			break
+		}
 		return pager, cmd
 	case tea.WindowSizeMsg:
 		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
@@ -94,7 +100,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.buffer.Append(append(p, msg.Data...))
 
 		err := pager.buffer.Window(
-			pager.writer,
+			&pager.writer,
 			pager.height,
 			nil,
 		)

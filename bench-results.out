@@ -1,0 +1,12 @@
+strings.Builder: plain
+77649	     14197 ns/op	   37819 B/op	       0 allocs/op
+
+strings.Builder: Grow(n) with adjusting func
+222999	     12145 ns/op	   40196 B/op	       0 allocs/op
+
+bytes.Builder: plain
+326218	      3296 ns/op	   15017 B/op	       0 allocs/op
+
+bytes.Builder: Grow(n) with adjusting func
+298526	      3763 ns/op 	   17819 B/op	       0 allocs/op
+

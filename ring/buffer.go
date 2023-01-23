@@ -21,8 +21,8 @@ type Buffer struct {
 // the ring buffer. To calculate the approximated memory size
 // one has to take the size of the on average expected []byte
 // stored in the buffer and compute: (1<<factor)*avg(item_size)
-func New(factor uint32) *Buffer {
-	return &Buffer{
+func New(factor uint32) Buffer {
+	return Buffer{
 		capacity: 1 << factor,
 		write:    0,
 		data:     make([][]byte, 1<<factor),
@@ -52,12 +52,40 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 			val = fn(val)
 		}
 
+		// under the hood we pass in a strings.Builder/bytes.Buffer
+		// which again is using a slice of bytes where data
+		// is appended to whenever write is called. However, this
+		// is a potential bottleneck as runtime.growslice and
+		// runtime.memmove will be called more frequently to adjust the
+		// strings.Builder buffer.
 		if _, err := w.Write(val); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (buf Buffer) WindowS(n int, fn func([]byte) []byte) string {
+
+	// write := w.Write
+	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
+	var offset = writeIndex - n
+
+	var out = ""
+	for i := offset; i < writeIndex; i++ { // this loops over range [offset, writeIndex)
+
+		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+
+		val := buf.data[index]
+		if fn != nil {
+			val = fn(val)
+		}
+
+		out += string(val)
+	}
+
+	return out
 }
 
 func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func([]byte) []byte) error {
