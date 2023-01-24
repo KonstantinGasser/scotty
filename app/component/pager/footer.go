@@ -125,6 +125,12 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// over the slice when rendering the items. Doing this however,
 		// we are loosing the information about the index of an item
 		// and we can no longer splice the slice but need a for loop.
+		index := f.streamIndex[string(msg)]
+		delete(f.streamIndex, string(msg))
+		f.streams = append(f.streams[:index], f.streams[index+1:]...)
+		for i, str := range f.streams {
+			f.streamIndex[str.label] = i
+		}
 
 	case plexer.Error:
 		// QUESTION @KonstantinGasser:

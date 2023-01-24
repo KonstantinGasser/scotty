@@ -127,7 +127,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// currently the app is not doing anything with the message as its child models are taking care
 	// of it. However, the app requests bubbletea to wait and listen for new messages pushed to
 	// channels
-	case plexer.Message, plexer.Error, plexer.Subscriber:
+	case plexer.Message, plexer.Error, plexer.Subscriber, plexer.Unsubscribe:
 
 		switch msg.(type) {
 		case plexer.Error:
