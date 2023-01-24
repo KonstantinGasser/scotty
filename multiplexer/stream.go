@@ -10,12 +10,12 @@ import (
 
 type stream struct {
 	label  string
-	errs   chan<- BeamError
-	msgs   chan<- BeamMessage
+	errs   chan<- Error
+	msgs   chan<- Message
 	reader net.Conn
 }
 
-func newStream(conn net.Conn, errs chan<- BeamError, msgs chan<- BeamMessage) (*stream, error) {
+func newStream(conn net.Conn, errs chan<- Error, msgs chan<- Message) (*stream, error) {
 
 	s := stream{
 		errs:   errs,
@@ -45,10 +45,10 @@ func (s *stream) handle() {
 				// the stream has disconnected/closed
 				break
 			}
-			s.errs <- BeamError(fmt.Errorf("unable to read from %q: %w", s.label, err))
+			s.errs <- Error(fmt.Errorf("unable to read from %q: %w", s.label, err))
 			return
 		}
-		s.msgs <- BeamMessage{
+		s.msgs <- Message{
 			Label: s.label,
 			Data:  msg,
 		}

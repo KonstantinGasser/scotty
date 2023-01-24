@@ -70,12 +70,16 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		f.width = msg.Width - 2 // account for margin
 		f.height = msg.Height
 		return f, nil
-	case beamConnected:
-		if beam, ok := f.connectedBeams[msg.label]; ok {
-			beam.count = 0
-			break
-		}
 
+	// whenever a stream connects to scotty the event
+	// is propagated. The footer uses the event to
+	// display connected stream and the number of logs streamed.
+	// Streams which disconnect temporally are removed from the
+	// footer state (color coding is delegated from the pager and thus
+	// stays the same unless the same stream connects with a different label).
+	// Each stream has a random background color for readability the footer
+	// either uses a white or black foreground color
+	case subscriber:
 		fg := styles.InverseColor(msg.color)
 		f.connectedBeams[msg.label] = &stream{
 			colorBg: msg.color,
@@ -89,11 +93,11 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			count: 0,
 		}
 
-	case plexer.BeamError:
+	case plexer.Error:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?
 		f.err = msg
-	case plexer.BeamMessage:
+	case plexer.Message:
 		// plexer.BeamMessage needs to be extended with
 		// information about the stream such as the label of it
 		// only then we can increase the respective count

@@ -11,14 +11,14 @@ type Socket struct {
 	// any error while accepting connections, creating the stream
 	// or reading from the stream will be piped to this channel
 	// so the UI can display errors
-	errors chan BeamError
+	errors chan Error
 	// any message (exclusive the SYNC message) of a stream
 	// will be send through this channel
-	messages chan BeamMessage
+	messages chan Message
 	// communicate that a new stream has connected
 	// to scotty - for now we only pipe the stream label
 	// as an information to the UI
-	beams chan BeamNew
+	beams chan Subscriber
 
 	listener net.Listener
 }
@@ -32,9 +32,9 @@ func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
 
 	return &Socket{
 		quite:    q,
-		errors:   make(chan BeamError),
-		messages: make(chan BeamMessage),
-		beams:    make(chan BeamNew),
+		errors:   make(chan Error),
+		messages: make(chan Message),
+		beams:    make(chan Subscriber),
 		listener: ln,
 	}, nil
 }
@@ -69,11 +69,11 @@ func (sock *Socket) Run() {
 				return
 			}
 			go s.handle()
-			sock.beams <- BeamNew(s.label)
+			sock.beams <- Subscriber(s.label)
 		}(conn)
 	}
 }
 
-func (sock *Socket) Errors() <-chan BeamError     { return sock.errors }
-func (sock *Socket) Messages() <-chan BeamMessage { return sock.messages }
-func (sock *Socket) Beams() <-chan BeamNew        { return sock.beams }
+func (sock *Socket) Errors() <-chan Error     { return sock.errors }
+func (sock *Socket) Messages() <-chan Message { return sock.messages }
+func (sock *Socket) Beams() <-chan Subscriber { return sock.beams }

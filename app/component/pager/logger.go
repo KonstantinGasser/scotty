@@ -27,7 +27,7 @@ var (
 		Padding(1)
 )
 
-type beamConnected struct {
+type subscriber struct {
 	label string
 	color lipgloss.Color
 }
@@ -104,25 +104,43 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.view.Width = pager.width
 		pager.view.Height = pager.height
 
-	case plexer.BeamNew:
+	// event dispatched each time a new stream connects to
+	// the multiplexer. on-event we need to update the footer
+	// model with the new stream information as well as update
+	// the loggers state. The logger keeps track of connected beams
+	// however only cares about the color to use when rendering the logs.
+	// Logger will ensure that the color for the printed logs of a stream
+	// are matching the color information in the footer
+	case plexer.Subscriber:
 
-		if _, ok := pager.beams[string(msg)]; ok {
-			// means beam existed before but was restarted/disconnected/etc.
-			// as such color is already defined - ignore call
-			// only after restart of scotty color is redefined
-			break
+		// stream was connected prior as such a color does already exist
+		// and we only need to tell the footer about it again
+		if color, ok := pager.beams[string(msg)]; ok {
+			pager.footer, _ = pager.footer.Update(subscriber{
+				label: string(msg),
+				color: color,
+			})
+			return pager, tea.Batch(cmds...)
 		}
 
 		color, _ := styles.RandColor()
 		pager.beams[string(msg)] = color
 
-		pager.footer, _ = pager.footer.Update(beamConnected{
+		pager.footer, _ = pager.footer.Update(subscriber{
 			label: string(msg),
 			color: color,
 		})
+
 		return pager, tea.Batch(cmds...)
 
-	case plexer.BeamMessage:
+	// event dispatched by the multiplexer each time a client/stream
+	// sends a log linen.
+	// The logger needs to add the ansi color code stored for the stream
+	// to the dispatched message before adding the data to the ring buffer.
+	// Once added to the ring buffer the logger queries for the latest N
+	// records (where N is equal to the height of the current viewport.Model)
+	// and pass the string to the viewport.Model for rendering
+	case plexer.Message:
 
 		p := []byte("[" + msg.Label + "] ")
 		pager.buffer.Append(append(p, msg.Data...))
@@ -144,6 +162,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return pager, tea.Batch(cmds...)
 	}
 
+	// propagate events to child models.
+	// in certain cases there will be an early return
+	// in any of the cases above either because the event
+	// is not relevant for any downstream model or because
+	// ??? there was some other reason...??
 	pager.view, cmd = pager.view.Update(msg)
 	cmds = append(cmds, cmd)
 
