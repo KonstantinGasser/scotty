@@ -69,28 +69,6 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 	return nil
 }
 
-func (buf Buffer) WindowS(n int, fn func([]byte) []byte) string {
-
-	// write := w.Write
-	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
-	var offset = writeIndex - n
-
-	var out = ""
-	for i := offset; i < writeIndex; i++ { // this loops over range [offset, writeIndex)
-
-		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
-
-		val := buf.data[index]
-		if fn != nil {
-			val = fn(val)
-		}
-
-		out += string(val)
-	}
-
-	return out
-}
-
 func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func([]byte) []byte) error {
 
 	var writeIndex, cap int = int(buf.write), int(buf.capacity)
