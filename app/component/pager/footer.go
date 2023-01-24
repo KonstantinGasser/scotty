@@ -112,6 +112,7 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 			// don't forget to update the index map
 			f.streamIndex[msg.label] = len(f.streams) - 1
+			break
 		}
 
 		f.streams[index].count = 0
@@ -139,7 +140,12 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case plexer.Message:
 		// lookup the stream which dispatched the event
 		// and increase the log count
-		f.streams[f.streamIndex[msg.Label]].count++
+		index, ok := f.streamIndex[msg.Label]
+		if !ok {
+			break
+		}
+
+		f.streams[index].count++
 	}
 
 	return f, tea.Batch(cmds...)
