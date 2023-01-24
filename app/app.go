@@ -51,17 +51,17 @@ type App struct {
 
 	// errs receives errors happening in the multiplexer
 	// while working/reading from streams
-	errs <-chan plexer.BeamError
+	errs <-chan plexer.Error
 	// messages receives each message send by a stream,
 	// excluding SYNC messages from the client beam command
-	messages <-chan plexer.BeamMessage
+	messages <-chan plexer.Message
 	// beams receives purely information about the fact
 	// that a new stream has connected. The received string
 	// is the label of the stream
-	beams <-chan plexer.BeamNew
+	beams <-chan plexer.Subscriber
 }
 
-func New(q chan<- struct{}, errs <-chan plexer.BeamError, msgs <-chan plexer.BeamMessage, beams <-chan plexer.BeamNew) (*App, error) {
+func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, beams <-chan plexer.Subscriber) (*App, error) {
 
 	width, height, err := windowSize()
 	if err != nil {
@@ -120,8 +120,19 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.width = msg.Width
 		app.height = msg.Height
 
-	case plexer.BeamMessage: // do something with the message like storing it somewhere
-		cmds = append(cmds, app.consumeMsg)
+	// currently the app is not doing anything with the message as its child models are taking care
+	// of it. However, the app requests bubbletea to wait and listen for new messages pushed to
+	// channels
+	case plexer.Message, plexer.Error, plexer.Subscriber:
+
+		switch msg.(type) {
+		case plexer.Error:
+			cmds = append(cmds, app.consumeErrs)
+		case plexer.Subscriber:
+			cmds = append(cmds, app.consumeBeams)
+		case plexer.Message:
+			cmds = append(cmds, app.consumeMsg)
+		}
 
 		// enable tailing of logs view
 		if app.state == welcomeView {
