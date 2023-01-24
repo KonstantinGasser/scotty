@@ -18,7 +18,8 @@ type Socket struct {
 	// communicate that a new stream has connected
 	// to scotty - for now we only pipe the stream label
 	// as an information to the UI
-	beams chan Subscriber
+	subscribe   chan Subscriber
+	unsubscribe chan Unsubscribe
 
 	listener net.Listener
 }
@@ -31,11 +32,12 @@ func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
 	}
 
 	return &Socket{
-		quite:    q,
-		errors:   make(chan Error),
-		messages: make(chan Message),
-		beams:    make(chan Subscriber),
-		listener: ln,
+		quite:       q,
+		errors:      make(chan Error),
+		messages:    make(chan Message),
+		subscribe:   make(chan Subscriber),
+		unsubscribe: make(chan Unsubscribe),
+		listener:    ln,
 	}, nil
 }
 
@@ -63,17 +65,18 @@ func (sock *Socket) Run() {
 		// this can be a blocking operation up to 5 seconds
 		// (sync timeout)
 		go func(c net.Conn) {
-			s, err := newStream(c, sock.errors, sock.messages)
+			s, err := newStream(c, sock.errors, sock.messages, sock.unsubscribe)
 			if err != nil {
 				sock.errors <- err
 				return
 			}
 			go s.handle()
-			sock.beams <- Subscriber(s.label)
+			sock.subscribe <- Subscriber(s.label)
 		}(conn)
 	}
 }
 
-func (sock *Socket) Errors() <-chan Error     { return sock.errors }
-func (sock *Socket) Messages() <-chan Message { return sock.messages }
-func (sock *Socket) Beams() <-chan Subscriber { return sock.beams }
+func (sock *Socket) Errors() <-chan Error            { return sock.errors }
+func (sock *Socket) Messages() <-chan Message        { return sock.messages }
+func (sock *Socket) Subscribe() <-chan Subscriber    { return sock.subscribe }
+func (sock *Socket) Unsubscribe() <-chan Unsubscribe { return sock.unsubscribe }

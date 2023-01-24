@@ -9,18 +9,20 @@ import (
 )
 
 type stream struct {
-	label  string
-	errs   chan<- Error
-	msgs   chan<- Message
-	reader net.Conn
+	label       string
+	errs        chan<- Error
+	msgs        chan<- Message
+	unsubscribe chan<- Unsubscribe
+	reader      net.Conn
 }
 
-func newStream(conn net.Conn, errs chan<- Error, msgs chan<- Message) (*stream, error) {
+func newStream(conn net.Conn, errs chan<- Error, msgs chan<- Message, unsubscribe chan<- Unsubscribe) (*stream, error) {
 
 	s := stream{
-		errs:   errs,
-		msgs:   msgs,
-		reader: conn,
+		errs:        errs,
+		msgs:        msgs,
+		unsubscribe: unsubscribe,
+		reader:      conn,
 	}
 
 	if err := s.waitForSync(); err != nil {
@@ -40,9 +42,7 @@ func (s *stream) handle() {
 		msg, err := buf.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
-				// here it would be nice to notify
-				// the user through the scotty ui that
-				// the stream has disconnected/closed
+				s.unsubscribe <- Unsubscribe(s.label)
 				break
 			}
 			s.errs <- Error(fmt.Errorf("unable to read from %q: %w", s.label, err))

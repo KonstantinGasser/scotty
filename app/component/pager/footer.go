@@ -116,6 +116,16 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		f.streams[index].count = 0
 
+	case plexer.Unsubscribe:
+		// QUESTION @KonstantinGasser:
+		// if we slice the streams in order remove an index
+		// we would need to re-index the streamIndex map as well.
+		// An other option would be to maintain a map[string]*stream
+		// this way we can modify the item through its address and loop
+		// over the slice when rendering the items. Doing this however,
+		// we are loosing the information about the index of an item
+		// and we can no longer splice the slice but need a for loop.
+
 	case plexer.Error:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?

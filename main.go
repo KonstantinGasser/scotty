@@ -29,7 +29,8 @@ func main() {
 		quite,
 		multiplex.Errors(),
 		multiplex.Messages(),
-		multiplex.Beams(),
+		multiplex.Subscribe(),
+		multiplex.Unsubscribe(),
 	)
 	if err != nil {
 		fmt.Println(err.Error())

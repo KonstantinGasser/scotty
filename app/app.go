@@ -58,10 +58,11 @@ type App struct {
 	// beams receives purely information about the fact
 	// that a new stream has connected. The received string
 	// is the label of the stream
-	beams <-chan plexer.Subscriber
+	subscriber  <-chan plexer.Subscriber
+	unsubscribe <-chan plexer.Unsubscribe
 }
 
-func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, beams <-chan plexer.Subscriber) (*App, error) {
+func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, subs <-chan plexer.Subscriber, unsubs <-chan plexer.Unsubscribe) (*App, error) {
 
 	width, height, err := windowSize()
 	if err != nil {
@@ -82,24 +83,27 @@ func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message
 		height: height,
 		state:  welcomeView,
 
-		errs:     errs,
-		messages: msgs,
-		beams:    beams,
+		errs:        errs,
+		messages:    msgs,
+		subscriber:  subs,
+		unsubscribe: unsubs,
 	}, nil
 }
 
 /* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */
-func (app *App) consumeMsg() tea.Msg   { return <-app.messages }
-func (app *App) consumeErrs() tea.Msg  { return <-app.errs }
-func (app *App) consumeBeams() tea.Msg { return <-app.beams }
+func (app *App) consumeMsg() tea.Msg          { return <-app.messages }
+func (app *App) consumeErrs() tea.Msg         { return <-app.errs }
+func (app *App) consumeSubscriber() tea.Msg   { return <-app.subscriber }
+func (app *App) consumerUnsubscribe() tea.Msg { return <-app.unsubscribe }
 
 // Init kicks off all the background listening jobs to receive
 // tea.Msg coming from outside the app.App such as the multiplexer.Socket
 func (app *App) Init() tea.Cmd {
 	return tea.Batch(
 		app.consumeErrs,
-		app.consumeBeams,
+		app.consumeSubscriber,
 		app.consumeMsg,
+		app.consumerUnsubscribe,
 	)
 }
 
@@ -129,7 +133,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case plexer.Error:
 			cmds = append(cmds, app.consumeErrs)
 		case plexer.Subscriber:
-			cmds = append(cmds, app.consumeBeams)
+			cmds = append(cmds, app.consumeSubscriber)
+		case plexer.Unsubscribe:
+			cmds = append(cmds, app.consumerUnsubscribe)
 		case plexer.Message:
 			cmds = append(cmds, app.consumeMsg)
 		}

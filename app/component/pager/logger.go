@@ -159,6 +159,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
 		pager.view.LineDown(1)
+
 	}
 
 	// propagate events to child models.
