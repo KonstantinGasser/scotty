@@ -27,10 +27,11 @@ func newStream(label string, proto string, addr string, asDaemon bool) (*stream,
 		return nil, err
 	}
 
-	var writers = []io.Writer{wc}
-	if asDaemon {
+	var writers = []io.Writer{}
+	if !asDaemon {
 		writers = append(writers, os.Stdout)
 	}
+	writers = append(writers, wc)
 
 	writer := io.MultiWriter(writers...)
 	s := stream{
