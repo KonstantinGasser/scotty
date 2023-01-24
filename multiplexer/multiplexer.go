@@ -20,8 +20,13 @@ type Socket struct {
 	// as an information to the UI
 	subscribe   chan Subscriber
 	unsubscribe chan Unsubscribe
-
-	listener net.Listener
+	// keep an index of labels from streams.
+	// duplicated stream labels are not allowed and
+	// will lead to silently dropping the connection.
+	// The beam command will receive an EOF while the user
+	// will be displayed the error
+	subscribers map[string]struct{}
+	listener    net.Listener
 }
 
 func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
@@ -65,13 +70,29 @@ func (sock *Socket) Run() {
 		// this can be a blocking operation up to 5 seconds
 		// (sync timeout)
 		go func(c net.Conn) {
-			s, err := newStream(c, sock.errors, sock.messages, sock.unsubscribe)
+			s, err := newStream(c, sock.messages)
 			if err != nil {
 				sock.errors <- err
 				return
 			}
-			go s.handle()
+			// check for duplicated beams
+			if _, ok := sock.subscribers[s.label]; ok {
+				sock.errors <- fmt.Errorf("the stream label %q is already used by another stream", s.label)
+				return
+			}
+
 			sock.subscribe <- Subscriber(s.label)
+
+			// blocking operation until error or EOF of client
+			if err := s.handle(); err != nil {
+				if err == ErrConnDropped {
+					sock.unsubscribe <- Unsubscribe(s.label)
+					return
+				}
+				sock.errors <- err
+				return
+			}
+
 		}(conn)
 	}
 }

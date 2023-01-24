@@ -9,20 +9,16 @@ import (
 )
 
 type stream struct {
-	label       string
-	errs        chan<- Error
-	msgs        chan<- Message
-	unsubscribe chan<- Unsubscribe
-	reader      net.Conn
+	label  string
+	msgs   chan<- Message
+	reader net.Conn
 }
 
-func newStream(conn net.Conn, errs chan<- Error, msgs chan<- Message, unsubscribe chan<- Unsubscribe) (*stream, error) {
+func newStream(conn net.Conn, msgs chan<- Message) (*stream, error) {
 
 	s := stream{
-		errs:        errs,
-		msgs:        msgs,
-		unsubscribe: unsubscribe,
-		reader:      conn,
+		msgs:   msgs,
+		reader: conn,
 	}
 
 	if err := s.waitForSync(); err != nil {
@@ -32,7 +28,11 @@ func newStream(conn net.Conn, errs chan<- Error, msgs chan<- Message, unsubscrib
 	return &s, nil
 }
 
-func (s *stream) handle() {
+var (
+	ErrConnDropped = fmt.Errorf("beam closed the connection")
+)
+
+func (s *stream) handle() error {
 
 	defer s.reader.Close()
 
@@ -42,17 +42,18 @@ func (s *stream) handle() {
 		msg, err := buf.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
-				s.unsubscribe <- Unsubscribe(s.label)
 				break
 			}
-			s.errs <- Error(fmt.Errorf("unable to read from %q: %w", s.label, err))
-			return
+			return Error(fmt.Errorf("unable to read from %q: %w", s.label, err))
 		}
 		s.msgs <- Message{
 			Label: s.label,
 			Data:  msg,
 		}
 	}
+	// if we reach this line the EOF broke the look and it is safe
+	// to assume that the client closed the connection
+	return ErrConnDropped
 }
 
 func (s *stream) waitForSync() error {
