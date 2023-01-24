@@ -48,6 +48,9 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
 		val := buf.data[index]
+		if val == nil {
+			continue
+		}
 		if fn != nil {
 			val = fn(val)
 		}

@@ -141,7 +141,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// records (where N is equal to the height of the current viewport.Model)
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
-
 		color := pager.beams[msg.Label]
 
 		p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "] "))
