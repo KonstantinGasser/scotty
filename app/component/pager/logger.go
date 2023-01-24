@@ -142,7 +142,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
 
-		p := []byte("[" + msg.Label + "] ")
+		color := pager.beams[msg.Label]
+
+		p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "] "))
 		pager.buffer.Append(append(p, msg.Data...))
 
 		err := pager.buffer.Window(
@@ -158,8 +160,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
 		pager.view.LineDown(1)
-
-		return pager, tea.Batch(cmds...)
 	}
 
 	// propagate events to child models.
