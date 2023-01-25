@@ -4,45 +4,52 @@
     <img src="resources/gopher-scotty.png" alt="scotty gopher :)" width="150px" height="150px"></img>
 </p>
 
-> Multiplex and query your logs during development
 
-## Idea behind ***scotty*** 
+# Why scotty?
 
-`scotty` aims to improve the process of understanding logs and tracing request or span ids while developing services locally. With `scotty` and its sub command `beam` you can multiplex many log streams into a consolidated view on which you can apply aggregations and filters. Thereby, you no longer need to manually stich together logs from multiple terminal windows.
+Often times when you develop an application on your local system it's not enough to run a single application but maybe many different once.
+The idea behind `scotty` originated from the resulting pain of having many terminal windows printing logs and stitching together the logs you
+need in order to understand the bug you're searching for..tedious
 
-As a secondary goal `scotty` tries parsing your logs (if they are structured) into JSON helping the readability while browsing the logs.
+With `scotty` you can multiplex your application logs into one consolidated terminal window apply filers on specific streams and query your logs (well once its implemented..working on it)
+# Installation guide
 
-By using *unix pipes* to pipe your program output into `beam` you are free to append commands prior to calling `beam`. By default `beam` will try to connect to a *unix socket* however, since applications nowadays usually are shipped within replicated environments (such as ***docker***) `scotty` will also allow you to beam **sorry stream** your logs via a `tcp:ip` connection. 
+Install with ***homebrew***:<br>
 
+`shell
+brew tab KonstantinGasser/scotty
+brew install scotty
+`
+<br>
 
-## Installation
-
-### Install with Homebrew (not available yet :( will be done in v0.0.1)
-
-### Go installed? Install from source
+Install from ***source***:<br>
 
 `go install github.com/KonstantinGasser/scotty@latest`
 
-## Beaming logs to scotty
 
-`scotty` can read any logs/messages piped to the `os.Stdin` of `beam`. Just be aware that application log
-are not necessarily printed to `os.Stdout` but usually to `os.Stderr`. Therefore you might need to redirect `os.Stderr` to `os.Stdout` in order for `beam` to receive and read the data from `os.Stdin`.<br>
-Redirecting the output can be done as such: `2>&1`
+# How it works?
 
-***Example reading from os.Stdout:***<br>
-When using `cat` data is printed to `os.Stdout` as such no redirect is required and in order to receive the data in `scotty` you can use a standard pipe like so: `cat engine.log | beam` which will pipe the engine logs line by line to scotty. 
+Somehow your logs need to be send or say beamed to `scotty`. This is why scotty comes with a helper command called `beam`.
+Beam pushes everything it reads from stdin to scotty. Just be aware that things printed to stderr won't work..but we can
+redirect `stderr` to `stdout` using `2>&1`. 
 
-***Example redirect to os.Stdout:***<br>
-Beaming application logs might requires to redirect the log output from `os.Stderr` to `os.Stdout` first before they can be piped to `beam`. Say your application is a python application your command could look like so: `python3 my/application.py -some flag -second flag 2>&1 | beam`. 
-<br><br>
-***Note:*** By default `beam` will print send logs also to `os.Stdout` similar to the `tee` command. If you want to suppress the output you can run `beam` with the `-d` flag (`beam -d`)
+# Examples
 
-## Streams
-In scotty a stream is any command/application which pipes data via `beam` to `scotty`. In order to differentiate between logs from different streams you can provide a label per stream. The label is a flag on the `beam` command (`beam -label=engine-service`). It is recommended to reuse the same label after re-connecting a beam to scotty as scotty maintains a state of color codes per stream to help with readability. Changing the stream label has no downside besides the fact that scotty assigns a new color to the stream. The state is discarded whenever `scotty` is stopped.
+## ...from stdout
 
-## Querying your logs
-yet to be implemented
-### View filtered log streams
-yet to be implemented
-### Aggregate log streams
-yet to be implemented
+`cat uss_enterprise_engine.log | beam engine-service -d`
+
+This above command cats the `uss_enterprise_engine.log` to stdout which is then piped to the stdin of `beam`. Note the beam's first argument
+will be the name referenced in scotty.
+
+## ...from stderr
+
+`go run -race cmd/my/application.go 2>&1 | beam my-application`
+
+Here `application.go` produces logs printed to stderr this is why we need to add `2>&1` to redirect the output to stdout. The pipe to `beam` stays unchanged.
+
+
+# Options with beam
+
+Currently `beam` only allows to pipe data through unix sockets..however `beam` as well as `scotty` are build such that both will support piping
+data via a ***tcp:ip*** connection which enables you to beam logs from for example docker instances to `scotty` :)
