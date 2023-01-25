@@ -155,7 +155,7 @@ func (f *footer) View() string {
 
 	var items = []string{}
 
-	if len(f.streams) <= 0 {
+	if len(f.streams) <= 0 && f.err == nil {
 		txt := "beam the logs up, scotty is ready"
 		items = append(items,
 			styles.StatusBarLogCount(txt),

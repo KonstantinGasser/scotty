@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 )
 
 type Socket struct {
@@ -18,15 +19,20 @@ type Socket struct {
 	// communicate that a new stream has connected
 	// to scotty - for now we only pipe the stream label
 	// as an information to the UI
-	subscribe   chan Subscriber
-	unsubscribe chan Unsubscribe
+	subscribe chan Subscriber
+	// guards subscriber index
+	mtx sync.RWMutex
 	// keep an index of labels from streams.
 	// duplicated stream labels are not allowed and
 	// will lead to silently dropping the connection.
 	// The beam command will receive an EOF while the user
 	// will be displayed the error
 	subscribers map[string]struct{}
-	listener    net.Listener
+	// on client EOF or a read error the stream is closed
+	// and the event is propagated using this channel
+	unsubscribe chan Unsubscribe
+
+	listener net.Listener
 }
 
 func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
@@ -41,6 +47,7 @@ func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
 		errors:      make(chan Error),
 		messages:    make(chan Message),
 		subscribe:   make(chan Subscriber),
+		subscribers: make(map[string]struct{}),
 		unsubscribe: make(chan Unsubscribe),
 		listener:    ln,
 	}, nil
@@ -76,10 +83,14 @@ func (sock *Socket) Run() {
 				return
 			}
 			// check for duplicated beams
+			sock.mtx.RLock()
 			if _, ok := sock.subscribers[s.label]; ok {
-				sock.errors <- fmt.Errorf("the stream label %q is already used by another stream", s.label)
+				sock.errors <- fmt.Errorf("the label %q is already used by another stream", s.label)
 				return
+			} else {
+				sock.subscribers[s.label] = struct{}{}
 			}
+			sock.mtx.RUnlock()
 
 			sock.subscribe <- Subscriber(s.label)
 
