@@ -43,7 +43,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
 	var offset = writeIndex - n
 
-	for i := offset; i < writeIndex; i++ { // this loops over range [offset, writeIndex)
+	for i := offset; i < writeIndex; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
@@ -51,6 +51,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 		if val == nil {
 			continue
 		}
+
 		if fn != nil {
 			val = fn(val)
 		}
@@ -60,7 +61,9 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 		// is appended to whenever write is called. However, this
 		// is a potential bottleneck as runtime.growslice and
 		// runtime.memmove will be called more frequently to adjust the
-		// strings.Builder/bytes.Buffer buffer.
+		// strings.Builder/bytes.Buffer buffer. Can be mitigated somehow
+		// by setting a capacity using Grow(N) where N is the educated guess
+		// of how many bytes are expected to be written.
 		if _, err := w.Write(val); err != nil {
 			return err
 		}
