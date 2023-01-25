@@ -83,20 +83,24 @@ func (sock *Socket) Run() {
 				return
 			}
 			// check for duplicated beams
-			sock.mtx.RLock()
+			sock.mtx.Lock()
 			if _, ok := sock.subscribers[s.label]; ok {
 				sock.errors <- fmt.Errorf("the label %q is already used by another stream", s.label)
 				return
 			} else {
 				sock.subscribers[s.label] = struct{}{}
 			}
-			sock.mtx.RUnlock()
+			sock.mtx.Unlock()
 
 			sock.subscribe <- Subscriber(s.label)
 
 			// blocking operation until error or EOF of client
 			if err := s.handle(); err != nil {
 				if err == ErrConnDropped {
+					sock.mtx.Lock()
+					delete(sock.subscribers, s.label)
+					sock.mtx.Unlock()
+
 					sock.unsubscribe <- Unsubscribe(s.label)
 					return
 				}

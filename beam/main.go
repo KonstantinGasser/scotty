@@ -14,7 +14,7 @@ func main() {
 
 	protocol := flag.String("protocol", "unix", "logs can be stream/piped through unix sockets or tcp sockets")
 	addr := flag.String("addr", "/tmp/scotty.sock", "specify a custom unix socket to use or a tcp:ip addr")
-	daemon := flag.Bool("d", false, "pipe logs to scotty and os.Stdout")
+	daemon := flag.Bool("d", false, "pipe logs to scotty and stdout")
 	flag.Parse()
 
 	label := flag.Arg(0)

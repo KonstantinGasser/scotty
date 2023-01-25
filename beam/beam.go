@@ -17,7 +17,7 @@ type stream struct {
 // newStream returns a new stream for beaming of logs. Logs are read in from
 // os.Stdin therefore 2>&1 might need to be used to pipe os.Stderr -> os.Stdout.
 // If beam is started as a daemon logs read in from os.Stdin are printed to os.Stdout
-func newStream(label string, proto string, addr string, asDaemon bool) (*stream, error) {
+func newStream(label string, proto string, addr string, daemon bool) (*stream, error) {
 	if len(label) == 0 {
 		return nil, fmt.Errorf("please set a label for the stream in order to identify the stream in scotty")
 	}
@@ -28,7 +28,7 @@ func newStream(label string, proto string, addr string, asDaemon bool) (*stream,
 	}
 
 	var writers = []io.Writer{}
-	if !asDaemon {
+	if !daemon {
 		writers = append(writers, os.Stdout)
 	}
 	writers = append(writers, wc)
