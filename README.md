@@ -16,8 +16,9 @@ With `scotty` you can multiplex your application logs into one consolidated term
 
 Install with ***homebrew***:<br>
 
-`shell
+`
 brew tab KonstantinGasser/scotty
+
 brew install scotty
 `
 <br>
