@@ -14,19 +14,15 @@ need in order to understand the bug you're searching for..tedious
 With `scotty` you can multiplex your application logs into one consolidated terminal window apply filers on specific streams and query your logs (well once its implemented..working on it)
 # Installation guide
 
-Install with ***homebrew***:<br>
 
-`bash
+## Homebrew
+```
 brew tab KonstantinGasser/scotty
-
 brew install scotty
-`
-<br>
+```
 
-Install from ***source***:<br>
-
+## From source
 `go install github.com/KonstantinGasser/scotty@latest`
-
 
 # How it works?
 
