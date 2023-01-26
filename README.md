@@ -1,4 +1,4 @@
-# scotty
+# beam me up, ***scotty***!
 
 <p align="center">
     <img src="resources/gopher-scotty.png" alt="scotty gopher :)" width="150px" height="150px"></img>
@@ -12,6 +12,8 @@ The idea behind `scotty` originated from the resulting pain of having many termi
 need in order to understand the bug you're searching for..tedious
 
 With `scotty` you can multiplex your application logs into one consolidated terminal window apply filers on specific streams and query your logs (well once its implemented..working on it)
+
+![](/resources/scotty_logs_x2.png)
 # Installation guide
 
 
