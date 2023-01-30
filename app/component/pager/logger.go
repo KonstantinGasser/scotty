@@ -113,18 +113,16 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case plexer.Unsubscribe:
 		// we only need to reassign the max value
 		// if the current max is disconnecting
-		debug.Debug(fmt.Sprintf("Unsubscribe: %s - len(msg)=%d, current: %d", msg, len(msg), pager.maxLabelLength))
 		if len(msg) >= pager.maxLabelLength {
 			max := 0
 			for label := range pager.beams {
-				debug.Debug(fmt.Sprintf("%s != %s => %v && len(label) > max => %v", label, msg, label != string(msg), len(label) > max))
 				if len(label) > max && label != string(msg) {
 					max = len(label)
 				}
 			}
-			debug.Debug(fmt.Sprintf("Max: %d", max))
 			pager.maxLabelLength = max
 		}
+
 	// event dispatched each time a new stream connects to
 	// the multiplexer. on-event we need to update the footer
 	// model with the new stream information as well as update
