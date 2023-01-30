@@ -2,6 +2,7 @@ package pager
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
@@ -163,14 +164,15 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// records (where N is equal to the height of the current viewport.Model)
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
-		// color := pager.beams[msg.Label]
-		// p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "]" + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label))))
-		pager.buffer.Append(msg.Data)
+		color := pager.beams[msg.Label]
+		prefix := "[" + msg.Label + "]" + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label))
+		colored := []byte(lipgloss.NewStyle().Foreground(color).Render(prefix))
+		pager.buffer.Append(append(colored, msg.Data...))
 
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
-			WithMultipleLines(pager.width),
+			WithMultipleLines(pager.width-len(prefix)),
 		)
 		if err != nil {
 			debug.Debug(err.Error())
@@ -217,7 +219,6 @@ func WithMultipleLines(width int) func([]byte) []byte {
 }
 
 func splitfunc(width int, p []byte, out []byte) []byte {
-	// fmt.Printf("p: %s\nout: %s\n", p, out)
 	if len(p) == 0 {
 		return out
 	}
@@ -225,8 +226,7 @@ func splitfunc(width int, p []byte, out []byte) []byte {
 	if len(p) <= width {
 		return append(out, p[:]...)
 	}
-	// out is where we append our results from one
-	// iteration to
+
 	out = append(out, p[:width]...)
 	out = append(out, '\n')
 
