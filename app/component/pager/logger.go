@@ -2,6 +2,8 @@ package pager
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
@@ -41,6 +43,9 @@ type Logger struct {
 	writer bytes.Buffer
 
 	beams map[string]lipgloss.Color
+	// stores the length of the longest stream
+	// label in order to align the start of the logs
+	maxLabelLength int
 	// underlying model which handles
 	// scrolling and rendering of the logs
 	view viewport.Model
@@ -67,11 +72,12 @@ func NewLogger(width, height int) *Logger {
 		buffer: ring.New(uint32(12)),
 		writer: bytes.Buffer{},
 
-		beams:  map[string]lipgloss.Color{},
-		view:   view,
-		width:  w,
-		height: h,
-		footer: newFooter(w, h),
+		beams:          map[string]lipgloss.Color{},
+		maxLabelLength: 0,
+		view:           view,
+		width:          w,
+		height:         h,
+		footer:         newFooter(w, h),
 	}
 }
 
@@ -104,6 +110,21 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.view.Width = pager.width
 		pager.view.Height = pager.height
 
+	case plexer.Unsubscribe:
+		// we only need to reassign the max value
+		// if the current max is disconnecting
+		debug.Debug(fmt.Sprintf("Unsubscribe: %s - len(msg)=%d, current: %d", msg, len(msg), pager.maxLabelLength))
+		if len(msg) >= pager.maxLabelLength {
+			max := 0
+			for label := range pager.beams {
+				debug.Debug(fmt.Sprintf("%s != %s => %v && len(label) > max => %v", label, msg, label != string(msg), len(label) > max))
+				if len(label) > max && label != string(msg) {
+					max = len(label)
+				}
+			}
+			debug.Debug(fmt.Sprintf("Max: %d", max))
+			pager.maxLabelLength = max
+		}
 	// event dispatched each time a new stream connects to
 	// the multiplexer. on-event we need to update the footer
 	// model with the new stream information as well as update
@@ -113,22 +134,27 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// are matching the color information in the footer
 	case plexer.Subscriber:
 
-		// stream was connected prior as such a color does already exist
-		// and we only need to tell the footer about it again
-		if color, ok := pager.beams[string(msg)]; ok {
-			pager.footer, _ = pager.footer.Update(subscriber{
-				label: string(msg),
-				color: color,
-			})
-			return pager, tea.Batch(cmds...)
+		// update max label length for indenting
+		// while displaying logs
+		if len(msg) > pager.maxLabelLength {
+			pager.maxLabelLength = len(msg)
 		}
 
-		color, _ := styles.RandColor()
-		pager.beams[string(msg)] = color
+		label := string(msg)
+
+		if _, ok := pager.beams[label]; !ok {
+			color, _ := styles.RandColor()
+			pager.beams[label] = color
+
+			pager.footer, _ = pager.footer.Update(subscriber{
+				label: label,
+				color: color,
+			})
+		}
 
 		pager.footer, _ = pager.footer.Update(subscriber{
-			label: string(msg),
-			color: color,
+			label: label,
+			color: pager.beams[label],
 		})
 
 		return pager, tea.Batch(cmds...)
@@ -142,8 +168,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
 		color := pager.beams[msg.Label]
-
-		p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "] "))
+		debug.Debug(fmt.Sprintf("Label: %s - Max: %d", msg.Label, pager.maxLabelLength))
+		p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "]" + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label))))
 		pager.buffer.Append(append(p, msg.Data...))
 
 		err := pager.buffer.Window(
