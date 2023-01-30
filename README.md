@@ -38,14 +38,18 @@ redirect `stderr` to `stdout` using `2>&1`.
 
 ## ...from stdout
 
-```cat uss_enterprise_engine.log | beam engine-service -d```
+```
+cat uss_enterprise_engine.log | beam engine-service -d
+```
 
 This above command cats the `uss_enterprise_engine.log` to stdout which is then piped to the stdin of `beam`. Note the beam's first argument
 will be the name referenced in scotty.
 
 ## ...from stderr
 
-```go run -race cmd/my/application.go 2>&1 | beam my-application```
+```
+go run -race cmd/my/application.go 2>&1 | beam my-application
+```
 
 Here `application.go` produces logs printed to stderr this is why we need to add `2>&1` to redirect the output to stdout. The pipe to `beam` stays unchanged.
 
