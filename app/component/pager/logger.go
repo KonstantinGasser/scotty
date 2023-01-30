@@ -2,8 +2,6 @@ package pager
 
 import (
 	"bytes"
-	"fmt"
-	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
@@ -165,15 +163,14 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// records (where N is equal to the height of the current viewport.Model)
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
-		color := pager.beams[msg.Label]
-		debug.Debug(fmt.Sprintf("Label: %s - Max: %d", msg.Label, pager.maxLabelLength))
-		p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "]" + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label))))
-		pager.buffer.Append(append(p, msg.Data...))
+		// color := pager.beams[msg.Label]
+		// p := []byte(lipgloss.NewStyle().Foreground(color).Render("[" + msg.Label + "]" + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label))))
+		pager.buffer.Append(msg.Data)
 
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
-			nil,
+			WithMultipleLines(pager.width),
 		)
 		if err != nil {
 			debug.Debug(err.Error())
@@ -207,4 +204,31 @@ func (pager *Logger) View() string {
 		),
 		pager.footer.View(),
 	)
+}
+
+// WithMultipleLines adds \n in the slice of bytes such
+// that the resulting slice of bytes respects the provided
+// max width.
+func WithMultipleLines(width int) func([]byte) []byte {
+	return func(b []byte) []byte {
+		var result = make([]byte, 0, len(b))
+		return splitfunc(width, b, result)
+	}
+}
+
+func splitfunc(width int, p []byte, out []byte) []byte {
+	// fmt.Printf("p: %s\nout: %s\n", p, out)
+	if len(p) == 0 {
+		return out
+	}
+
+	if len(p) <= width {
+		return append(out, p[:]...)
+	}
+	// out is where we append our results from one
+	// iteration to
+	out = append(out, p[:width]...)
+	out = append(out, '\n')
+
+	return splitfunc(width, p[width:], out)
 }
