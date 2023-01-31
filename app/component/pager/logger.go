@@ -214,7 +214,9 @@ func (pager *Logger) View() string {
 func WithMultipleLines(width int) func([]byte) []byte {
 	return func(b []byte) []byte {
 		var result = make([]byte, 0, len(b))
-		return splitfunc(width, b, result)
+		out := splitfunc(width, b, result)
+		debug.Print("%s", out)
+		return out
 	}
 }
 
@@ -224,6 +226,9 @@ func splitfunc(width int, p []byte, out []byte) []byte {
 	}
 
 	if len(p) <= width {
+		if p[len(p)-1] == '\n' && len(p) == 1 { // sometimes there is only an new line character left
+			return out
+		}
 		return append(out, p[:]...)
 	}
 
