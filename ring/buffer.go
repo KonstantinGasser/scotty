@@ -37,7 +37,7 @@ func (buf *Buffer) Append(p []byte) {
 // Window write up to N of the last appended items to the io.Writer
 // To modify items before writing them to the writer, a function can be provided.
 //
-func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
+func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error {
 
 	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
@@ -53,7 +53,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 		}
 
 		if fn != nil {
-			val = fn(val)
+			val = fn(index, val)
 		}
 
 		// under the hood we pass in a strings.Builder/bytes.Buffer
@@ -72,7 +72,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func([]byte) []byte) error {
 	return nil
 }
 
-func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func([]byte) []byte) error {
+func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) []byte) error {
 
 	var writeIndex, cap int = int(buf.write), int(buf.capacity)
 	var offset = writeIndex - n - delta
@@ -83,7 +83,7 @@ func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func([]byte) []byte
 
 		val := buf.data[index]
 		if fn != nil {
-			val = fn(val)
+			val = fn(index, val)
 		}
 
 		if _, err := w.Write(val); err != nil {

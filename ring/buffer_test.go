@@ -85,7 +85,7 @@ func TestWindowN(t *testing.T) {
 		n     int
 		input [][]byte
 		want  string
-		fn    func([]byte) []byte
+		fn    func(int, []byte) []byte
 	}{
 		{
 			name:  "window last entry (N=1); buffer half full",
@@ -113,7 +113,7 @@ func TestWindowN(t *testing.T) {
 			n:     6,
 			input: makeByteSliceN(int((1<<factor)+4), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
 			want:  "14,15,16,17,18,19,",
-			fn: func(v []byte) []byte {
+			fn: func(i int, v []byte) []byte {
 				return append(v, byte(','))
 			},
 		},
@@ -151,7 +151,7 @@ func TestScrollUp(t *testing.T) {
 		n           int
 		input       [][]byte
 		want        string
-		fn          func([]byte) []byte
+		fn          func(int, []byte) []byte
 	}{
 		{
 			name:        "scroll-up (delta=3) (N=4); buffer half full",
@@ -176,7 +176,7 @@ func TestScrollUp(t *testing.T) {
 				}
 				return fmt.Sprintf("%d,", i-1)
 			}), // string rep of i from 0-126 concatenated
-			fn: func(v []byte) []byte {
+			fn: func(i int, v []byte) []byte {
 				return append(v, byte(','))
 			},
 		},
@@ -193,7 +193,7 @@ func TestScrollUp(t *testing.T) {
 				}
 				return fmt.Sprintf("%d,", i-1)
 			}), // string rep of i from 0-126 concatenated
-			fn: func(v []byte) []byte {
+			fn: func(i int, v []byte) []byte {
 				return append(v, byte(','))
 			},
 		},
@@ -274,7 +274,7 @@ func BenchmarkWindowNWithPreGrow(b *testing.B) {
 
 		w.Grow((size * screenWidth) * 2)
 		for i := 0; i < bench.N; i++ {
-			err := buf.Window(&w, size, func(v []byte) []byte {
+			err := buf.Window(&w, size, func(i int, v []byte) []byte {
 				if len(v) > screenWidth {
 					return v[:screenWidth]
 				}
@@ -330,7 +330,7 @@ func BenchmarkWindowNWithBytesBufferGrow(b *testing.B) {
 		w.Grow(size * screenWidth)
 
 		for i := 0; i < bench.N; i++ {
-			err := buf.Window(&w, size, func(v []byte) []byte {
+			err := buf.Window(&w, size, func(i int, v []byte) []byte {
 				if len(v) > screenWidth {
 					return v[:screenWidth]
 				}

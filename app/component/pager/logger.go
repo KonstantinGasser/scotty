@@ -2,6 +2,7 @@ package pager
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -233,8 +234,8 @@ func (pager *Logger) View() string {
 // WithMultipleLines adds \n in the slice of bytes such
 // that the resulting slice of bytes respects the provided
 // max width.
-func WithLineWrap(width int) func([]byte) []byte {
-	return func(b []byte) []byte {
-		return wrap.Bytes(b, width)
+func WithLineWrap(width int) func(int, []byte) []byte {
+	return func(index int, b []byte) []byte {
+		return wrap.Bytes(append([]byte("["+strconv.Itoa(index)+"]"), b[:]...), width)
 	}
 }
