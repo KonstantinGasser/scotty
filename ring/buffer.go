@@ -80,6 +80,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 
 var (
 	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
+	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
 )
 
 func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
@@ -121,7 +122,7 @@ func WithIndentation() func([]byte) ([]byte, error) {
 	return func(b []byte) ([]byte, error) {
 		offset := bytes.Index(b, []byte("{"))
 		if offset < 0 {
-			return b, nil
+			return nil, ErrNotParsable
 		}
 
 		var out bytes.Buffer

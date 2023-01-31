@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -77,7 +76,6 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				c.err = fmt.Errorf("input %q is not numeric. Type the index of the line you want to parse", value)
 				break
 			}
-			debug.Print("input: %s\n", c.input.Value())
 			cmds = append(cmds, parseLog(index))
 		}
 	}

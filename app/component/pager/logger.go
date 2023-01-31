@@ -186,11 +186,12 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
-			ring.WithLineWrap(pager.width-len(prefix)),
+			ring.WithLineWrap(pager.width),
 		)
 		if err != nil {
 			debug.Debug(err.Error())
 		}
+
 		pager.view.SetContent(pager.writer.String())
 		pager.writer.Reset()
 
