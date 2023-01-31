@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wrap"
 )
 
 const (
@@ -181,7 +182,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.writer.Reset()
 
 		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
-		pager.view.LineDown(1)
+		pager.view.GotoBottom()
 
 	}
 
@@ -213,27 +214,6 @@ func (pager *Logger) View() string {
 // max width.
 func WithMultipleLines(width int) func([]byte) []byte {
 	return func(b []byte) []byte {
-		var result = make([]byte, 0, len(b))
-		out := splitfunc(width, b, result)
-		debug.Print("%s", out)
-		return out
+		return wrap.Bytes(b, width)
 	}
-}
-
-func splitfunc(width int, p []byte, out []byte) []byte {
-	if len(p) == 0 {
-		return out
-	}
-
-	if len(p) <= width {
-		if p[len(p)-1] == '\n' && len(p) == 1 { // sometimes there is only an new line character left
-			return out
-		}
-		return append(out, p[:]...)
-	}
-
-	out = append(out, p[:width]...)
-	out = append(out, '\n')
-
-	return splitfunc(width, p[width:], out)
 }
