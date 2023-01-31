@@ -54,7 +54,12 @@ type Logger struct {
 	// updates if changes
 	width, height int
 
-	footer tea.Model
+	// awaitInput indicated if ECS is pressed.
+	// if awaitInput == false the input for commands
+	// is focused else moved out of focus
+	awaitInput bool
+	footer     tea.Model
+	cmd        tea.Model
 }
 
 func NewLogger(width, height int) *Logger {
@@ -77,7 +82,9 @@ func NewLogger(width, height int) *Logger {
 		view:           view,
 		width:          w,
 		height:         h,
+		awaitInput:     false,
 		footer:         newFooter(w, h),
+		cmd:            newCommand(w, h),
 	}
 }
 
@@ -102,6 +109,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 		return pager, cmd
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyEsc:
+			pager.awaitInput = !pager.awaitInput
+		}
 	case tea.WindowSizeMsg:
 		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
 		pager.height = msg.Height - 1 // by now I have already no plan why it needs to be one - only now 2 messed things up
@@ -173,7 +185,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
-			WithMultipleLines(pager.width-len(prefix)),
+			WithLineWrap(pager.width-len(prefix)),
 		)
 		if err != nil {
 			debug.Debug(err.Error())
@@ -201,18 +213,25 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (pager *Logger) View() string {
+
+	var bottom = ""
+	if pager.awaitInput {
+		bottom = pager.cmd.View()
+	} else {
+		bottom = pager.footer.View()
+	}
 	return lipgloss.JoinVertical(lipgloss.Left,
 		pagerStyle.Render(
 			pager.view.View(),
 		),
-		pager.footer.View(),
+		bottom,
 	)
 }
 
 // WithMultipleLines adds \n in the slice of bytes such
 // that the resulting slice of bytes respects the provided
 // max width.
-func WithMultipleLines(width int) func([]byte) []byte {
+func WithLineWrap(width int) func([]byte) []byte {
 	return func(b []byte) []byte {
 		return wrap.Bytes(b, width)
 	}
