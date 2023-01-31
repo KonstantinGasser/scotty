@@ -26,6 +26,5 @@ func Print(msg string, args ...interface{}) {
 	}
 	defer f.Close()
 	defer fmt.Fprintln(f, "+++++++++++++++++++++++++++++++++++++")
-	fmt.Fprintln(f, "+++++++++++++++++++++++++++++++++++++")
 	fmt.Fprintf(f, msg, args...)
 }

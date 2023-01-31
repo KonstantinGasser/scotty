@@ -2,7 +2,6 @@ package pager
 
 import (
 	"bytes"
-	"strconv"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -12,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/reflow/wrap"
 )
 
 const (
@@ -116,6 +114,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.awaitInput = !pager.awaitInput
 		}
 		pager.cmd, cmd = pager.cmd.Update(msg)
+		cmds = append(cmds, cmd)
 	case tea.WindowSizeMsg:
 		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
 		pager.height = msg.Height - 1 // by now I have already no plan why it needs to be one - only now 2 messed things up
@@ -187,7 +186,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
-			WithLineWrap(pager.width-len(prefix)),
+			ring.WithLineWrap(pager.width-len(prefix)),
 		)
 		if err != nil {
 			debug.Debug(err.Error())
@@ -198,6 +197,13 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
 		pager.view.GotoBottom()
 
+	// event dispatched by the command model whenever the user
+	// enters on an input requesting to parse a log line.
+	// The msg of type parserIndex is an integer and represents
+	// the captured requested index.
+	case parserIndex:
+		parsed, err := pager.buffer.At(int(msg), ring.WithIndentation())
+		debug.Print("parsed: %s\nerr: %v\n", parsed, err)
 	}
 
 	// propagate events to child models.
@@ -229,13 +235,4 @@ func (pager *Logger) View() string {
 		),
 		bottom,
 	)
-}
-
-// WithMultipleLines adds \n in the slice of bytes such
-// that the resulting slice of bytes respects the provided
-// max width.
-func WithLineWrap(width int) func(int, []byte) []byte {
-	return func(index int, b []byte) []byte {
-		return wrap.Bytes(append([]byte("["+strconv.Itoa(index)+"]"), b[:]...), width)
-	}
 }

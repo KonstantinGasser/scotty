@@ -16,6 +16,7 @@ const (
 	ColorStatusBarLogCount = lipgloss.Color("#FF4C94")
 	ColorStatusBarBeamInfo = lipgloss.Color("22")
 	ColorErrorBackground   = lipgloss.Color("160")
+	ColorError             = lipgloss.Color("#FF0000")
 )
 
 func RandColor() (lipgloss.Color, lipgloss.Color) {

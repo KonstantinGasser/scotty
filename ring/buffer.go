@@ -1,7 +1,13 @@
 package ring
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
+	"strconv"
+
+	"github.com/muesli/reflow/wrap"
 )
 
 type Buffer struct {
@@ -72,6 +78,17 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 	return nil
 }
 
+var (
+	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
+)
+
+func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
+	if index > int(buf.capacity) || index < 0 {
+		return nil, ErrIndexOutOfBounds
+	}
+	return fn(buf.data[index])
+}
+
 func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) []byte) error {
 
 	var writeIndex, cap int = int(buf.write), int(buf.capacity)
@@ -92,4 +109,31 @@ func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) [
 	}
 
 	return nil
+}
+
+// WithIndentation returns a func which parses and indents
+// a JSON string. Before parsing it performs a search for
+// the first occurrence of the byte("{") since the passed in
+// byte slice might hold more information then the JSON.
+// In our case a log line includes the label name as well
+// as the ansi color codes which we cannot parse
+func WithIndentation() func([]byte) ([]byte, error) {
+	return func(b []byte) ([]byte, error) {
+		offset := bytes.Index(b, []byte("{"))
+
+		var out bytes.Buffer
+		if err := json.Indent(&out, b[offset:], " ", "\t"); err != nil {
+			return nil, err
+		}
+		return out.Bytes(), nil
+	}
+}
+
+//WithLineWrap wraps the slice of bytes based on the
+// provided width where the resulting byte slice include
+// \n after a maximum of width bytes.
+func WithLineWrap(width int) func(int, []byte) []byte {
+	return func(index int, b []byte) []byte {
+		return wrap.Bytes(append([]byte("["+strconv.Itoa(index)+"]"), b[:]...), width)
+	}
 }
