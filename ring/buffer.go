@@ -120,6 +120,9 @@ func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) [
 func WithIndentation() func([]byte) ([]byte, error) {
 	return func(b []byte) ([]byte, error) {
 		offset := bytes.Index(b, []byte("{"))
+		if offset < 0 {
+			return b, nil
+		}
 
 		var out bytes.Buffer
 		if err := json.Indent(&out, b[offset:], " ", "\t"); err != nil {
