@@ -53,6 +53,11 @@ go run -race cmd/my/application.go 2>&1 | beam my-application
 
 Here `application.go` produces logs printed to stderr this is why we need to add `2>&1` to redirect the output to stdout. The pipe to `beam` stays unchanged.
 
+# Format a log line
+
+Especially when logs are structured we humans have it hard to read the unformatted JSON. Hit the `:` key and type the line number of the log you want to format.
+
+***Hint***: once the log line is displayed use the arrow keys for up and down (or `j`, `k`) to parse the previous or next line
 
 # Options with beam
 
