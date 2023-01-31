@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"time"
@@ -16,6 +17,9 @@ const (
 )
 
 func main() {
+
+	delay := flag.Int("delay", 100, "max rand millisecond before the next log is generated")
+	flag.Parse()
 
 	rand.Seed(time.Now().Unix())
 	sl, err := zap.NewProduction()
@@ -39,6 +43,6 @@ func main() {
 		}
 
 		i++
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * time.Duration(*delay))
 	}
 }

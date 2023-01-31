@@ -110,10 +110,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return pager, cmd
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc:
+		switch msg.String() {
+		case ":":
 			pager.awaitInput = !pager.awaitInput
 		}
+		pager.cmd, cmd = pager.cmd.Update(msg)
 	case tea.WindowSizeMsg:
 		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
 		pager.height = msg.Height - 1 // by now I have already no plan why it needs to be one - only now 2 messed things up
@@ -178,7 +179,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
 		color := pager.beams[msg.Label]
-		prefix := "[" + msg.Label + "]" + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label))
+		prefix := msg.Label + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label)) + " | "
 		colored := []byte(lipgloss.NewStyle().Foreground(color).Render(prefix))
 		pager.buffer.Append(append(colored, msg.Data...))
 
@@ -220,6 +221,7 @@ func (pager *Logger) View() string {
 	} else {
 		bottom = pager.footer.View()
 	}
+
 	return lipgloss.JoinVertical(lipgloss.Left,
 		pagerStyle.Render(
 			pager.view.View(),
