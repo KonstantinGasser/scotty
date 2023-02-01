@@ -24,8 +24,8 @@ const (
 
 var (
 	pagerStyle = lipgloss.NewStyle().
-		Margin(0, 1).
-		Padding(1)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(styles.ColorBorder)
 )
 
 type subscriber struct {
@@ -206,7 +206,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
-			ring.WithLineWrap(pager.width),
+			ring.WithLineWrap(pager.width-1), // -1 as we need to account for the pixels reserved for the border
 		)
 		if err != nil {
 			debug.Debug(err.Error())
