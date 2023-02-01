@@ -322,7 +322,7 @@ func BenchmarkWindowNWithBytesBufferGrow(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.Run("windowing-with-bytes_buf-growN", func(bench *testing.B) {
+	b.Run("with-line-wrap", func(bench *testing.B) {
 		size := 50         // pager height in full screen on 16'' monitor
 		screenWidth := 200 // this will be available in the pager.Logger based on that we can determine the final max size of the string
 
@@ -330,15 +330,24 @@ func BenchmarkWindowNWithBytesBufferGrow(b *testing.B) {
 		w.Grow(size * screenWidth)
 
 		for i := 0; i < bench.N; i++ {
-			err := buf.Window(&w, size, func(i int, v []byte) []byte {
-				if len(v) > screenWidth {
-					return v[:screenWidth]
-				}
-				return v
-			})
+			err := buf.Window(&w, size, WithLineWrap(screenWidth))
 			if err != nil {
 				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
 			}
 		}
 	})
+	// b.Run("without-line-wrap", func(bench *testing.B) {
+	// 	size := 50         // pager height in full screen on 16'' monitor
+	// 	screenWidth := 200 // this will be available in the pager.Logger based on that we can determine the final max size of the string
+
+	// 	var w = bytes.Buffer{}
+	// 	w.Grow(size * screenWidth)
+
+	// 	for i := 0; i < bench.N; i++ {
+	// 		err := buf.Window(&w, size, nil)
+	// 		if err != nil {
+	// 			bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
+	// 		}
+	// 	}
+	// })
 }

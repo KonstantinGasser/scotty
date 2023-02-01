@@ -66,12 +66,12 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 			val = fn(index, val)
 		}
 
-		// under the hood we pass in a strings.Builder/bytes.Buffer
+		// under the hood we pass in a bytes.Buffer
 		// which again is using a slice of bytes where data
 		// is appended to whenever write is called. However, this
 		// is a potential bottleneck as runtime.growslice and
 		// runtime.memmove will be called more frequently to adjust the
-		// strings.Builder/bytes.Buffer buffer. Can be mitigated somehow
+		// bytes.Buffer's buffer. Can be mitigated to a degree
 		// by setting a capacity using Grow(N) where N is the educated guess
 		// of how many bytes are expected to be written.
 		if _, err := w.Write(val); err != nil {
