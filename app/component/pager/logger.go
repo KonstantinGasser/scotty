@@ -53,6 +53,11 @@ type Logger struct {
 	// updates if changes
 	width, height int
 
+	// selected represents an index of the buffer
+	// which was initially requested to be parsed.
+	// It can be decremented or incremented to parse
+	// the previous or next item in the buffer
+	selected int
 	// awaitInput indicated if ECS is pressed.
 	// if awaitInput == false the input for commands
 	// is focused else moved out of focus
@@ -112,9 +117,24 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case ":":
 			pager.awaitInput = !pager.awaitInput
+		case "up", "j":
+			if pager.selected <= 0 {
+				break
+			}
+			pager.selected--
+			if err := pager.parse(pager.selected); err != nil {
+				debug.Debug(err.Error())
+			}
+		case "down", "k":
+			if pager.selected >= int(pager.buffer.Cap()) {
+				break
+			}
+			pager.selected++
+			if err := pager.parse(pager.selected); err != nil {
+				debug.Debug(err.Error())
+			}
 		}
-		pager.cmd, cmd = pager.cmd.Update(msg)
-		cmds = append(cmds, cmd)
+
 	case tea.WindowSizeMsg:
 		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
 		pager.height = msg.Height - 1 // by now I have already no plan why it needs to be one - only now 2 messed things up
@@ -203,8 +223,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// The msg of type parserIndex is an integer and represents
 	// the captured requested index.
 	case parserIndex:
-		parsed, err := pager.buffer.At(int(msg), ring.WithIndentation())
-		debug.Print("parsed: %s\nerr: %v\n", parsed, err)
+		if err := pager.parse(int(msg)); err != nil {
+			debug.Debug(err.Error())
+		}
 	}
 
 	// propagate events to child models.
@@ -216,6 +237,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	pager.footer, cmd = pager.footer.Update(msg)
+	cmds = append(cmds, cmd)
+
+	pager.cmd, cmd = pager.cmd.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return pager, tea.Batch(cmds...)
@@ -236,4 +260,15 @@ func (pager *Logger) View() string {
 		),
 		bottom,
 	)
+}
+
+func (pager *Logger) parse(index int) error {
+
+	parsed, err := pager.buffer.At(index, ring.WithIndentation())
+	if err != nil {
+		return err
+	}
+
+	debug.Print("parsed(index=%d): %s\n", index, parsed)
+	return nil
 }
