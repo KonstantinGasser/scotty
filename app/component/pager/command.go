@@ -57,6 +57,11 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, nil
 	case tea.KeyMsg:
 		switch msg.String() {
+		// same as for the char ":" we don't want to propagate the keystrokes
+		// down to the textinput.Model since these keystrokes are registered as
+		// normal user input.
+		case "j", "k":
+			return c, tea.Batch(cmds...)
 		case ":":
 			c.input.Reset()
 

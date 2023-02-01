@@ -117,7 +117,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case ":":
 			pager.awaitInput = !pager.awaitInput
-		case "up", "j":
+		case "up", "k":
 			if pager.selected <= 0 {
 				break
 			}
@@ -125,7 +125,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := pager.parse(pager.selected); err != nil {
 				debug.Debug(err.Error())
 			}
-		case "down", "k":
+		case "down", "j":
 			if pager.selected >= int(pager.buffer.Cap()) {
 				break
 			}
