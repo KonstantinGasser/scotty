@@ -83,10 +83,16 @@ var (
 	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
 )
 
+// At returns a single element in the buffer at the given index. It returns an error
+// if the index is either grater than the buffer's capacity or less than 0.
+// If the buffer has not overflown yet and the provided index is grater than the
+// current buffer's write head-1 At still returns the value at the index however,
+// it will be a nil byte slice
 func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
 	if index > int(buf.capacity) || index < 0 {
 		return nil, ErrIndexOutOfBounds
 	}
+
 	return fn(buf.data[index])
 }
 
