@@ -10,6 +10,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var (
+	commandStyle = lipgloss.NewStyle().Padding(0, 1) //.
+	// Border(lipgloss.RoundedBorder()).
+	// BorderForeground(styles.ColorBorder)
+)
+
 type parserIndex int
 
 // send whenever an input is provided and the
@@ -30,7 +36,6 @@ func newCommand(w, h int) *command {
 	input := textinput.New()
 	input.Placeholder = "type the line number to parse as JSON"
 	input.Prompt = ":"
-
 	return &command{
 		width:  w,
 		height: h,
@@ -52,7 +57,7 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		c.width = msg.Width - 2 // account for margin
+		c.width = int(float64(msg.Width) * parserBoxWidthRatio)
 		c.height = msg.Height
 		return c, nil
 	case tea.KeyMsg:
@@ -93,10 +98,12 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (c *command) View() string {
 	if c.err != nil {
-		return lipgloss.NewStyle().
+		return commandStyle.
 			Foreground(styles.ColorError).
 			Render(c.err.Error())
 	}
 
-	return c.input.View()
+	return commandStyle.Render(
+		c.input.View(),
+	)
 }
