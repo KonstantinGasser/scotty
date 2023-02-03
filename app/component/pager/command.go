@@ -13,23 +13,36 @@ import (
 
 var (
 	commandStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.ColorBorder)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(styles.ColorBorder)
+
+	parsedStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(styles.ColorBorder)
 )
 
+// parsedIndex holds the parsed log data
+type parsedLog []byte
 type parserIndex int
 
 // send whenever an input is provided and the
 // confirmed by the enter key
-func parseLog(index int) tea.Cmd {
+func emitIndex(index int) tea.Cmd {
 	return func() tea.Msg {
 		return parserIndex(index)
+	}
+}
+
+func emitParsed(v []byte) tea.Cmd {
+	return func() tea.Msg {
+		return parsedLog(v)
 	}
 }
 
 type command struct {
 	width, height int
 	input         textinput.Model
+	parsed        []byte
 	err           error
 }
 
@@ -56,6 +69,7 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 	)
 
+	debug.Print("[cmd.Update] %T - %v\n", msg, msg)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.width = msg.Width
@@ -71,6 +85,7 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "esc":
 			c.input.Blur()
+			c.parsed = nil
 			return c, nil
 		case ":":
 			c.input.Reset()
@@ -91,8 +106,12 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				c.err = fmt.Errorf("input %q is not numeric. Type the index of the line you want to parse", value)
 				break
 			}
-			cmds = append(cmds, parseLog(index))
+			debug.Print("[enter] index=%d\n", index)
+			cmds = append(cmds, emitIndex(index))
 		}
+	case parsedLog:
+		debug.Print("[parsedLog] %s\n", msg)
+		c.parsed = []byte(msg)
 	}
 
 	c.input, cmd = c.input.Update(msg)
@@ -104,12 +123,30 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (c *command) View() string {
 	if c.err != nil {
 		return commandStyle.
-			Width(int(c.width / 3)).
+			Width(int(c.width/3) - 1).
 			Background(styles.ColorError).
 			Render(c.err.Error())
 	}
 
-	debug.Print("cmd with width: %d\n", int(c.width/3)-1)
+	// debug.Print("cmd with width: %d\n", int(c.width/3)-1)
+	debug.Print("parsed: %s\n", c.parsed)
+
+	if c.parsed != nil {
+		return lipgloss.JoinVertical(lipgloss.Top,
+			commandStyle.
+				Width(int(c.width/3)-1).
+				Render(
+					c.input.View(),
+				),
+			parsedStyle.
+				Width(int(c.width/3)-1).
+				Height(lipgloss.Height(string(c.parsed))).
+				Padding(1).
+				Render(
+					string(c.parsed),
+				),
+		)
+	}
 	return commandStyle.
 		Width(int(c.width/3) - 1).
 		Render(

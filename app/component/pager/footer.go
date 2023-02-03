@@ -58,9 +58,8 @@ type footer struct {
 
 func newFooter(w, h int) *footer {
 	return &footer{
-		width:  w,
-		height: h,
-		err:    nil,
+		width: w,
+		err:   nil,
 
 		mtx:            sync.RWMutex{},
 		logCount:       0,
@@ -83,8 +82,8 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		f.width = msg.Width - 2 // account for margin
-		f.height = msg.Height
+		f.width = msg.Width
+		// f.height = msg.Height -> not really interested in the tty height
 		return f, nil
 
 	// whenever a stream connects to scotty the event
@@ -186,14 +185,10 @@ func (f *footer) View() string {
 		)
 	}
 
-	return lipgloss.PlaceVertical(
-		bottomSectionHeight,
-		lipgloss.Bottom,
-		footerStyle.
-			Render(
-				lipgloss.JoinHorizontal(lipgloss.Left,
-					items...,
-				),
+	return footerStyle.
+		Render(
+			lipgloss.JoinHorizontal(lipgloss.Left,
+				items...,
 			),
-	)
+		)
 }

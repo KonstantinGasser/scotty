@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	bottomSectionHeight = 2
+	bottomSectionHeight = 1
 
 	// wow literally no idea why this number hence
 	// the variable name - if you get why tell me and
 	// pls open a PR..else pls don't change it
-	magicNumber = 3
+	magicNumber = 2
 )
 
 var (
@@ -66,7 +66,7 @@ type Logger struct {
 
 func NewLogger(width, height int) *Logger {
 
-	w, h := width, height-bottomSectionHeight-magicNumber // -1 to margin top for testing
+	w, h := width, height-bottomSectionHeight // -1 to margin top for testing
 
 	view := viewport.New(w, h)
 	view.Height = h
@@ -113,9 +113,16 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return pager, cmd
 	case tea.KeyMsg:
 		switch msg.String() {
+		case ":":
+			if pager.awaitInput {
+				return pager, nil
+			}
+			pager.awaitInput = true
+			pager.width = pager.width - int(pager.width/3) - (1 + 2)
+			return pager, nil
 		case "esc":
 			if !pager.awaitInput {
-				break
+				return pager, nil
 			}
 
 			w, h, err := styles.WindowSize()
@@ -127,28 +134,21 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			debug.Print("[tea.KeyMsg(esc)] pager width: %d - pager height: %d\n", pager.width, pager.height)
 			pager.awaitInput = false
-		case ":":
-			if pager.awaitInput {
-				break
-			}
-			pager.awaitInput = true
-			pager.width = pager.width - int(pager.width/3) - (1 + 2)
+			return pager, nil
 		case "up", "k":
 			if pager.selected <= 0 {
 				break
 			}
 			pager.selected--
-			if err := pager.parse(pager.selected); err != nil {
-				debug.Debug(err.Error())
-			}
+			cmds = append(cmds, pager.parse(pager.selected))
+			return pager, nil
 		case "down", "j":
 			if pager.selected >= int(pager.buffer.Cap()) {
 				break
 			}
 			pager.selected++
-			if err := pager.parse(pager.selected); err != nil {
-				debug.Debug(err.Error())
-			}
+			cmds = append(cmds, pager.parse(pager.selected))
+			return pager, nil
 		}
 
 	case tea.WindowSizeMsg:
@@ -226,7 +226,13 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
 		color := pager.beams[msg.Label]
-		prefix := msg.Label + strings.Repeat(" ", pager.maxLabelLength-len(msg.Label)) + " | "
+
+		space := pager.maxLabelLength - len(msg.Label)
+		if space < 0 {
+			space = 0
+		}
+
+		prefix := msg.Label + strings.Repeat(" ", space) + " | "
 		colored := []byte(lipgloss.NewStyle().Foreground(color).Render(prefix))
 		pager.buffer.Append(append(colored, msg.Data...))
 
@@ -250,9 +256,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// The msg of type parserIndex is an integer and represents
 	// the captured requested index.
 	case parserIndex:
-		if err := pager.parse(int(msg)); err != nil {
-			debug.Debug(err.Error())
-		}
+		parsed := pager.parse(int(msg))
+		pager.cmd, _ = pager.cmd.Update(
+			parsed(),
+		)
+		return pager, nil
 	}
 
 	// propagate events to child models.
@@ -302,13 +310,11 @@ func (pager *Logger) View() string {
 	)
 }
 
-func (pager *Logger) parse(index int) error {
-
+func (pager *Logger) parse(index int) tea.Cmd {
 	parsed, err := pager.buffer.At(index, ring.WithIndentation())
 	if err != nil {
-		return err
+		debug.Debug(err.Error())
 	}
-
-	debug.Print("parsed(index=%d): %s\n", index, parsed)
-	return nil
+	debug.Print("[parsed] %s\n", parsed)
+	return emitParsed(parsed)
 }
