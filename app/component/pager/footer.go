@@ -186,10 +186,14 @@ func (f *footer) View() string {
 		)
 	}
 
-	return footerStyle.
-		Render(
-			lipgloss.JoinHorizontal(lipgloss.Left,
-				items...,
+	return lipgloss.PlaceVertical(
+		bottomSectionHeight,
+		lipgloss.Bottom,
+		footerStyle.
+			Render(
+				lipgloss.JoinHorizontal(lipgloss.Left,
+					items...,
+				),
 			),
-		)
+	)
 }

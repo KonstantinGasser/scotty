@@ -38,8 +38,8 @@ var defaultBindings = bindings{
 		key.WithHelp("?", "toggle help"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("esc", "ctrl+c"),
-		key.WithHelp("esc", "exit scotty"),
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q", "exit scotty"),
 	),
 }
 

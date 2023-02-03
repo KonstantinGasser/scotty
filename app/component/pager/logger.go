@@ -14,18 +14,16 @@ import (
 )
 
 const (
-	marginLeft   = 0
-	marginRight  = 10
-	marginTop    = 30
-	marginBottom = 0
+	bottomSectionHeight = 2
 
-	footerHeight = 3
+	// wow literally no idea why this number hence
+	// the variable name - if you get why tell me and
+	// pls open a PR..else pls don't change it
+	magicNumber = 3
 )
 
 var (
-	pagerStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.ColorBorder)
+	pagerStyle = lipgloss.NewStyle()
 )
 
 type subscriber struct {
@@ -68,7 +66,7 @@ type Logger struct {
 
 func NewLogger(width, height int) *Logger {
 
-	w, h := width-1, height-footerHeight // -1 to margin top for testing
+	w, h := width, height-bottomSectionHeight-magicNumber // -1 to margin top for testing
 
 	view := viewport.New(w, h)
 	view.Height = h
@@ -115,8 +113,26 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return pager, cmd
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "esc":
+			if !pager.awaitInput {
+				break
+			}
+
+			w, h, err := styles.WindowSize()
+			if err != nil {
+				debug.Print("[tea.KeyMsg(esc)] unable to get tty width and height: %w\n", err)
+			}
+			pager.width = w
+			pager.height = h - bottomSectionHeight - magicNumber
+
+			debug.Print("[tea.KeyMsg(esc)] pager width: %d - pager height: %d\n", pager.width, pager.height)
+			pager.awaitInput = false
 		case ":":
-			pager.awaitInput = !pager.awaitInput
+			if pager.awaitInput {
+				break
+			}
+			pager.awaitInput = true
+			pager.width = pager.width - int(pager.width/3) - (1 + 2)
 		case "up", "k":
 			if pager.selected <= 0 {
 				break
@@ -136,13 +152,24 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		pager.width = msg.Width - 1   // pls fix this to constant so I will continue to understand
-		pager.height = msg.Height - 1 // by now I have already no plan why it needs to be one - only now 2 messed things up
 
+		pager.height = msg.Height - bottomSectionHeight - magicNumber
+		pager.width = msg.Width
+
+		if pager.awaitInput && pager.cmd != nil {
+			pager.width = msg.Width - int(msg.Width/3) - (1 + 2) // magic number + margin between logs and parsed code
+		}
+
+		debug.Print("[tea.WindowSizeMsg] pager width: %d - pager height: %d\n", pager.width, pager.height)
 		// update viewport width an height
 		pager.view.Width = pager.width
 		pager.view.Height = pager.height
 
+	// event dispatched each time a beam disconnects from scotty.
+	// The message itself is the label of the stream which
+	// disconnected. On a disconnect we need to recompute the
+	// length of the longest stream label in order to maintain
+	// pretty indention for logging the logs with the label prefix
 	case plexer.Unsubscribe:
 		// we only need to reassign the max value
 		// if the current max is disconnecting
@@ -247,18 +274,31 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (pager *Logger) View() string {
 
-	var bottom = ""
-	if pager.awaitInput {
-		bottom = pager.cmd.View()
-	} else {
-		bottom = pager.footer.View()
+	debug.Print("[pager.View()] pager with width: %d\n", pager.width)
+
+	// rending
+	if pager.awaitInput && pager.cmd != nil {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.JoinHorizontal(lipgloss.Left,
+				pagerStyle.
+					Border(lipgloss.RoundedBorder()).
+					BorderForeground(styles.ColorBorder).
+					Width(pager.width).
+					Render(
+						pager.view.View(),
+					),
+				pager.cmd.View(),
+			),
+			pager.footer.View(),
+		)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		pagerStyle.Render(
-			pager.view.View(),
-		),
-		bottom,
+		pagerStyle.
+			Render(
+				pager.view.View(),
+			),
+		pager.footer.View(),
 	)
 }
 

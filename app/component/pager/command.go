@@ -5,15 +5,16 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 var (
-	commandStyle = lipgloss.NewStyle().Padding(0, 1) //.
-	// Border(lipgloss.RoundedBorder()).
-	// BorderForeground(styles.ColorBorder)
+	commandStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(styles.ColorBorder)
 )
 
 type parserIndex int
@@ -57,7 +58,7 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		c.width = int(float64(msg.Width) * parserBoxWidthRatio)
+		c.width = msg.Width
 		c.height = msg.Height
 		return c, nil
 	case tea.KeyMsg:
@@ -67,6 +68,10 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// normal user input.
 		case "j", "k":
 			return c, tea.Batch(cmds...)
+
+		case "esc":
+			c.input.Blur()
+			return c, nil
 		case ":":
 			c.input.Reset()
 
@@ -99,11 +104,15 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (c *command) View() string {
 	if c.err != nil {
 		return commandStyle.
-			Foreground(styles.ColorError).
+			Width(int(c.width / 3)).
+			Background(styles.ColorError).
 			Render(c.err.Error())
 	}
 
-	return commandStyle.Render(
-		c.input.View(),
-	)
+	debug.Print("cmd with width: %d\n", int(c.width/3)-1)
+	return commandStyle.
+		Width(int(c.width/3) - 1).
+		Render(
+			c.input.View(),
+		)
 }
