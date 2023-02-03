@@ -66,7 +66,7 @@ type Logger struct {
 
 func NewLogger(width, height int) *Logger {
 
-	w, h := width, height-bottomSectionHeight // -1 to margin top for testing
+	w, h := width, height-bottomSectionHeight-magicNumber // -1 to margin top for testing
 
 	view := viewport.New(w, h)
 	view.Height = h
@@ -115,55 +115,79 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case ":":
 			if pager.awaitInput {
-				return pager, nil
+				break
 			}
 			pager.awaitInput = true
-			pager.width = pager.width - int(pager.width/3) - (1 + 2)
-			return pager, nil
+			width := pager.width - int(pager.width/3) - (1 + 2)
+
+			pager.setDimensions(
+				width,
+				pager.height,
+			)
+
 		case "esc":
 			if !pager.awaitInput {
-				return pager, nil
+				break
 			}
 
-			w, h, err := styles.WindowSize()
+			width, height, err := styles.WindowSize()
 			if err != nil {
 				debug.Print("[tea.KeyMsg(esc)] unable to get tty width and height: %w\n", err)
 			}
-			pager.width = w
-			pager.height = h - bottomSectionHeight - magicNumber
 
-			debug.Print("[tea.KeyMsg(esc)] pager width: %d - pager height: %d\n", pager.width, pager.height)
+			pager.setDimensions(
+				width,
+				height-bottomSectionHeight-magicNumber,
+			)
+
 			pager.awaitInput = false
-			return pager, nil
+
+		// selects the previous log line to be parsed
+		// and displayed. Input ignores when selected <= 0
 		case "up", "k":
 			if pager.selected <= 0 {
 				break
 			}
 			pager.selected--
-			cmds = append(cmds, pager.parse(pager.selected))
+
+			parsed := pager.parse(pager.selected)
+			pager.cmd, _ = pager.cmd.Update(
+				parsed(),
+			)
 			return pager, nil
+
+		// selects the next log line to be parsed and
+		// displayed. Input ignored when selected >= buffer.cap
 		case "down", "j":
 			if pager.selected >= int(pager.buffer.Cap()) {
 				break
 			}
 			pager.selected++
-			cmds = append(cmds, pager.parse(pager.selected))
+
+			parsed := pager.parse(pager.selected)
+			pager.cmd, _ = pager.cmd.Update(
+				parsed(),
+			)
 			return pager, nil
 		}
 
+	// event dispatched from bubbletea when the screen size changes.
+	// We need to update the pager and pager.view width and height.
+	// However, if the parsing mode is on the width is only 2/3
+	// of the available screen size.
 	case tea.WindowSizeMsg:
 
-		pager.height = msg.Height - bottomSectionHeight - magicNumber
-		pager.width = msg.Width
+		width := msg.Width
+		height := msg.Height - bottomSectionHeight - magicNumber
 
 		if pager.awaitInput && pager.cmd != nil {
-			pager.width = msg.Width - int(msg.Width/3) - (1 + 2) // magic number + margin between logs and parsed code
+			width = msg.Width - int(msg.Width/3) - (1 + 2) // magic number + margin between logs and parsed code
 		}
 
-		debug.Print("[tea.WindowSizeMsg] pager width: %d - pager height: %d\n", pager.width, pager.height)
-		// update viewport width an height
-		pager.view.Width = pager.width
-		pager.view.Height = pager.height
+		pager.setDimensions(
+			width,
+			height,
+		)
 
 	// event dispatched each time a beam disconnects from scotty.
 	// The message itself is the label of the stream which
@@ -282,9 +306,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (pager *Logger) View() string {
 
-	debug.Print("[pager.View()] pager with width: %d\n", pager.width)
-
-	// rending
 	if pager.awaitInput && pager.cmd != nil {
 		return lipgloss.JoinVertical(lipgloss.Left,
 			lipgloss.JoinHorizontal(lipgloss.Left,
@@ -292,6 +313,7 @@ func (pager *Logger) View() string {
 					Border(lipgloss.RoundedBorder()).
 					BorderForeground(styles.ColorBorder).
 					Width(pager.width).
+					Height(pager.height).
 					Render(
 						pager.view.View(),
 					),
@@ -303,6 +325,7 @@ func (pager *Logger) View() string {
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		pagerStyle.
+			Padding(1).
 			Render(
 				pager.view.View(),
 			),
@@ -313,8 +336,12 @@ func (pager *Logger) View() string {
 func (pager *Logger) parse(index int) tea.Cmd {
 	parsed, err := pager.buffer.At(index, ring.WithIndentation())
 	if err != nil {
-		debug.Debug(err.Error())
+		debug.Print("unable to parse buffer item at index=%d: %v\n", index, err)
 	}
-	debug.Print("[parsed] %s\n", parsed)
 	return emitParsed(parsed)
+}
+
+func (pager *Logger) setDimensions(width, height int) {
+	pager.width, pager.height = width, height
+	pager.view.Width, pager.view.Height = width, height
 }

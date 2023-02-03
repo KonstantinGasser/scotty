@@ -69,11 +69,10 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 	)
 
-	debug.Print("[cmd.Update] %T - %v\n", msg, msg)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		c.width = msg.Width
-		c.height = msg.Height
+		c.width = int(msg.Width/3) - 1
+		c.height = msg.Height - bottomSectionHeight - magicNumber
 		return c, nil
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -123,23 +122,22 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (c *command) View() string {
 	if c.err != nil {
 		return commandStyle.
-			Width(int(c.width/3) - 1).
+			Width(c.width).
 			Background(styles.ColorError).
 			Render(c.err.Error())
 	}
 
-	// debug.Print("cmd with width: %d\n", int(c.width/3)-1)
 	debug.Print("parsed: %s\n", c.parsed)
 
 	if c.parsed != nil {
 		return lipgloss.JoinVertical(lipgloss.Top,
 			commandStyle.
-				Width(int(c.width/3)-1).
+				Width(c.width).
 				Render(
 					c.input.View(),
 				),
 			parsedStyle.
-				Width(int(c.width/3)-1).
+				Width(c.width).
 				Height(lipgloss.Height(string(c.parsed))).
 				Padding(1).
 				Render(
@@ -148,7 +146,7 @@ func (c *command) View() string {
 		)
 	}
 	return commandStyle.
-		Width(int(c.width/3) - 1).
+		Width(c.width).
 		Render(
 			c.input.View(),
 		)
