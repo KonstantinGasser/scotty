@@ -81,7 +81,7 @@ func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message
 
 		width:  width,
 		height: height,
-		state:  logTailView,
+		state:  welcomeView,
 
 		errs:        errs,
 		messages:    msgs,

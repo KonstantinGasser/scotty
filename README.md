@@ -13,7 +13,7 @@ need in order to understand the bug you're searching for..tedious
 
 With `scotty` you can multiplex your application logs into one consolidated terminal window apply filers on specific streams and query your logs (well once its implemented..working on it)
 
-![](/resources/scotty_logs_x2.png)
+![](/resources/example.png)
 # Installation guide
 
 

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -48,7 +47,7 @@ type command struct {
 
 func newCommand(w, h int) *command {
 	input := textinput.New()
-	input.Placeholder = "type the line number to parse as JSON"
+	input.Placeholder = "line number (use k/j to move and ESC to exit)"
 	input.Prompt = ":"
 	return &command{
 		width:  w,
@@ -105,11 +104,9 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				c.err = fmt.Errorf("input %q is not numeric. Type the index of the line you want to parse", value)
 				break
 			}
-			debug.Print("[enter] index=%d\n", index)
 			cmds = append(cmds, emitIndex(index))
 		}
 	case parsedLog:
-		debug.Print("[parsedLog] %s\n", msg)
 		c.parsed = []byte(msg)
 	}
 
@@ -126,8 +123,6 @@ func (c *command) View() string {
 			Background(styles.ColorError).
 			Render(c.err.Error())
 	}
-
-	debug.Print("parsed: %s\n", c.parsed)
 
 	if c.parsed != nil {
 		return lipgloss.JoinVertical(lipgloss.Top,
