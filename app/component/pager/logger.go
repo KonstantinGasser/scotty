@@ -83,6 +83,7 @@ func NewLogger(width, height int) *Logger {
 		width:          w,
 		height:         h,
 		awaitInput:     false,
+		selected:       -1,
 		footer:         newFooter(w, h),
 		cmd:            newCommand(w, h),
 	}
@@ -126,19 +127,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pager.height,
 			)
 
-			err := pager.buffer.Window(
-				&pager.writer,
+			pager.renderView(
 				pager.height,
-				ring.WithLineWrap(pager.width-1), // -1 as we need to account for the pixels reserved for the border
+				true,
+				ring.WithLineWrap(pager.width-1),
 			)
-			if err != nil {
-				debug.Debug(err.Error())
-			}
-
-			pager.view.SetContent(pager.writer.String())
-			pager.writer.Reset()
-
-			pager.view.GotoBottom()
 
 		// exits the parsing mode. Has no effect
 		// while not in parsing mode (awaitInput == false)
@@ -158,6 +151,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 			pager.awaitInput = false
+			pager.selected = -1
 
 			pager.renderView(
 				pager.height,
@@ -304,7 +298,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// while browsing through the logs do don't want to
 		// keep moving down the new logs
-		if pager.awaitInput {
+		if pager.awaitInput && pager.selected >= 0 {
 			break
 		}
 
@@ -325,6 +319,14 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.cmd, _ = pager.cmd.Update(
 			parsed(),
 		)
+
+		pager.renderView(
+			pager.height,
+			false,
+			ring.WithLineWrap(pager.width),
+			ring.WithSelectedLine(pager.selected),
+		)
+
 		return pager, tea.Batch(cmds...)
 	}
 

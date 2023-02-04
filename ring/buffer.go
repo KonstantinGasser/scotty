@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wrap"
 )
@@ -144,7 +143,6 @@ func WithIndent() func([]byte) ([]byte, error) {
 
 		offset := bytes.IndexByte(b, byte('|'))
 		if offset < 0 {
-			debug.Print("offset not found in -> %q\n", b)
 			return nil, ErrMalformedLog
 		}
 
@@ -156,7 +154,6 @@ func WithIndent() func([]byte) ([]byte, error) {
 			),
 			[]byte(" "),
 		)
-		debug.Print("at offset: %q\n", data)
 
 		var out bytes.Buffer
 		if err := json.Indent(&out, data, " ", "\t"); err != nil {
