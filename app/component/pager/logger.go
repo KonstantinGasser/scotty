@@ -125,6 +125,21 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				width,
 				pager.height,
 			)
+
+			err := pager.buffer.Window(
+				&pager.writer,
+				pager.height,
+				ring.WithLineWrap(pager.width-1), // -1 as we need to account for the pixels reserved for the border
+			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			pager.writer.Reset()
+
+			pager.view.GotoBottom()
+
 		// exits the parsing mode. Has no effect
 		// while not in parsing mode (awaitInput == false)
 		case "esc":
@@ -144,6 +159,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			pager.awaitInput = false
 
+			pager.renderView(
+				pager.height,
+				true,
+			)
+
 		// selects the previous log line to be parsed
 		// and displayed. Input ignores when selected <= 0
 		case "k":
@@ -159,18 +179,12 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// re-render log view to mark the current
 			// line formatted
-			err := pager.buffer.Window(
-				&pager.writer,
+			pager.renderView(
 				pager.height,
-				ring.WithLineWrap(pager.width-1),
+				false,
+				ring.WithLineWrap(pager.width),
 				ring.WithSelectedLine(pager.selected),
 			)
-			if err != nil {
-				debug.Debug(err.Error())
-			}
-
-			pager.view.SetContent(pager.writer.String())
-			pager.writer.Reset()
 
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when selected >= buffer.cap
@@ -187,18 +201,12 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// re-render log view to mark the current
 			// line formatted
-			err := pager.buffer.Window(
-				&pager.writer,
+			pager.renderView(
 				pager.height,
-				ring.WithLineWrap(pager.width-1),
+				false,
+				ring.WithLineWrap(pager.width),
 				ring.WithSelectedLine(pager.selected),
 			)
-			if err != nil {
-				debug.Debug(err.Error())
-			}
-
-			pager.view.SetContent(pager.writer.String())
-			pager.writer.Reset()
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -300,19 +308,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		err := pager.buffer.Window(
-			&pager.writer,
+		pager.renderView(
 			pager.height,
-			ring.WithLineWrap(pager.width-1), // -1 as we need to account for the pixels reserved for the border
+			true,
+			ring.WithLineWrap(pager.width),
 		)
-		if err != nil {
-			debug.Debug(err.Error())
-		}
-
-		pager.view.SetContent(pager.writer.String())
-		pager.writer.Reset()
-
-		pager.view.GotoBottom()
 
 	// event dispatched by the command model whenever the user
 	// enters on an input requesting to parse a log line.
@@ -383,6 +383,26 @@ func (pager *Logger) parse(index int) tea.Cmd {
 	return emitParsed(
 		convertToStruct(index, current),
 	)
+}
+
+func (pager *Logger) renderView(rows int, toBottom bool, opts ...func(int, []byte) []byte) {
+	err := pager.buffer.Window(
+		&pager.writer,
+		pager.height,
+		opts...,
+	)
+	if err != nil {
+		debug.Debug(err.Error())
+	}
+
+	pager.view.SetContent(pager.writer.String())
+	pager.writer.Reset()
+
+	if !toBottom {
+		return
+	}
+
+	pager.view.GotoBottom()
 }
 
 func convertToStruct(i int, v []byte) *parsedLog {

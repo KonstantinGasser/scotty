@@ -184,16 +184,25 @@ func WithSelectedLine(index int) func(int, []byte) []byte {
 			return b
 		}
 
-		// var selected = make([]byte, 0, len(b))
-		// copy(selected, b)
+		offset := bytes.IndexByte(b, byte('|'))
 
-		val := []byte(lipgloss.NewStyle().
+		val := lipgloss.NewStyle().
 			Foreground(styles.ColorBorder).
-			Bold(true).
 			Render(
-				string(b),
-			))
-		debug.Print("[selected] %s\n", val)
-		return val
+				string(b[offset+1:]),
+			)
+
+		// for some reason a lot of empty spaces are
+		// added to the end of the styled string which
+		// are messing up the formatting
+		var cutoff = len(val) - 1
+		for i := len(val) - 1; i >= 0; i-- {
+			if val[i] != byte('\n') && val[i] != byte(' ') {
+				break
+			}
+			cutoff = i
+		}
+
+		return append(b[0:offset+1], val[:cutoff]...)
 	}
 }
