@@ -113,6 +113,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return pager, cmd
 	case tea.KeyMsg:
 		switch msg.String() {
+		// triggers the parsing mode of logs. Has no
+		// effect while in parsing mode (awaitInput == true)
 		case ":":
 			if pager.awaitInput {
 				break
@@ -124,7 +126,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				width,
 				pager.height,
 			)
-
+		// exits the parsing mode. Has no effect
+		// while not in parsing mode (awaitInput == false)
 		case "esc":
 			if !pager.awaitInput {
 				break
