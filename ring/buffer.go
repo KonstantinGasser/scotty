@@ -7,6 +7,7 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/muesli/reflow/wrap"
 )
 
@@ -85,19 +86,24 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 var (
 	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
 	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
+	ErrMalformedLog     = fmt.Errorf("unable to format log. Log is malformed")
 )
 
 // At returns a single element in the buffer at the given index. It returns an error
 // if the index is either grater than the buffer's capacity or less than 0.
 // If the buffer has not overflown yet and the provided index is grater than the
 // current buffer's write head-1 At still returns the value at the index however,
-// it will be a nil byte slice
+// it will be a nil byte slice.
+// Since mutation of the item might occur the []byte slice is copied
 func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
 	if index > int(buf.capacity) || index < 0 {
 		return nil, ErrIndexOutOfBounds
 	}
 
-	return fn(buf.data[index])
+	var item = make([]byte, len(buf.data[index]))
+	copy(item, buf.data[index])
+
+	return fn(item)
 }
 
 func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) []byte) error {
@@ -122,24 +128,42 @@ func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) [
 	return nil
 }
 
-// WithIndentation returns a func which parses and indents
-// a JSON string. Before parsing it performs a search for
-// the first occurrence of the byte("{") since the passed in
-// byte slice might hold more information then the JSON.
-// In our case a log line includes the label name as well
-// as the ansi color codes which we cannot parse
-func WithIndentation() func([]byte) ([]byte, error) {
+// WithIndent returns a slice of byte in which
+// the stream label and the formatted JSON are
+// separated by the delimiter "@". If the data
+// portion cannot be formatted the unformatted
+// data is appended to the result slice.
+func WithIndent() func([]byte) ([]byte, error) {
 	return func(b []byte) ([]byte, error) {
-		offset := bytes.Index(b, []byte("{"))
-		if offset < 0 {
-			return nil, ErrNotParsable
+
+		if b == nil {
+			return nil, nil
 		}
 
-		var out bytes.Buffer
-		if err := json.Indent(&out, b[offset:], " ", "\t"); err != nil {
-			return nil, err
+		offset := bytes.IndexByte(b, byte('|'))
+		if offset < 0 {
+			debug.Print("offset not found in -> %q\n", b)
+			return nil, ErrMalformedLog
 		}
-		return out.Bytes(), nil
+
+		var label = b[0:offset]
+		var data = bytes.TrimPrefix(
+			bytes.TrimSuffix(
+				b[offset+1:],
+				[]byte("\n"),
+			),
+			[]byte(" "),
+		)
+		debug.Print("at offset: %q\n", data)
+
+		var out bytes.Buffer
+		if err := json.Indent(&out, data, " ", "\t"); err != nil {
+			// in case of an error we don't care tbh. But at least show the
+			// dev the log in unformatted
+			return append(append(label, byte('@')), data...), nil
+		}
+
+		return append(append(label, byte('@')), out.Bytes()...), nil
 	}
 }
 
