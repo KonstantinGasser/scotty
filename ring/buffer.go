@@ -7,7 +7,9 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wrap"
 )
 
@@ -48,7 +50,7 @@ func (buf *Buffer) Append(p []byte) {
 // Window write up to N of the last appended items to the io.Writer
 // To modify items before writing them to the writer, a function can be provided.
 //
-func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error {
+func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) error {
 
 	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
@@ -63,7 +65,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 			continue
 		}
 
-		if fn != nil {
+		for _, fn := range fns {
 			val = fn(index, val)
 		}
 
@@ -173,5 +175,25 @@ func WithIndent() func([]byte) ([]byte, error) {
 func WithLineWrap(width int) func(int, []byte) []byte {
 	return func(index int, b []byte) []byte {
 		return wrap.Bytes(append([]byte("["+strconv.Itoa(index)+"]"), b[:]...), width)
+	}
+}
+
+func WithSelectedLine(index int) func(int, []byte) []byte {
+	return func(i int, b []byte) []byte {
+		if i != index {
+			return b
+		}
+
+		// var selected = make([]byte, 0, len(b))
+		// copy(selected, b)
+
+		val := []byte(lipgloss.NewStyle().
+			Foreground(styles.ColorBorder).
+			Bold(true).
+			Render(
+				string(b),
+			))
+		debug.Print("[selected] %s\n", val)
+		return val
 	}
 }

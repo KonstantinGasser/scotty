@@ -150,13 +150,27 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pager.selected <= 0 {
 				break
 			}
-			debug.Print("tea.KeyMsg[k] -> prev: %d\n", pager.selected)
 			pager.selected--
-			debug.Print("tea.KeyMsg[k] -> next: %d\n", pager.selected)
+
 			parsed := pager.parse(pager.selected)
 			pager.cmd, _ = pager.cmd.Update(
 				parsed(),
 			)
+
+			// re-render log view to mark the current
+			// line formatted
+			err := pager.buffer.Window(
+				&pager.writer,
+				pager.height,
+				ring.WithLineWrap(pager.width-1),
+				ring.WithSelectedLine(pager.selected),
+			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			pager.writer.Reset()
 
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when selected >= buffer.cap
@@ -164,14 +178,27 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pager.selected >= int(pager.buffer.Cap()) {
 				break
 			}
-			debug.Print("tea.KeyMsg[j] -> prev: %d\n", pager.selected)
 			pager.selected++
-			debug.Print("tea.KeyMsg[j] -> next: %d\n", pager.selected)
 
 			parsed := pager.parse(pager.selected)
 			pager.cmd, _ = pager.cmd.Update(
 				parsed(),
 			)
+
+			// re-render log view to mark the current
+			// line formatted
+			err := pager.buffer.Window(
+				&pager.writer,
+				pager.height,
+				ring.WithLineWrap(pager.width-1),
+				ring.WithSelectedLine(pager.selected),
+			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			pager.writer.Reset()
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -267,6 +294,12 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		pager.buffer.Append(append([]byte(prefix), msg.Data...))
 
+		// while browsing through the logs do don't want to
+		// keep moving down the new logs
+		if pager.awaitInput {
+			break
+		}
+
 		err := pager.buffer.Window(
 			&pager.writer,
 			pager.height,
@@ -279,7 +312,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.view.SetContent(pager.writer.String())
 		pager.writer.Reset()
 
-		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
 		pager.view.GotoBottom()
 
 	// event dispatched by the command model whenever the user
