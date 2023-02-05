@@ -173,12 +173,26 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// re-render log view to mark the current
 			// line formatted
-			pager.renderView(
+			err := pager.buffer.Offset(
+				&pager.writer,
+				pager.selected,
 				pager.height,
-				false,
 				ring.WithLineWrap(pager.width),
 				ring.WithSelectedLine(pager.selected),
 			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			debug.Print("string height: %d\nview height:  %d\n", lipgloss.Height(pager.writer.String()), pager.height)
+			pager.writer.Reset()
+			// pager.renderView(
+			// 	pager.height,
+			// 	false,
+			// 	ring.WithLineWrap(pager.width),
+			// 	ring.WithSelectedLine(pager.selected),
+			// )
 
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when selected >= buffer.cap
@@ -195,12 +209,26 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// re-render log view to mark the current
 			// line formatted
-			pager.renderView(
+			err := pager.buffer.Offset(
+				&pager.writer,
+				pager.selected,
 				pager.height,
-				false,
 				ring.WithLineWrap(pager.width),
 				ring.WithSelectedLine(pager.selected),
 			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			debug.Print("string height: %d\nview height:  %d\n", lipgloss.Height(pager.writer.String()), pager.height)
+			pager.writer.Reset()
+			// pager.renderView(
+			// 	pager.height,
+			// 	false,
+			// 	ring.WithLineWrap(pager.width),
+			// 	ring.WithSelectedLine(pager.selected),
+			// )
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -302,11 +330,13 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		pager.renderView(
-			pager.height,
-			true,
-			ring.WithLineWrap(pager.width),
-		)
+		// NOTE @KonstantinGasser:
+		// commented out for testing - hidden bug when formatting logs
+		// pager.renderView(
+		// 	pager.height,
+		// 	true,
+		// 	ring.WithLineWrap(pager.width),
+		// )
 
 	// event dispatched by the command model whenever the user
 	// enters on an input requesting to parse a log line.
@@ -320,12 +350,26 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			parsed(),
 		)
 
-		pager.renderView(
+		err := pager.buffer.Offset(
+			&pager.writer,
+			pager.selected,
 			pager.height,
-			false,
 			ring.WithLineWrap(pager.width),
 			ring.WithSelectedLine(pager.selected),
 		)
+		if err != nil {
+			debug.Debug(err.Error())
+		}
+
+		pager.view.SetContent(pager.writer.String())
+		pager.writer.Reset()
+
+		// pager.renderView(
+		// 	pager.height,
+		// 	false,
+		// 	ring.WithLineWrap(pager.width),
+		// 	ring.WithSelectedLine(pager.selected),
+		// )
 
 		return pager, tea.Batch(cmds...)
 	}

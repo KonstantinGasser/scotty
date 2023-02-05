@@ -84,27 +84,48 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) er
 	return nil
 }
 
-var (
-	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
-	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
-	ErrMalformedLog     = fmt.Errorf("unable to format log. Log is malformed")
-)
+func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte) []byte) error {
 
-// At returns a single element in the buffer at the given index. It returns an error
-// if the index is either grater than the buffer's capacity or less than 0.
-// If the buffer has not overflown yet and the provided index is grater than the
-// current buffer's write head-1 At still returns the value at the index however,
-// it will be a nil byte slice.
-// Since mutation of the item might occur the []byte slice is copied
-func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
-	if index > int(buf.capacity) || index < 0 {
-		return nil, ErrIndexOutOfBounds
+	var cap = int(buf.capacity)
+
+	// we are doing line wrapping. As such the resulting
+	// string height might end up being height the the requested height.
+	// Keep track of the actual height and break if reached
+	var actualHeight int
+	for i := offset; i < offset+n; i++ {
+
+		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+
+		val := buf.data[index]
+		if val == nil {
+			continue
+		}
+
+		// debug.Print("offset[%d:%d] - index(%d) %s\n", offset, offset+n, index, buf.data[index])
+		for _, fn := range fns {
+			val = fn(index, val)
+		}
+
+		actualHeight += bytes.Count(val, []byte("\n"))
+
+		if actualHeight >= n {
+			return nil
+		}
+
+		// under the hood we pass in a bytes.Buffer
+		// which again is using a slice of bytes where data
+		// is appended to whenever write is called. However, this
+		// is a potential bottleneck as runtime.growslice and
+		// runtime.memmove will be called more frequently to adjust the
+		// bytes.Buffer's buffer. Can be mitigated to a degree
+		// by setting a capacity using Grow(N) where N is the educated guess
+		// of how many bytes are expected to be written.
+		if _, err := w.Write(val); err != nil {
+			return err
+		}
 	}
 
-	var item = make([]byte, len(buf.data[index]))
-	copy(item, buf.data[index])
-
-	return fn(item)
+	return nil
 }
 
 func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) []byte) error {
@@ -127,6 +148,29 @@ func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) [
 	}
 
 	return nil
+}
+
+var (
+	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
+	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
+	ErrMalformedLog     = fmt.Errorf("unable to format log. Log is malformed")
+)
+
+// At returns a single element in the buffer at the given index. It returns an error
+// if the index is either grater than the buffer's capacity or less than 0.
+// If the buffer has not overflown yet and the provided index is grater than the
+// current buffer's write head-1 At still returns the value at the index however,
+// it will be a nil byte slice.
+// Since mutation of the item might occur the []byte slice is copied
+func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
+	if index > int(buf.capacity) || index < 0 {
+		return nil, ErrIndexOutOfBounds
+	}
+
+	var item = make([]byte, len(buf.data[index]))
+	copy(item, buf.data[index])
+
+	return fn(item)
 }
 
 // WithIndent returns a slice of byte in which
