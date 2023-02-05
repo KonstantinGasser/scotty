@@ -70,8 +70,6 @@ func NewLogger(width, height int) *Logger {
 
 	view := viewport.New(w, h)
 	view.Height = h
-	// no header we can render content in the first row
-	// view.HighPerformanceRendering = true
 	view.MouseWheelEnabled = true
 
 	// view.YPosition = 1
@@ -85,6 +83,7 @@ func NewLogger(width, height int) *Logger {
 		width:          w,
 		height:         h,
 		awaitInput:     false,
+		selected:       -1,
 		footer:         newFooter(w, h),
 		cmd:            newCommand(w, h),
 	}
@@ -104,15 +103,18 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		pager.view, cmd = pager.view.Update(msg)
-		switch msg.Type {
-		case tea.MouseWheelUp:
-			break
-		case tea.MouseWheelDown:
-			break
-		}
-		return pager, cmd
+		cmds = append(cmds, cmd)
+	// 	switch msg.Type {
+	// 	case tea.MouseWheelUp:
+	// 		break
+	// 	case tea.MouseWheelDown:
+	// 		break
+	// 	}
+	// 	return pager, cmd
 	case tea.KeyMsg:
 		switch msg.String() {
+		// triggers the parsing mode of logs. Has no
+		// effect while in parsing mode (awaitInput == true)
 		case ":":
 			if pager.awaitInput {
 				break
@@ -125,6 +127,14 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pager.height,
 			)
 
+			pager.renderView(
+				pager.height,
+				true,
+				ring.WithLineWrap(pager.width-1),
+			)
+
+		// exits the parsing mode. Has no effect
+		// while not in parsing mode (awaitInput == false)
 		case "esc":
 			if !pager.awaitInput {
 				break
@@ -141,10 +151,16 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 			pager.awaitInput = false
+			pager.selected = -1
+
+			pager.renderView(
+				pager.height,
+				true,
+			)
 
 		// selects the previous log line to be parsed
 		// and displayed. Input ignores when selected <= 0
-		case "up", "k":
+		case "k":
 			if pager.selected <= 0 {
 				break
 			}
@@ -154,11 +170,33 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.cmd, _ = pager.cmd.Update(
 				parsed(),
 			)
-			return pager, nil
+
+			// re-render log view to mark the current
+			// line formatted
+			err := pager.buffer.Offset(
+				&pager.writer,
+				pager.selected,
+				pager.height,
+				ring.WithLineWrap(pager.width),
+				ring.WithSelectedLine(pager.selected),
+			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			debug.Print("string height: %d\nview height:  %d\n", lipgloss.Height(pager.writer.String()), pager.height)
+			pager.writer.Reset()
+			// pager.renderView(
+			// 	pager.height,
+			// 	false,
+			// 	ring.WithLineWrap(pager.width),
+			// 	ring.WithSelectedLine(pager.selected),
+			// )
 
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when selected >= buffer.cap
-		case "down", "j":
+		case "j":
 			if pager.selected >= int(pager.buffer.Cap()) {
 				break
 			}
@@ -168,7 +206,29 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.cmd, _ = pager.cmd.Update(
 				parsed(),
 			)
-			return pager, nil
+
+			// re-render log view to mark the current
+			// line formatted
+			err := pager.buffer.Offset(
+				&pager.writer,
+				pager.selected,
+				pager.height,
+				ring.WithLineWrap(pager.width),
+				ring.WithSelectedLine(pager.selected),
+			)
+			if err != nil {
+				debug.Debug(err.Error())
+			}
+
+			pager.view.SetContent(pager.writer.String())
+			debug.Print("string height: %d\nview height:  %d\n", lipgloss.Height(pager.writer.String()), pager.height)
+			pager.writer.Reset()
+			// pager.renderView(
+			// 	pager.height,
+			// 	false,
+			// 	ring.WithLineWrap(pager.width),
+			// 	ring.WithSelectedLine(pager.selected),
+			// )
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -256,14 +316,44 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			space = 0
 		}
 
-		prefix := msg.Label + strings.Repeat(" ", space) + " | "
-		colored := []byte(lipgloss.NewStyle().Foreground(color).Render(prefix))
-		pager.buffer.Append(append(colored, msg.Data...))
+		prefix := lipgloss.NewStyle().
+			Foreground(color).
+			Render(
+				msg.Label+strings.Repeat(" ", space),
+			) + " | "
 
-		err := pager.buffer.Window(
-			&pager.writer,
+		pager.buffer.Append(append([]byte(prefix), msg.Data...))
+
+		// while browsing through the logs do don't want to
+		// keep moving down the new logs
+		if pager.awaitInput && pager.selected >= 0 {
+			break
+		}
+
+		pager.renderView(
 			pager.height,
-			ring.WithLineWrap(pager.width-1), // -1 as we need to account for the pixels reserved for the border
+			true,
+			ring.WithLineWrap(pager.width),
+		)
+
+	// event dispatched by the command model whenever the user
+	// enters on an input requesting to parse a log line.
+	// The msg of type parserIndex is an integer and represents
+	// the captured requested index.
+	case parserIndex:
+		parsed := pager.parse(int(msg))
+		pager.selected = int(msg)
+
+		pager.cmd, _ = pager.cmd.Update(
+			parsed(),
+		)
+
+		err := pager.buffer.Offset(
+			&pager.writer,
+			pager.selected,
+			pager.height,
+			ring.WithLineWrap(pager.width),
+			ring.WithSelectedLine(pager.selected),
 		)
 		if err != nil {
 			debug.Debug(err.Error())
@@ -272,19 +362,14 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pager.view.SetContent(pager.writer.String())
 		pager.writer.Reset()
 
-		// this has one flaw; if a log with longer then the width of the terminal it will be wrapped -> >1 line
-		pager.view.GotoBottom()
+		// pager.renderView(
+		// 	pager.height,
+		// 	false,
+		// 	ring.WithLineWrap(pager.width),
+		// 	ring.WithSelectedLine(pager.selected),
+		// )
 
-	// event dispatched by the command model whenever the user
-	// enters on an input requesting to parse a log line.
-	// The msg of type parserIndex is an integer and represents
-	// the captured requested index.
-	case parserIndex:
-		parsed := pager.parse(int(msg))
-		pager.cmd, _ = pager.cmd.Update(
-			parsed(),
-		)
-		return pager, nil
+		return pager, tea.Batch(cmds...)
 	}
 
 	// propagate events to child models.
@@ -334,11 +419,47 @@ func (pager *Logger) View() string {
 }
 
 func (pager *Logger) parse(index int) tea.Cmd {
-	parsed, err := pager.buffer.At(index, ring.WithIndentation())
+	current, err := pager.buffer.At(index, ring.WithIndent())
 	if err != nil {
 		debug.Print("unable to parse buffer item at index=%d: %v\n", index, err)
 	}
-	return emitParsed(parsed)
+
+	return emitParsed(
+		convertToStruct(index, current),
+	)
+}
+
+func (pager *Logger) renderView(rows int, toBottom bool, opts ...func(int, []byte) []byte) {
+	err := pager.buffer.Window(
+		&pager.writer,
+		pager.height,
+		opts...,
+	)
+	if err != nil {
+		debug.Debug(err.Error())
+	}
+
+	pager.view.SetContent(pager.writer.String())
+	pager.writer.Reset()
+
+	if !toBottom {
+		return
+	}
+
+	pager.view.GotoBottom()
+}
+
+func convertToStruct(i int, v []byte) *parsedLog {
+	if v == nil {
+		return nil
+	}
+	parts := bytes.Split(v, []byte("@"))
+
+	return &parsedLog{
+		index: i,
+		label: string(parts[0]),
+		data:  parts[1],
+	}
 }
 
 func (pager *Logger) setDimensions(width, height int) {

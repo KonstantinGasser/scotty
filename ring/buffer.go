@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wrap"
 )
 
@@ -47,7 +49,7 @@ func (buf *Buffer) Append(p []byte) {
 // Window write up to N of the last appended items to the io.Writer
 // To modify items before writing them to the writer, a function can be provided.
 //
-func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error {
+func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) error {
 
 	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
@@ -62,7 +64,7 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 			continue
 		}
 
-		if fn != nil {
+		for _, fn := range fns {
 			val = fn(index, val)
 		}
 
@@ -82,22 +84,50 @@ func (buf Buffer) Window(w io.Writer, n int, fn func(int, []byte) []byte) error 
 	return nil
 }
 
-var (
-	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
-	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
-)
+func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte) []byte) error {
 
-// At returns a single element in the buffer at the given index. It returns an error
-// if the index is either grater than the buffer's capacity or less than 0.
-// If the buffer has not overflown yet and the provided index is grater than the
-// current buffer's write head-1 At still returns the value at the index however,
-// it will be a nil byte slice
-func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
-	if index > int(buf.capacity) || index < 0 {
-		return nil, ErrIndexOutOfBounds
+	var cap = int(buf.capacity)
+
+	// we are doing line wrapping. As such the resulting
+	// string height might end up being height the the requested height.
+	// Keep track of the actual height and break if reached
+	var actualHeight int
+
+	for i := offset; i < offset+n; i++ {
+
+		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+
+		val := buf.data[index]
+		if val == nil {
+			continue
+		}
+
+		for _, fn := range fns {
+			val = fn(index, val)
+		}
+
+		actualHeight += bytes.Count(val, []byte("\n"))
+
+		// we accept that the might come out with
+		// less lines then height would allow.
+		if actualHeight >= n {
+			return nil
+		}
+
+		// under the hood we pass in a bytes.Buffer
+		// which again is using a slice of bytes where data
+		// is appended to whenever write is called. However, this
+		// is a potential bottleneck as runtime.growslice and
+		// runtime.memmove will be called more frequently to adjust the
+		// bytes.Buffer's buffer. Can be mitigated to a degree
+		// by setting a capacity using Grow(N) where N is the educated guess
+		// of how many bytes are expected to be written.
+		if _, err := w.Write(val); err != nil {
+			return err
+		}
 	}
 
-	return fn(buf.data[index])
+	return nil
 }
 
 func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) []byte) error {
@@ -122,24 +152,63 @@ func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) [
 	return nil
 }
 
-// WithIndentation returns a func which parses and indents
-// a JSON string. Before parsing it performs a search for
-// the first occurrence of the byte("{") since the passed in
-// byte slice might hold more information then the JSON.
-// In our case a log line includes the label name as well
-// as the ansi color codes which we cannot parse
-func WithIndentation() func([]byte) ([]byte, error) {
+var (
+	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
+	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
+	ErrMalformedLog     = fmt.Errorf("unable to format log. Log is malformed")
+)
+
+// At returns a single element in the buffer at the given index. It returns an error
+// if the index is either grater than the buffer's capacity or less than 0.
+// If the buffer has not overflown yet and the provided index is grater than the
+// current buffer's write head-1 At still returns the value at the index however,
+// it will be a nil byte slice.
+// Since mutation of the item might occur the []byte slice is copied
+func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error) {
+	if index > int(buf.capacity) || index < 0 {
+		return nil, ErrIndexOutOfBounds
+	}
+
+	var item = make([]byte, len(buf.data[index]))
+	copy(item, buf.data[index])
+
+	return fn(item)
+}
+
+// WithIndent returns a slice of byte in which
+// the stream label and the formatted JSON are
+// separated by the delimiter "@". If the data
+// portion cannot be formatted the unformatted
+// data is appended to the result slice.
+func WithIndent() func([]byte) ([]byte, error) {
 	return func(b []byte) ([]byte, error) {
-		offset := bytes.Index(b, []byte("{"))
-		if offset < 0 {
-			return nil, ErrNotParsable
+
+		if b == nil {
+			return nil, nil
 		}
 
-		var out bytes.Buffer
-		if err := json.Indent(&out, b[offset:], " ", "\t"); err != nil {
-			return nil, err
+		offset := bytes.IndexByte(b, byte('|'))
+		if offset < 0 {
+			return nil, ErrMalformedLog
 		}
-		return out.Bytes(), nil
+
+		var label = b[0:offset]
+		var data = bytes.TrimPrefix(
+			bytes.TrimSuffix(
+				b[offset+1:],
+				[]byte("\n"),
+			),
+			[]byte(" "),
+		)
+
+		var out bytes.Buffer
+		if err := json.Indent(&out, data, " ", "\t"); err != nil {
+			// in case of an error we don't care tbh. But at least show the
+			// dev the log in unformatted
+			return append(append(label, byte('@')), data...), nil
+		}
+
+		return append(append(label, byte('@')), out.Bytes()...), nil
 	}
 }
 
@@ -149,5 +218,34 @@ func WithIndentation() func([]byte) ([]byte, error) {
 func WithLineWrap(width int) func(int, []byte) []byte {
 	return func(index int, b []byte) []byte {
 		return wrap.Bytes(append([]byte("["+strconv.Itoa(index)+"]"), b[:]...), width)
+	}
+}
+
+func WithSelectedLine(index int) func(int, []byte) []byte {
+	return func(i int, b []byte) []byte {
+		if i != index {
+			return b
+		}
+
+		offset := bytes.IndexByte(b, byte('|'))
+
+		val := lipgloss.NewStyle().
+			Foreground(styles.ColorBorder).
+			Render(
+				string(b[offset+1:]),
+			)
+
+		// for some reason a lot of empty spaces are
+		// added to the end of the styled string which
+		// are messing up the formatting
+		var cutoff = len(val) - 1
+		for i := len(val) - 1; i >= 0; i-- {
+			if val[i] != byte('\n') && val[i] != byte(' ') {
+				break
+			}
+			cutoff = i
+		}
+
+		return append(b[0:offset+1], val[:cutoff]...)
 	}
 }

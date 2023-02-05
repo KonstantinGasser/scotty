@@ -6,8 +6,10 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wrap"
 )
 
 var (
@@ -18,10 +20,18 @@ var (
 	parsedStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(styles.ColorBorder)
+
+	emptyParsedMsg = lipgloss.NewStyle().
+			Bold(true).
+			Render("no value which can be formatted")
 )
 
 // parsedIndex holds the parsed log data
-type parsedLog []byte
+type parsedLog struct {
+	index int
+	label string
+	data  []byte
+}
 type parserIndex int
 
 // send whenever an input is provided and the
@@ -32,28 +42,33 @@ func emitIndex(index int) tea.Cmd {
 	}
 }
 
-func emitParsed(v []byte) tea.Cmd {
+func emitParsed(v *parsedLog) tea.Cmd {
 	return func() tea.Msg {
-		return parsedLog(v)
+		return v
 	}
 }
 
 type command struct {
 	width, height int
 	input         textinput.Model
-	parsed        []byte
-	err           error
+
+	parsedItem *parsedLog
+	parsedView viewport.Model
+	err        error
 }
 
 func newCommand(w, h int) *command {
+	width := int(w/3) - 1
 	input := textinput.New()
 	input.Placeholder = "line number (use k/j to move and ESC to exit)"
 	input.Prompt = ":"
 	return &command{
-		width:  w,
-		height: h,
-		input:  input,
-		err:    nil,
+		width:      width,
+		height:     h,
+		input:      input,
+		parsedItem: nil,
+		parsedView: defaultLogView(width, 1),
+		err:        nil,
 	}
 }
 
@@ -69,6 +84,10 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		c.parsedView, cmd = c.parsedView.Update(msg)
+		cmds = append(cmds, cmd)
+
 	case tea.WindowSizeMsg:
 		c.width = int(msg.Width/3) - 1
 		c.height = msg.Height - bottomSectionHeight - magicNumber
@@ -83,7 +102,7 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "esc":
 			c.input.Blur()
-			c.parsed = nil
+			c.parsedView.SetContent("")
 			return c, nil
 		case ":":
 			c.input.Reset()
@@ -106,8 +125,8 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			cmds = append(cmds, emitIndex(index))
 		}
-	case parsedLog:
-		c.parsed = []byte(msg)
+	case *parsedLog:
+		c.parsedItem = msg
 	}
 
 	c.input, cmd = c.input.Update(msg)
@@ -124,25 +143,42 @@ func (c *command) View() string {
 			Render(c.err.Error())
 	}
 
-	if c.parsed != nil {
-		return lipgloss.JoinVertical(lipgloss.Top,
-			commandStyle.
-				Width(c.width).
-				Render(
-					c.input.View(),
-				),
-			parsedStyle.
-				Width(c.width).
-				Height(lipgloss.Height(string(c.parsed))).
-				Padding(1).
-				Render(
-					string(c.parsed),
-				),
+	c.parsedView.SetContent(emptyParsedMsg)
+	parsedContent := c.parsedView.View()
+	if c.parsedItem != nil {
+		value := lipgloss.NewStyle().
+			MarginTop(1).
+			Render(
+				wrap.String(string(c.parsedItem.data), c.width-2),
+			)
+
+		c.parsedView.Height = lipgloss.Height(value)
+		c.parsedView.SetContent(value)
+
+		parsedContent = lipgloss.JoinVertical(lipgloss.Left,
+			"["+strconv.Itoa(c.parsedItem.index)+"]"+c.parsedItem.label,
+			c.parsedView.View(),
 		)
 	}
-	return commandStyle.
-		Width(c.width).
-		Render(
-			c.input.View(),
-		)
+
+	return lipgloss.JoinVertical(lipgloss.Top,
+		commandStyle.
+			Width(c.width).
+			Render(
+				c.input.View(),
+			),
+		parsedStyle.
+			Padding(0, 1).
+			Width(c.width).
+			Render(
+				parsedContent,
+			),
+	)
+}
+
+func defaultLogView(width, height int) viewport.Model {
+	vp := viewport.New(width, height)
+	vp.MouseWheelEnabled = true
+
+	return vp
 }
