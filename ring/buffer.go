@@ -2,13 +2,13 @@ package ring
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/muesli/reflow/wrap"
 )
 
@@ -179,14 +179,14 @@ func WithIndent() func([]byte) ([]byte, error) {
 			[]byte(" "),
 		)
 
-		var out bytes.Buffer
-		if err := json.Indent(&out, data, " ", "\t"); err != nil {
+		out, err := prettyjson.Format(data)
+		if err != nil {
 			// in case of an error we don't care tbh. But at least show the
 			// dev the log in unformatted
 			return append(append(label, byte('@')), data...), nil
 		}
 
-		return append(append(label, byte('@')), out.Bytes()...), nil
+		return append(append(label, byte('@')), out...), nil
 	}
 }
 
