@@ -92,6 +92,7 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 	// string height might end up being height the the requested height.
 	// Keep track of the actual height and break if reached
 	var actualHeight int
+
 	for i := offset; i < offset+n; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
@@ -101,13 +102,14 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 			continue
 		}
 
-		// debug.Print("offset[%d:%d] - index(%d) %s\n", offset, offset+n, index, buf.data[index])
 		for _, fn := range fns {
 			val = fn(index, val)
 		}
 
 		actualHeight += bytes.Count(val, []byte("\n"))
 
+		// we accept that the might come out with
+		// less lines then height would allow.
 		if actualHeight >= n {
 			return nil
 		}

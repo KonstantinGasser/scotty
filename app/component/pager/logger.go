@@ -330,13 +330,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		// NOTE @KonstantinGasser:
-		// commented out for testing - hidden bug when formatting logs
-		// pager.renderView(
-		// 	pager.height,
-		// 	true,
-		// 	ring.WithLineWrap(pager.width),
-		// )
+		pager.renderView(
+			pager.height,
+			true,
+			ring.WithLineWrap(pager.width),
+		)
 
 	// event dispatched by the command model whenever the user
 	// enters on an input requesting to parse a log line.
