@@ -66,4 +66,4 @@ data via a ***tcp:ip*** connection which enables you to beam logs from for examp
 
 # In case it fails, it fails!
 
-Since `scotty` is still under active development panics within the program might happen. In such case you might need to delete the create ***unix socket* before restarting scotty. The default path for the socket scotty is using is `/tmp/scotty.unix`. This does not apply it you used `tcp:ip`
+Since `scotty` is still under active development panics within the program might happen. In such case you might need to delete the create ***unix socket*** before restarting scotty. The default path for the socket scotty is using is `/tmp/scotty.sock`. This does not apply if you used `tcp:ip`
