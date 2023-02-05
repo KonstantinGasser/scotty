@@ -91,6 +91,8 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		c.width = int(msg.Width/3) - 1
+		c.parsedView.Width = c.width
+
 		c.height = msg.Height - bottomSectionHeight - magicNumber
 		return c, nil
 	case tea.KeyMsg:
