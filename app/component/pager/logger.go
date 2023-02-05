@@ -119,6 +119,10 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pager.height,
 			)
 
+			// we need to kick of and continue to render
+			// incoming logs. If we don't kick of the
+			// rerendering the current logs are not wrapped
+			// by the new width only once a new log is received
 			pager.renderWindow(
 				pager.height,
 				true,
@@ -145,6 +149,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.awaitInput = false
 			pager.selected = -1
 
+			// again the width of the log view changes on
+			// exit as such we need to force a rerender
+			// in order to fix the line wraps of each log
 			pager.renderWindow(
 				pager.height,
 				true,
@@ -163,6 +170,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				parsed(),
 			)
 
+			// render logs starting from the selected
+			// and highlight the selected log line
 			pager.renderOffset(
 				pager.selected,
 				ring.WithLineWrap(pager.width),
@@ -182,6 +191,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				parsed(),
 			)
 
+			// render logs starting from the selected
+			// and highlight the selected log line
 			pager.renderOffset(
 				pager.selected,
 				ring.WithLineWrap(pager.width),

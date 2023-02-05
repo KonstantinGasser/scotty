@@ -13,7 +13,7 @@ need in order to understand the bug you're searching for..tedious
 
 With `scotty` you can multiplex your application logs into one consolidated terminal window apply filers on specific streams and query your logs (well once its implemented..working on it)
 
-![](/resources/example.png)
+![](/resources/example_v0.0.1.png)
 # Installation guide
 
 
@@ -63,3 +63,7 @@ Especially when logs are structured we humans have it hard to read the unformatt
 
 Currently `beam` only allows to pipe data through unix sockets..however `beam` as well as `scotty` are build such that both will support piping
 data via a ***tcp:ip*** connection which enables you to beam logs from for example docker instances to `scotty` :)
+
+# In case it fails, it fails!
+
+Since `scotty` is still under active development panics within the program might happen. In such case you might need to delete the create ***unix socket* before restarting scotty. The default path for the socket scotty is using is `/tmp/scotty.unix`. This does not apply it you used `tcp:ip`
