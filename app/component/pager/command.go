@@ -153,7 +153,7 @@ func (c *command) View() string {
 		value := lipgloss.NewStyle().
 			MarginTop(1).
 			Render(
-				wrap.String(string(c.parsedItem.data), c.width-2),
+				wrap.String(string(c.parsedItem.data), c.width),
 			)
 
 		c.parsedView.Height = lipgloss.Height(value)

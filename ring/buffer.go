@@ -130,28 +130,6 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 	return nil
 }
 
-func (buf Buffer) ScrollUp(w io.Writer, delta int, n int, fn func(int, []byte) []byte) error {
-
-	var writeIndex, cap int = int(buf.write), int(buf.capacity)
-	var offset = writeIndex - n - delta
-
-	for i := offset; i < writeIndex-delta; i++ { // this loops over range [offset, writeIndex)
-
-		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
-
-		val := buf.data[index]
-		if fn != nil {
-			val = fn(index, val)
-		}
-
-		if _, err := w.Write(val); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 var (
 	ErrIndexOutOfBounds = fmt.Errorf("input index is grater than the capacity of the buffer or less than zero")
 	ErrNotParsable      = fmt.Errorf("requested log line cannot be parsed to JSON")
