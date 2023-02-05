@@ -11,9 +11,7 @@ import (
 )
 
 var (
-	footerStyle = lipgloss.NewStyle().Padding(0, 1) //.
-	// Border(lipgloss.RoundedBorder()).
-	// BorderForeground(styles.ColorBorder)
+	footerStyle = lipgloss.NewStyle().Padding(0, 1)
 
 	spacing = styles.Spacer(1).Render("")
 )

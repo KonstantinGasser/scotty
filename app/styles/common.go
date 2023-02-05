@@ -7,7 +7,7 @@ var (
 
 	StatusBarLogCount = lipgloss.NewStyle().
 				Padding(0, 1).
-				Foreground(ColorStatusBarLogCount).
+				Foreground(DefaultColor.Light).
 				Render
 
 	StatusBarBeamInfo = lipgloss.NewStyle().
@@ -15,6 +15,6 @@ var (
 
 	ErrorInfo = lipgloss.NewStyle().
 			Padding(0, 1).
-			Background(ColorErrorBackground).
+			Background(DefaultColor.Error).
 			Render
 )

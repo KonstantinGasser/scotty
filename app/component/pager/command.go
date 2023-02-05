@@ -15,14 +15,15 @@ import (
 var (
 	commandStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.ColorBorder)
+			BorderForeground(styles.DefaultColor.Border)
 
 	parsedStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.ColorBorder)
+			BorderForeground(styles.DefaultColor.Border)
 
 	emptyParsedMsg = lipgloss.NewStyle().
 			Bold(true).
+			Foreground(styles.DefaultColor.Light).
 			Render("no value which can be formatted")
 )
 
@@ -140,7 +141,7 @@ func (c *command) View() string {
 	if c.err != nil {
 		return commandStyle.
 			Width(c.width).
-			Background(styles.ColorError).
+			Background(styles.DefaultColor.Error).
 			Render(c.err.Error())
 	}
 

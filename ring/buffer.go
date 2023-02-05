@@ -230,7 +230,7 @@ func WithSelectedLine(index int) func(int, []byte) []byte {
 		offset := bytes.IndexByte(b, byte('|'))
 
 		val := lipgloss.NewStyle().
-			Foreground(styles.ColorBorder).
+			Foreground(styles.DefaultColor.Highlight).
 			Render(
 				string(b[offset+1:]),
 			)
