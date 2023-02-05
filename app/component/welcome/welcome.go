@@ -38,19 +38,18 @@ var (
 			MarginBottom(2).
 			Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Bold(true).Render("usage:\n"),
+				lipgloss.NewStyle().Bold(true).Underline(true).Render("beam logs:\n"),
 				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
 				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
 			}, "\n"),
 		)
 
-	welcomeQueries = lipgloss.NewStyle().
+	howToText = lipgloss.NewStyle().
 			Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Bold(true).Render("queries:\n"),
-				"\tfilter stream(s): " + lipgloss.NewStyle().Bold(true).Render("filter beam=app_1 tracing_span='1e4851b8fe64ec763ad0'"),
-				"\tapply statistics: " + lipgloss.NewStyle().Bold(true).Render("filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
-				"\ttail -f a query : " + lipgloss.NewStyle().Bold(true).Render("tail |\n\t\t\t  filter level=debug\n\t\t\t  | stats sum(tree_traversed)"),
+				lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
+				lipgloss.NewStyle().Bold(true).Render("\thit \":\" and then a the index of the log to format the log. Use k/j to format the previous or next log"),
+				lipgloss.NewStyle().Bold(true).Render("\thit \"f\" to open the mask. Within the mask filter the entire logs using the query \"filter level=debug\""),
 			}, "\n"),
 		)
 )
@@ -86,7 +85,7 @@ func (m *Model) View() string {
 	maxWidth := max(
 		lipgloss.Width(welcomeLogo),
 		lipgloss.Width(welcomeUsage),
-		lipgloss.Width(welcomeQueries),
+		lipgloss.Width(howToText),
 	)
 
 	welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -103,7 +102,7 @@ func (m *Model) View() string {
 		lipgloss.PlaceHorizontal(
 			maxWidth,
 			lipgloss.Left,
-			welcomeQueries,
+			howToText,
 		),
 	)
 

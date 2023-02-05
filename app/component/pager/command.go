@@ -98,6 +98,7 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// down to the textinput.Model since these keystrokes are registered as
 		// normal user input.
 		case "j", "k":
+			c.input.Reset()
 			return c, tea.Batch(cmds...)
 
 		case "esc":
