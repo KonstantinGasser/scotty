@@ -92,21 +92,27 @@ func TestWindowN(t *testing.T) {
 			n:     1,
 			input: makeByteSliceN(int((1<<factor)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
 			want:  "7", // last entry in the buffer is 7 (1<<factor/2 = 8)
-			fn:    nil,
+			fn: func(i int, v []byte) []byte {
+				return v
+			},
 		},
 		{
 			name:  "window entries (N=4); buffer half full",
 			n:     4,
 			input: makeByteSliceN(int((1<<factor)/2), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
 			want:  "4567", // last 4 entries in the buffer
-			fn:    nil,
+			fn: func(i int, v []byte) []byte {
+				return v
+			},
 		},
 		{
 			name:  "window entries (N=6); buffer overflow by 4",
 			n:     6,
 			input: makeByteSliceN(int((1<<factor)+4), func(i int) []byte { return []byte(fmt.Sprintf("%d", i)) }),
 			want:  "141516171819",
-			fn:    nil,
+			fn: func(i int, v []byte) []byte {
+				return v
+			},
 		},
 		{
 			name:  "window entries (N=6); buffer overflow by 4; custom func",
