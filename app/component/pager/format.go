@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	commandStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.DefaultColor.Border)
+	formatModelStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(styles.DefaultColor.Border)
 
 	parsedStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -49,7 +49,7 @@ func emitParsed(v *parsedLog) tea.Cmd {
 	}
 }
 
-type command struct {
+type formatter struct {
 	width, height int
 	input         textinput.Model
 
@@ -58,12 +58,12 @@ type command struct {
 	err        error
 }
 
-func newCommand(w, h int) *command {
+func newFormatter(w, h int) *formatter {
 	width := int(w/3) - 1
 	input := textinput.New()
 	input.Placeholder = "line number (use k/j to move and ESC to exit)"
 	input.Prompt = ":"
-	return &command{
+	return &formatter{
 		width:      width,
 		height:     h,
 		input:      input,
@@ -73,11 +73,11 @@ func newCommand(w, h int) *command {
 	}
 }
 
-func (cmd *command) Init() tea.Cmd {
+func (f *formatter) Init() tea.Cmd {
 	return nil
 }
 
-func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (f *formatter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -86,94 +86,94 @@ func (c *command) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		c.parsedView, cmd = c.parsedView.Update(msg)
+		f.parsedView, cmd = f.parsedView.Update(msg)
 		cmds = append(cmds, cmd)
 
 	case tea.WindowSizeMsg:
-		c.width = int(msg.Width/3) - 1
-		c.parsedView.Width = c.width
+		f.width = int(msg.Width/3) - 1
+		f.parsedView.Width = f.width
 
-		c.height = msg.Height - bottomSectionHeight - magicNumber
-		return c, nil
+		f.height = msg.Height - bottomSectionHeight - magicNumber
+		return f, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		// same as for the char ":" we don't want to propagate the keystrokes
 		// down to the textinput.Model since these keystrokes are registered as
 		// normal user input.
 		case "j", "k":
-			c.input.Reset()
-			return c, tea.Batch(cmds...)
+			f.input.Reset()
+			return f, tea.Batch(cmds...)
 
 		case "esc":
-			c.input.Blur()
-			c.parsedView.SetContent("")
-			return c, nil
+			f.input.Blur()
+			f.parsedView.SetContent("")
+			return f, nil
 		case ":":
-			c.input.Reset()
+			f.input.Reset()
 
-			if c.input.Focused() {
-				c.err = nil
-				c.input.Blur()
+			if f.input.Focused() {
+				f.err = nil
+				f.input.Blur()
 				break
 			}
 
-			c.input.Focus()
+			f.input.Focus()
 			cmds = append(cmds, textinput.Blink)
-			return c, tea.Batch(cmds...) // we want to ignore the update of the textinput.Model else ":" is registered as first key stroke of the input
+			return f, tea.Batch(cmds...) // we want to ignore the update of the textinput.Model else ":" is registered as first key stroke of the input
 		case "enter":
-			value := c.input.Value()
+			value := f.input.Value()
 			index, err := strconv.Atoi(value)
 			if err != nil {
-				c.err = fmt.Errorf("input %q is not numeric. Type the index of the line you want to parse", value)
+				f.err = fmt.Errorf("input %q is not numerif. Type the index of the line you want to parse", value)
 				break
 			}
 			cmds = append(cmds, emitIndex(index))
 		}
 	case *parsedLog:
-		c.parsedItem = msg
+		f.parsedItem = msg
 	}
 
-	c.input, cmd = c.input.Update(msg)
+	f.input, cmd = f.input.Update(msg)
 	cmds = append(cmds, cmd)
 
-	return c, tea.Batch(cmds...)
+	return f, tea.Batch(cmds...)
 }
 
-func (c *command) View() string {
-	if c.err != nil {
-		return commandStyle.
-			Width(c.width).
+func (f *formatter) View() string {
+	if f.err != nil {
+		return formatModelStyle.
+			Width(f.width).
 			Background(styles.DefaultColor.Error).
-			Render(c.err.Error())
+			Render(f.err.Error())
 	}
 
-	c.parsedView.SetContent(emptyParsedMsg)
-	parsedContent := c.parsedView.View()
-	if c.parsedItem != nil {
+	f.parsedView.SetContent(emptyParsedMsg)
+	parsedContent := f.parsedView.View()
+	if f.parsedItem != nil {
 		value := lipgloss.NewStyle().
 			MarginTop(1).
 			Render(
-				wrap.String(string(c.parsedItem.data), c.width),
+				wrap.String(string(f.parsedItem.data), f.width),
 			)
 
-		c.parsedView.Height = lipgloss.Height(value)
-		c.parsedView.SetContent(value)
+		f.parsedView.Height = lipgloss.Height(value)
+		f.parsedView.SetContent(value)
 
 		parsedContent = lipgloss.JoinVertical(lipgloss.Left,
-			"["+strconv.Itoa(c.parsedItem.index)+"]"+c.parsedItem.label,
-			c.parsedView.View(),
+			"["+strconv.Itoa(f.parsedItem.index)+"]"+f.parsedItem.label,
+			f.parsedView.View(),
 		)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Top,
-		commandStyle.
-			Width(c.width).
+		formatModelStyle.
+			Width(f.width).
 			Render(
-				c.input.View(),
+				f.input.View(),
 			),
 		parsedStyle.
 			Padding(0, 1).
-			Width(c.width).
+			Width(f.width).
 			Render(
 				parsedContent,
 			),

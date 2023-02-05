@@ -72,7 +72,6 @@ func NewLogger(width, height int) *Logger {
 	view.Height = h
 	view.MouseWheelEnabled = true
 
-	// view.YPosition = 1
 	return &Logger{
 		buffer: ring.New(uint32(12)),
 		writer: bytes.Buffer{},
@@ -85,7 +84,7 @@ func NewLogger(width, height int) *Logger {
 		awaitInput:     false,
 		selected:       -1,
 		footer:         newFooter(w, h),
-		cmd:            newCommand(w, h),
+		cmd:            newFormatter(w, h),
 	}
 }
 
@@ -104,13 +103,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		pager.view, cmd = pager.view.Update(msg)
 		cmds = append(cmds, cmd)
-	// 	switch msg.Type {
-	// 	case tea.MouseWheelUp:
-	// 		break
-	// 	case tea.MouseWheelDown:
-	// 		break
-	// 	}
-	// 	return pager, cmd
 	case tea.KeyMsg:
 		switch msg.String() {
 		// triggers the parsing mode of logs. Has no

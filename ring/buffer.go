@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/muesli/reflow/wrap"
@@ -186,6 +187,7 @@ func WithIndent() func([]byte) ([]byte, error) {
 			return append(append(label, byte('@')), data...), nil
 		}
 
+		debug.Print("formatted:\n%q\n", out)
 		return append(append(label, byte('@')), out...), nil
 	}
 }
