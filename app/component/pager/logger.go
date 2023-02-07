@@ -51,12 +51,25 @@ type Logger struct {
 	// updates if changes
 	width, height int
 
-	// selected represents an index of the buffer
-	// which was initially requested to be parsed.
-	// It can be decremented or incremented to parse
-	// the previous or next item in the buffer
-	selected    int
+	// relativeIndex represents the requested index
+	// on the current page. Whichever item == index
+	// is highlighted and formatted. Note relativeIndex
+	// is the relative index to the page. In order
+	// to get the index of the element within the
+	// buffer one must add the offsetStart to the
+	// relativeIndex to get the absolute index.
+	relativeIndex int
+	// absoluteIndex refers to the actual index in the
+	// buffer which is currently formatted
+	absoluteIndex int
+	// offsetStart if used when paging through the logs
+	// and formatting log lines. It refers to the index
+	// with which the pager starts (first log of the page)
 	offsetStart int
+	// pageSize refers to the number of items currently
+	// visible in the view - line wraps are not included
+	// an item which takes up two lines counts as one
+	pageSize int
 	// awaitInput indicated if ECS is pressed.
 	// if awaitInput == false the input for commands
 	// is focused else moved out of focus
@@ -83,7 +96,7 @@ func NewLogger(width, height int) *Logger {
 		width:          w,
 		height:         h,
 		awaitInput:     false,
-		selected:       -1,
+		relativeIndex:  -1,
 		footer:         newFooter(w, h),
 		cmd:            newFormatter(w, h),
 	}
@@ -112,23 +125,15 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pager.awaitInput {
 				break
 			}
-			// pager.awaitInput = true
-			// width := pager.width - int(pager.width/3) - (1 + 2)
+			pager.awaitInput = true
 
-			// pager.setDimensions(
-			// 	width,
-			// 	pager.height,
-			// )
-
-			pager.selected = 0
-			pager.offsetStart = pager.selected
 			// we need to kick of and continue to render
 			// incoming logs. If we don't kick of the
 			// rerendering the current logs are not wrapped
 			// by the new width only once a new log is received
-			pager.renderOffset(
-				pager.selected,
-				ring.WithInlineFormatting(pager.width, pager.selected),
+			pager.renderWindow(
+				pager.relativeIndex,
+				true,
 				ring.WithLineWrap(pager.width),
 			)
 
@@ -150,7 +155,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 			pager.awaitInput = false
-			pager.selected = -1
+			pager.relativeIndex = -1
 
 			// again the width of the log view changes on
 			// exit as such we need to force a rerender
@@ -161,63 +166,100 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 		// selects the previous log line to be parsed
-		// and displayed. Input ignores when selected <= 0
+		// and displayed. Input ignores when relativeIndex <= 0
 		case "k":
-			if pager.selected <= 0 {
+
+			if pager.absoluteIndex == 0 {
 				break
 			}
-			pager.selected--
 
-			// parsed := pager.parse(pager.selected)
-			// pager.cmd, _ = pager.cmd.Update(
-			// 	parsed(),
-			// )
+			pager.relativeIndex--
+			pager.absoluteIndex--
 
-			// render logs starting from the selected
-			// and highlight the selected log line
-			pager.renderOffset(
-				pager.selected,
-				ring.WithInlineFormatting(pager.width, pager.selected),
-				ring.WithLineWrap(pager.width),
-			)
+			// move page up
+			if pager.relativeIndex < 0 {
+				pager.relativeIndex = 0
+				pager.offsetStart--
+				if pager.offsetStart < 0 {
+					pager.offsetStart = 0
+				}
 
-		// selects the next log line to be parsed and
-		// displayed. Input ignored when selected >= buffer.cap
-		case "j":
-			if pager.selected >= int(pager.buffer.Cap()) {
-				break
-			}
-			pager.selected++
-
-			// parsed := pager.parse(pager.selected)
-			// pager.cmd, _ = pager.cmd.Update(
-			// 	parsed(),
-			// )
-			debug.Print("current offsetStart: %d current selected: %d - current height: %d\n", pager.offsetStart, pager.selected, pager.height)
-			// render logs starting from the selected
-			// and highlight the selected log line
-			// if pager.selected > pager.height {
-			// 	pager.offsetStart = pager.selected
-			// 	debug.Print("new offsetStart: %d\n", pager.offsetStart)
-			// }
-
-			lines := pager.renderOffset(
-				pager.offsetStart,
-				ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.selected),
-				ring.WithLineWrap(pager.width),
-			)
-
-			if pager.selected >= lines {
-				pager.offsetStart += pager.selected
-				pager.selected = 0
-
-				_ = pager.renderOffset(
+				pager.pageSize = pager.renderOffset(
 					pager.offsetStart,
-					ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.selected),
+					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 					ring.WithLineWrap(pager.width),
 				)
-				debug.Print("new offsetStart: %d - new selected: %d\n", pager.offsetStart, pager.selected)
+				break
+				// // define new offset where the
+				// // upper page starts
+				// pager.offsetStart = pager.absoluteIndex - pager.pageSize
+				// if pager.offsetStart < 0 {
+				// 	pager.offsetStart = 0
+				// }
+
+				// // set relativeIndex to last possible element
+				// pager.relativeIndex = pager.absoluteIndex - 1
+
+				// pager.pageSize = pager.renderOffset(
+				// 	pager.offsetStart,
+				// 	ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.relativeIndex),
+				// 	ring.WithLineWrap(pager.width),
+				// )
+
+				// debug.Print("[k][page-up] relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n", pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
+				// break
 			}
+
+			pager.pageSize = pager.renderOffset(
+				pager.offsetStart,
+				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+				ring.WithLineWrap(pager.width),
+			)
+
+			debug.Print("[k][default] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n",
+				pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
+
+		// selects the next log line to be parsed and
+		// displayed. Input ignored when relativeIndex >= buffer.cap
+		case "j":
+			if pager.absoluteIndex >= int(pager.buffer.Cap()) || pager.buffer.Nil(pager.absoluteIndex) {
+				break
+			}
+			pager.relativeIndex++ // index of the within the current page
+			pager.absoluteIndex++ // overall index of the selected item in the buffer
+
+			// check if the requested log line is out of
+			// the view (not included in the previous render)
+			// if so we need to adjust the page/go to the next
+			// page an rerender the view again
+			if pager.relativeIndex >= pager.pageSize {
+				pager.offsetStart += pager.relativeIndex
+				// reset relativeIndex since its relative to
+				// the current page. When the page changes
+				// the relative index is 0
+				pager.relativeIndex = 0
+
+				debug.Print("[j][down] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n", pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
+				_ = pager.renderOffset(
+					pager.offsetStart,
+					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+					ring.WithLineWrap(pager.width),
+				)
+				break
+			}
+
+			// render logs starting from the offset
+			// till offset+height. The returned
+			// lines indicate how many items are included
+			// in the render (hard to tell solely based on the string
+			// from the pager.writer)
+			pager.pageSize = pager.renderOffset(
+				pager.offsetStart,
+				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+				ring.WithLineWrap(pager.width),
+			)
+
+			debug.Print("[j][default] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n", pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -238,14 +280,14 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			height,
 		)
 
-		if pager.awaitInput && pager.selected >= 0 {
-			pager.renderOffset(
-				pager.selected,
-				ring.WithLineWrap(pager.width),
-				ring.WithSelectedLine(pager.selected),
-			)
-			break
-		}
+		// if pager.awaitInput && pager.relativeIndex >= 0 {
+		// 	pager.renderOffset(
+		// 		pager.relativeIndex,
+		// 		ring.WithLineWrap(pager.width),
+		// 		ring.WithrelativeIndexLine(pager.relativeIndex),
+		// 	)
+		// 	break
+		// }
 
 		pager.renderWindow(
 			pager.height,
@@ -330,7 +372,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// while browsing through the logs do don't want to
 		// keep moving down the new logs
-		if pager.awaitInput && pager.selected >= 0 {
+		if pager.awaitInput && pager.relativeIndex >= 0 {
 			break
 		}
 
@@ -345,18 +387,15 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// The msg of type parserIndex is an integer and represents
 	// the captured requested index.
 	case parserIndex:
-		parsed := pager.parse(int(msg))
-		pager.selected = int(msg)
+		pager.offsetStart = int(msg)
+		pager.relativeIndex = 0
 
-		pager.cmd, _ = pager.cmd.Update(
-			parsed(),
-		)
-
-		pager.renderOffset(
-			pager.selected,
+		pager.pageSize = pager.renderOffset(
+			pager.offsetStart,
+			ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.relativeIndex),
 			ring.WithLineWrap(pager.width),
-			ring.WithSelectedLine(pager.selected),
 		)
+		debug.Print("[start]relativeIndex: %d - height: %d - offset: %d\n", pager.relativeIndex, pager.height, pager.offsetStart)
 
 		return pager, tea.Batch(cmds...)
 	}
@@ -379,24 +418,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (pager *Logger) View() string {
-
-	if pager.awaitInput && pager.cmd != nil {
-		return lipgloss.JoinVertical(lipgloss.Left,
-			lipgloss.JoinHorizontal(lipgloss.Left,
-				pagerStyle.
-					Border(lipgloss.RoundedBorder()).
-					BorderForeground(styles.DefaultColor.Border).
-					Width(pager.width).
-					Height(pager.height).
-					Render(
-						pager.view.View(),
-					),
-				pager.cmd.View(),
-			),
-			pager.footer.View(),
-		)
-	}
-
 	return lipgloss.JoinVertical(lipgloss.Left,
 		pagerStyle.
 			Padding(1).
@@ -449,7 +470,6 @@ func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) 
 		debug.Debug(err.Error())
 	}
 
-	debug.Print("at offset: %d string height = %d\n", offset, lipgloss.Height(pager.writer.String()))
 	pager.view.SetContent(pager.writer.String())
 	pager.writer.Reset()
 

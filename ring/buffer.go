@@ -42,6 +42,10 @@ func (buf Buffer) Cap() uint32 {
 	return buf.capacity
 }
 
+func (buff Buffer) Nil(index int) bool {
+	return buff.data[index] == nil
+}
+
 func (buf *Buffer) Append(p []byte) {
 	buf.data[buf.write] = p
 	buf.write = (buf.write + 1) % buf.capacity
