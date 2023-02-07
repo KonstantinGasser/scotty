@@ -206,11 +206,23 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when relativeIndex >= buffer.cap
 		case "j":
-			if pager.absoluteIndex >= int(pager.buffer.Cap()) || pager.buffer.Nil(pager.absoluteIndex) {
-				break
-			}
 			pager.relativeIndex++ // index of the within the current page
 			pager.absoluteIndex++ // overall index of the selected item in the buffer
+
+			if pager.buffer.Nil(pager.absoluteIndex) {
+				// well showing nothing is not cool
+				// compensate to last working index
+				pager.absoluteIndex--
+				pager.relativeIndex--
+
+				pager.pageSize = pager.renderOffset(
+					pager.offsetStart,
+					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+					ring.WithLineWrap(pager.width),
+				)
+
+				break
+			}
 
 			// check if the requested log line is out of
 			// the view (not included in the previous render)
@@ -396,6 +408,13 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	pager.footer, cmd = pager.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
+	// TODO @KonstantinGasser:
+	// since we are now embedding formatting with in the log view
+	// we can remove the cmd Model however need to place the user
+	// input somewhere else
+	pager.cmd, cmd = pager.cmd.Update(msg)
+	cmds = append(cmds, cmd)
+
 	return pager, tea.Batch(cmds...)
 }
 
@@ -419,6 +438,19 @@ func (pager *Logger) parse(index int) tea.Cmd {
 	return emitParsed(
 		convertToStruct(index, current),
 	)
+}
+
+func convertToStruct(i int, v []byte) *parsedLog {
+	if v == nil {
+		return nil
+	}
+	parts := bytes.Split(v, []byte("@"))
+
+	return &parsedLog{
+		index: i,
+		label: string(parts[0]),
+		data:  parts[1],
+	}
 }
 
 func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []byte) []byte) {
@@ -456,19 +488,6 @@ func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) 
 	pager.writer.Reset()
 
 	return lines
-}
-
-func convertToStruct(i int, v []byte) *parsedLog {
-	if v == nil {
-		return nil
-	}
-	parts := bytes.Split(v, []byte("@"))
-
-	return &parsedLog{
-		index: i,
-		label: string(parts[0]),
-		data:  parts[1],
-	}
 }
 
 func (pager *Logger) setDimensions(width, height int) {

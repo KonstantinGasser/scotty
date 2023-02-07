@@ -263,16 +263,14 @@ func WithInlineFormatting(width int, index int) func(int, []byte) []byte {
 			debug.Print("unable to pretty-print json: %v\n", err)
 			return append(
 				[]byte(
-
 					lipgloss.NewStyle().
-						Border(lipgloss.RoundedBorder()).
+						Bold(true).
+						Border(lipgloss.DoubleBorder(), false, false, false, true).
 						BorderForeground(styles.DefaultColor.Border).
-						Padding(0, 1).
-						MaxWidth(width).
 						Render(
 							lipgloss.JoinVertical(lipgloss.Left,
 								string(b[:offset]),
-								string(wrap.Bytes(b, width-1)),
+								string(wrap.Bytes(data[:cutoff], width-1)),
 							),
 						),
 				),
@@ -281,12 +279,10 @@ func WithInlineFormatting(width int, index int) func(int, []byte) []byte {
 		}
 		return append(
 			[]byte(
-
 				lipgloss.NewStyle().
-					Border(lipgloss.RoundedBorder()).
+					Bold(true).
+					Border(lipgloss.DoubleBorder(), false, false, false, true).
 					BorderForeground(styles.DefaultColor.Border).
-					Padding(0, 1).
-					MaxWidth(width).
 					Render(
 						lipgloss.JoinVertical(lipgloss.Left,
 							string(b[:offset]),
