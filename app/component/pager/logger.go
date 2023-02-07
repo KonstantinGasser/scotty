@@ -55,7 +55,8 @@ type Logger struct {
 	// which was initially requested to be parsed.
 	// It can be decremented or incremented to parse
 	// the previous or next item in the buffer
-	selected int
+	selected    int
+	offsetStart int
 	// awaitInput indicated if ECS is pressed.
 	// if awaitInput == false the input for commands
 	// is focused else moved out of focus
@@ -111,22 +112,24 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pager.awaitInput {
 				break
 			}
-			pager.awaitInput = true
-			width := pager.width - int(pager.width/3) - (1 + 2)
+			// pager.awaitInput = true
+			// width := pager.width - int(pager.width/3) - (1 + 2)
 
-			pager.setDimensions(
-				width,
-				pager.height,
-			)
+			// pager.setDimensions(
+			// 	width,
+			// 	pager.height,
+			// )
 
+			pager.selected = 0
+			pager.offsetStart = pager.selected
 			// we need to kick of and continue to render
 			// incoming logs. If we don't kick of the
 			// rerendering the current logs are not wrapped
 			// by the new width only once a new log is received
-			pager.renderWindow(
-				pager.height,
-				true,
-				ring.WithLineWrap(pager.width-1),
+			pager.renderOffset(
+				pager.selected,
+				ring.WithInlineFormatting(pager.width, pager.selected),
+				ring.WithLineWrap(pager.width),
 			)
 
 		// exits the parsing mode. Has no effect
@@ -165,17 +168,17 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			pager.selected--
 
-			parsed := pager.parse(pager.selected)
-			pager.cmd, _ = pager.cmd.Update(
-				parsed(),
-			)
+			// parsed := pager.parse(pager.selected)
+			// pager.cmd, _ = pager.cmd.Update(
+			// 	parsed(),
+			// )
 
 			// render logs starting from the selected
 			// and highlight the selected log line
 			pager.renderOffset(
 				pager.selected,
+				ring.WithInlineFormatting(pager.width, pager.selected),
 				ring.WithLineWrap(pager.width),
-				ring.WithSelectedLine(pager.selected),
 			)
 
 		// selects the next log line to be parsed and
@@ -186,18 +189,35 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			pager.selected++
 
-			parsed := pager.parse(pager.selected)
-			pager.cmd, _ = pager.cmd.Update(
-				parsed(),
-			)
-
+			// parsed := pager.parse(pager.selected)
+			// pager.cmd, _ = pager.cmd.Update(
+			// 	parsed(),
+			// )
+			debug.Print("current offsetStart: %d current selected: %d - current height: %d\n", pager.offsetStart, pager.selected, pager.height)
 			// render logs starting from the selected
 			// and highlight the selected log line
-			pager.renderOffset(
-				pager.selected,
+			// if pager.selected > pager.height {
+			// 	pager.offsetStart = pager.selected
+			// 	debug.Print("new offsetStart: %d\n", pager.offsetStart)
+			// }
+
+			lines := pager.renderOffset(
+				pager.offsetStart,
+				ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.selected),
 				ring.WithLineWrap(pager.width),
-				ring.WithSelectedLine(pager.selected),
 			)
+
+			if pager.selected >= lines {
+				pager.offsetStart += pager.selected
+				pager.selected = 0
+
+				_ = pager.renderOffset(
+					pager.offsetStart,
+					ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.selected),
+					ring.WithLineWrap(pager.width),
+				)
+				debug.Print("new offsetStart: %d - new selected: %d\n", pager.offsetStart, pager.selected)
+			}
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -418,8 +438,8 @@ func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []b
 	pager.view.GotoBottom()
 }
 
-func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) {
-	err := pager.buffer.Offset(
+func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) int {
+	lines, err := pager.buffer.Offset(
 		&pager.writer,
 		offset,
 		pager.height,
@@ -429,8 +449,11 @@ func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) 
 		debug.Debug(err.Error())
 	}
 
+	debug.Print("at offset: %d string height = %d\n", offset, lipgloss.Height(pager.writer.String()))
 	pager.view.SetContent(pager.writer.String())
 	pager.writer.Reset()
+
+	return lines
 }
 
 func convertToStruct(i int, v []byte) *parsedLog {
