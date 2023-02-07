@@ -155,7 +155,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 			pager.awaitInput = false
+			pager.offsetStart = -1
 			pager.relativeIndex = -1
+			pager.absoluteIndex = -1
 
 			// again the width of the log view changes on
 			// exit as such we need to force a rerender
@@ -190,24 +192,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					ring.WithLineWrap(pager.width),
 				)
 				break
-				// // define new offset where the
-				// // upper page starts
-				// pager.offsetStart = pager.absoluteIndex - pager.pageSize
-				// if pager.offsetStart < 0 {
-				// 	pager.offsetStart = 0
-				// }
-
-				// // set relativeIndex to last possible element
-				// pager.relativeIndex = pager.absoluteIndex - 1
-
-				// pager.pageSize = pager.renderOffset(
-				// 	pager.offsetStart,
-				// 	ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.relativeIndex),
-				// 	ring.WithLineWrap(pager.width),
-				// )
-
-				// debug.Print("[k][page-up] relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n", pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
-				// break
 			}
 
 			pager.pageSize = pager.renderOffset(
@@ -388,14 +372,15 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// the captured requested index.
 	case parserIndex:
 		pager.offsetStart = int(msg)
+		pager.absoluteIndex = pager.offsetStart
 		pager.relativeIndex = 0
 
 		pager.pageSize = pager.renderOffset(
 			pager.offsetStart,
-			ring.WithInlineFormatting(pager.width, pager.offsetStart+pager.relativeIndex),
+			ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 			ring.WithLineWrap(pager.width),
 		)
-		debug.Print("[start]relativeIndex: %d - height: %d - offset: %d\n", pager.relativeIndex, pager.height, pager.offsetStart)
+		debug.Print("[start] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d\n", pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart)
 
 		return pager, tea.Batch(cmds...)
 	}
@@ -409,9 +394,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	pager.footer, cmd = pager.footer.Update(msg)
-	cmds = append(cmds, cmd)
-
-	pager.cmd, cmd = pager.cmd.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return pager, tea.Batch(cmds...)

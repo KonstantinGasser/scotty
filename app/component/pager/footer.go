@@ -16,12 +16,17 @@ var (
 	spacing = styles.Spacer(1).Render("")
 )
 
+const (
+	labelDisconnected = "SIGINT"
+)
+
 type stream struct {
-	label   string
-	colorBg lipgloss.Color
-	colorFg lipgloss.Color
-	style   func(string) string
-	count   int
+	label        string
+	colorBg      lipgloss.Color
+	colorFg      lipgloss.Color
+	style        func(string) string
+	count        int
+	disconnected bool
 }
 
 type footer struct {
@@ -113,23 +118,11 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		f.streams[index].count = 0
+		f.streams[index].disconnected = false
 
 	case plexer.Unsubscribe:
-		// QUESTION @KonstantinGasser:
-		// if we slice the streams in order remove an index
-		// we would need to re-index the streamIndex map as well.
-		// An other option would be to maintain a map[string]*stream
-		// this way we can modify the item through its address and loop
-		// over the slice when rendering the items. Doing this however,
-		// we are loosing the information about the index of an item
-		// and we can no longer splice the slice but need a for loop.
 		index := f.streamIndex[string(msg)]
-		delete(f.streamIndex, string(msg))
-		f.streams = append(f.streams[:index], f.streams[index+1:]...)
-		for i, str := range f.streams {
-			f.streamIndex[str.label] = i
-		}
+		f.streams[index].disconnected = true
 
 	case plexer.Error:
 		// QUESTION @KonstantinGasser:
@@ -163,8 +156,14 @@ func (f *footer) View() string {
 	for i, stream := range f.streams {
 		if i >= len(f.streams)-1 {
 			// not space after last one thou
+
+			var info any = stream.count
+			if stream.disconnected {
+				info = labelDisconnected
+			}
+
 			items = append(items, stream.style(
-				stream.label+":"+fmt.Sprint(stream.count),
+				stream.label+":"+fmt.Sprint(info),
 			))
 			continue
 		}
