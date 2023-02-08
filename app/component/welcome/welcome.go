@@ -39,8 +39,8 @@ var (
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Underline(true).Render("beam logs:\n"),
-				"\tfrom stderr: " + lipgloss.NewStyle().Bold(true).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
-				"\tfrom stdout: " + lipgloss.NewStyle().Bold(true).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
+				"\tfrom stderr: " + lipgloss.NewStyle().Bold(false).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
+				"\tfrom stdout: " + lipgloss.NewStyle().Bold(false).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
 			}, "\n"),
 		)
 
@@ -48,9 +48,10 @@ var (
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
-				lipgloss.NewStyle().Bold(true).Render("\thit \":\" and type an index to format a specific line. Use k/j to format the previous or next log"),
-				lipgloss.NewStyle().Bold(true).Render("\thit \"f\" to focus on a specific stream (coming soon, I'm working on it)"),
-				lipgloss.NewStyle().Bold(true).Render("\thit \"cmd+f\" to apply a filter on all streams (coming soon, I'm working on it)"),
+				lipgloss.NewStyle().Bold(false).Render("\t- hit \":\" and type an index to format a specific line. Use k/j to format the previous or next log"),
+				lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with ESC)"),
+				lipgloss.NewStyle().Bold(false).Render("\t- hit \"f\" to focus on a specific stream (coming soon, I'm working on it)"),
+				lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" to apply a filter on all streams (coming soon, I'm working on it)"),
 			}, "\n"),
 		)
 )
