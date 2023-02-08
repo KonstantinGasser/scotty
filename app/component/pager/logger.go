@@ -19,6 +19,8 @@ const (
 	bottomSectionHeight = 1
 	inputSectionHeight  = 2
 
+	borderMargin = 0
+
 	// wow literally no idea why this number hence
 	// the variable name - if you get why tell me and
 	// pls open a PR..else pls don't change it
@@ -29,7 +31,9 @@ const (
 )
 
 var (
-	pagerStyle = lipgloss.NewStyle()
+	pagerStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(styles.DefaultColor.Border)
 
 	inputStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -100,11 +104,12 @@ type Logger struct {
 
 func NewLogger(width, height int) *Logger {
 
-	w, h := width, height-bottomSectionHeight-inputSectionHeight-magicNumber // -1 to margin top for testing
+	w, h := width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 
 	view := viewport.New(w, h)
 	view.Height = h
 	view.MouseWheelEnabled = true
+	view.Style = pagerStyle.Width(w)
 
 	input := textinput.New()
 	input.Placeholder = "line number (use k/j to move and ESC to exit)"
@@ -152,14 +157,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// and if passed to the update func of the model is
 			// added to the input - which is want we don't want
 			pager.ignoreInput = true
-
-			// //
-			// pager.renderWindow(
-			// 	pager.height,
-			// 	true,
-			// 	ring.WithLineWrap(pager.width),
-			// )
-
 			pager.input.Focus()
 
 		case "enter":
@@ -202,7 +199,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			pager.setDimensions(
 				width,
-				height-bottomSectionHeight-magicNumber,
+				height,
 			)
 
 			pager.awaitInput = false
@@ -327,17 +324,15 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// of the available screen size.
 	case tea.WindowSizeMsg:
 
-		width := msg.Width
-		height := msg.Height - bottomSectionHeight - inputSectionHeight - magicNumber
-
 		pager.setDimensions(
-			width,
-			height,
+			msg.Width,
+			msg.Height,
 		)
+		pager.view.Style = pagerStyle.Width(pager.width)
 
 		if pager.awaitInput && pager.relativeIndex >= 0 {
 			pager.pageSize = pager.renderOffset(
-				pager.relativeIndex,
+				pager.offsetStart,
 				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 				ring.WithLineWrap(pager.width),
 			)
@@ -459,11 +454,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (pager *Logger) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinVertical(lipgloss.Left,
-			pagerStyle.
-				Padding(1).
-				Render(
-					pager.view.View(),
-				),
+			// pagerStyle.
+			// 	Render(
+			// 		pager.view.View(),
+			// 	),
+			pager.view.View(),
 			pager.footer.View(),
 		),
 		lipgloss.NewStyle().
@@ -513,6 +508,6 @@ func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) 
 }
 
 func (pager *Logger) setDimensions(width, height int) {
-	pager.width, pager.height = width, height
+	pager.width, pager.height = width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 	pager.view.Width, pager.view.Height = width, height
 }
