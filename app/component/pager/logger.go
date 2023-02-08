@@ -2,12 +2,14 @@ package pager
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/ring"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -15,15 +17,23 @@ import (
 
 const (
 	bottomSectionHeight = 1
+	inputSectionHeight  = 2
 
 	// wow literally no idea why this number hence
 	// the variable name - if you get why tell me and
 	// pls open a PR..else pls don't change it
 	magicNumber = 2
+
+	awaitInput = iota + 1
+	hasInput
 )
 
 var (
 	pagerStyle = lipgloss.NewStyle()
+
+	inputStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(styles.DefaultColor.Border)
 )
 
 type subscriber struct {
@@ -74,17 +84,25 @@ type Logger struct {
 	// if awaitInput == false the input for commands
 	// is focused else moved out of focus
 	awaitInput bool
-	footer     tea.Model
-	cmd        tea.Model
+	// input is the input field to select
+	// an index to format and input further
+	// commands
+	input textinput.Model
+
+	footer tea.Model
 }
 
 func NewLogger(width, height int) *Logger {
 
-	w, h := width, height-bottomSectionHeight-magicNumber // -1 to margin top for testing
+	w, h := width, height-bottomSectionHeight-inputSectionHeight-magicNumber // -1 to margin top for testing
 
 	view := viewport.New(w, h)
 	view.Height = h
 	view.MouseWheelEnabled = true
+
+	input := textinput.New()
+	input.Placeholder = "line number (use k/j to move and ESC to exit)"
+	input.Prompt = ":"
 
 	return &Logger{
 		buffer: ring.New(uint32(12)),
@@ -98,7 +116,7 @@ func NewLogger(width, height int) *Logger {
 		awaitInput:     false,
 		relativeIndex:  -1,
 		footer:         newFooter(w, h),
-		cmd:            newFormatter(w, h),
+		input:          input,
 	}
 }
 
@@ -127,6 +145,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			pager.awaitInput = true
 
+			pager.input.Focus()
+			cmds = append(cmds, textinput.Blink)
+
 			// we need to kick of and continue to render
 			// incoming logs. If we don't kick of the
 			// rerendering the current logs are not wrapped
@@ -134,6 +155,28 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.renderWindow(
 				pager.relativeIndex,
 				true,
+				ring.WithLineWrap(pager.width),
+			)
+
+		case "enter":
+			if !pager.awaitInput {
+				break
+			}
+
+			value := pager.input.Value()
+			index, err := strconv.Atoi(value)
+			if err != nil {
+				debug.Print("input %q is not numeric. Type the index of the line you want to parse", value)
+				break
+			}
+
+			pager.offsetStart = index
+			pager.absoluteIndex = pager.offsetStart
+			pager.relativeIndex = 0
+
+			pager.pageSize = pager.renderOffset(
+				pager.offsetStart,
+				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 				ring.WithLineWrap(pager.width),
 			)
 
@@ -178,7 +221,11 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.relativeIndex--
 			pager.absoluteIndex--
 
-			// move page up
+			// requested index to format is outside (above)
+			// the current view as such we need to shift the
+			// content of the view up. For scrolling up we
+			// only show the next upper element not an entire
+			// new page like we do when scrolling down.
 			if pager.relativeIndex < 0 {
 				pager.relativeIndex = 0
 				pager.offsetStart--
@@ -200,15 +247,15 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ring.WithLineWrap(pager.width),
 			)
 
-			debug.Print("[k][default] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n",
-				pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
-
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when relativeIndex >= buffer.cap
 		case "j":
 			pager.relativeIndex++ // index of the within the current page
 			pager.absoluteIndex++ // overall index of the selected item in the buffer
 
+			// nil items in the buffer indicated that the buffer is not full
+			// and the requested index exists but has not been written to yet.
+			// Just means user wanted a log that has not been beamed yet.
 			if pager.buffer.Nil(pager.absoluteIndex) {
 				// well showing nothing is not cool
 				// compensate to last working index
@@ -235,8 +282,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// the relative index is 0
 				pager.relativeIndex = 0
 
-				debug.Print("[j][down] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n", pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
-				_ = pager.renderOffset(
+				pager.pageSize = pager.renderOffset(
 					pager.offsetStart,
 					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 					ring.WithLineWrap(pager.width),
@@ -255,7 +301,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ring.WithLineWrap(pager.width),
 			)
 
-			debug.Print("[j][default] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d - pageSize: %d\n", pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart, pager.pageSize)
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -265,25 +310,21 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 
 		width := msg.Width
-		height := msg.Height - bottomSectionHeight - magicNumber
-
-		if pager.awaitInput && pager.cmd != nil {
-			width = msg.Width - int(msg.Width/3) - (1 + 2) // magic number + margin between logs and parsed code
-		}
+		height := msg.Height - bottomSectionHeight - inputSectionHeight - magicNumber
 
 		pager.setDimensions(
 			width,
 			height,
 		)
 
-		// if pager.awaitInput && pager.relativeIndex >= 0 {
-		// 	pager.renderOffset(
-		// 		pager.relativeIndex,
-		// 		ring.WithLineWrap(pager.width),
-		// 		ring.WithrelativeIndexLine(pager.relativeIndex),
-		// 	)
-		// 	break
-		// }
+		if pager.awaitInput && pager.relativeIndex >= 0 {
+			pager.pageSize = pager.renderOffset(
+				pager.relativeIndex,
+				ring.WithLineWrap(pager.width),
+				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+			)
+			break
+		}
 
 		pager.renderWindow(
 			pager.height,
@@ -392,7 +433,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 			ring.WithLineWrap(pager.width),
 		)
-		debug.Print("[start] absoluteIndex: %d - relativeIndex: %d - height: %d - offset: %d\n", pager.absoluteIndex, pager.relativeIndex, pager.height, pager.offsetStart)
 
 		return pager, tea.Batch(cmds...)
 	}
@@ -405,14 +445,10 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	pager.view, cmd = pager.view.Update(msg)
 	cmds = append(cmds, cmd)
 
-	pager.footer, cmd = pager.footer.Update(msg)
+	pager.input, cmd = pager.input.Update(msg)
 	cmds = append(cmds, cmd)
 
-	// TODO @KonstantinGasser:
-	// since we are now embedding formatting with in the log view
-	// we can remove the cmd Model however need to place the user
-	// input somewhere else
-	pager.cmd, cmd = pager.cmd.Update(msg)
+	pager.footer, cmd = pager.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return pager, tea.Batch(cmds...)
@@ -420,41 +456,23 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (pager *Logger) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		pagerStyle.
-			Padding(1).
+		lipgloss.JoinVertical(lipgloss.Left,
+			pagerStyle.
+				Padding(1).
+				Render(
+					pager.view.View(),
+				),
+			pager.footer.View(),
+		),
+		inputStyle.
 			Render(
-				pager.view.View(),
+				pager.input.View(),
 			),
-		pager.footer.View(),
 	)
 }
 
-func (pager *Logger) parse(index int) tea.Cmd {
-	current, err := pager.buffer.At(index, ring.WithIndent())
-	if err != nil {
-		debug.Print("unable to parse buffer item at index=%d: %v\n", index, err)
-	}
-
-	return emitParsed(
-		convertToStruct(index, current),
-	)
-}
-
-func convertToStruct(i int, v []byte) *parsedLog {
-	if v == nil {
-		return nil
-	}
-	parts := bytes.Split(v, []byte("@"))
-
-	return &parsedLog{
-		index: i,
-		label: string(parts[0]),
-		data:  parts[1],
-	}
-}
-
-func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []byte) []byte) {
-	err := pager.buffer.Window(
+func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []byte) []byte) int {
+	itemCount, err := pager.buffer.Window(
 		&pager.writer,
 		pager.height,
 		opts...,
@@ -467,10 +485,11 @@ func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []b
 	pager.writer.Reset()
 
 	if !toBottom {
-		return
+		return itemCount
 	}
 
 	pager.view.GotoBottom()
+	return itemCount
 }
 
 func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) int {

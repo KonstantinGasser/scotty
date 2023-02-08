@@ -54,12 +54,13 @@ func (buf *Buffer) Append(p []byte) {
 // Window write up to N of the last appended items to the io.Writer
 // To modify items before writing them to the writer, a function can be provided.
 //
-func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) error {
+func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) (int, error) {
 
 	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
 	var offset = writeIndex - n
 
+	var actualHeight, count int
 	for i := offset; i < writeIndex; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
@@ -69,8 +70,16 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) er
 			continue
 		}
 
+		val = append([]byte("["+strconv.Itoa(index)+"]"), val...)
+
 		for _, fn := range fns {
 			val = fn(index, val)
+		}
+
+		// we accept that the might come out with
+		// less lines then height would allow.
+		if actualHeight >= n {
+			return count, nil
 		}
 
 		// under the hood we pass in a bytes.Buffer
@@ -82,11 +91,12 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) er
 		// by setting a capacity using Grow(N) where N is the educated guess
 		// of how many bytes are expected to be written.
 		if _, err := w.Write(val); err != nil {
-			return err
+			return count, err
 		}
+		count++
 	}
 
-	return nil
+	return count, nil
 }
 
 func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte) []byte) (int, error) {
@@ -96,9 +106,8 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 	// we are doing line wrapping. As such the resulting
 	// string height might end up being height the the requested height.
 	// Keep track of the actual height and break if reached
-	var actualHeight int
+	var actualHeight, count int
 
-	var count int
 	for i := offset; i < offset+n; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
