@@ -48,8 +48,9 @@ var (
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
-				lipgloss.NewStyle().Bold(true).Render("\thit \":\" and then a the index of the log to format the log. Use k/j to format the previous or next log"),
-				lipgloss.NewStyle().Bold(true).Render("\thit \"f\" to open the mask. Within the mask filter the entire logs using the query \"filter level=debug\""),
+				lipgloss.NewStyle().Bold(true).Render("\thit \":\" and type an index to format a specific line. Use k/j to format the previous or next log"),
+				lipgloss.NewStyle().Bold(true).Render("\thit \"f\" to focus on a specific stream (coming soon, I'm working on it)"),
+				lipgloss.NewStyle().Bold(true).Render("\thit \"cmd+f\" to apply a filter on all streams (coming soon, I'm working on it)"),
 			}, "\n"),
 		)
 )
