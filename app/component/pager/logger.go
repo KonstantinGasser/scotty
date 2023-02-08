@@ -88,6 +88,12 @@ type Logger struct {
 	// an index to format and input further
 	// commands
 	input textinput.Model
+	// some characters inputted we don't want to
+	// propagate down to the textinput.Model
+	// as they are treated as regular chars
+	// and displayed as value - as such indicated if
+	// propagation should be ignored
+	ignoreInput bool
 
 	footer tea.Model
 }
@@ -140,20 +146,19 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// triggers the parsing mode of logs. Has no
 		// effect while in parsing mode (awaitInput == true)
 		case ":":
-			if pager.awaitInput {
-				break
-			}
 			pager.awaitInput = true
 
-			// we need to kick of and continue to render
-			// incoming logs. If we don't kick of the
-			// rerendering the current logs are not wrapped
-			// by the new width only once a new log is received
-			pager.renderWindow(
-				pager.relativeIndex,
-				true,
-				ring.WithLineWrap(pager.width),
-			)
+			// the char ":" is not a cmd for the textinput.Model
+			// and if passed to the update func of the model is
+			// added to the input - which is want we don't want
+			pager.ignoreInput = true
+
+			// //
+			// pager.renderWindow(
+			// 	pager.height,
+			// 	true,
+			// 	ring.WithLineWrap(pager.width),
+			// )
 
 			pager.input.Focus()
 
@@ -178,6 +183,10 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 				ring.WithLineWrap(pager.width),
 			)
+			pager.view.GotoTop()
+
+			pager.input.Blur()
+			pager.input.Reset()
 
 		// exits the parsing mode. Has no effect
 		// while not in parsing mode (awaitInput == false)
@@ -329,8 +338,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if pager.awaitInput && pager.relativeIndex >= 0 {
 			pager.pageSize = pager.renderOffset(
 				pager.relativeIndex,
-				ring.WithLineWrap(pager.width),
 				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+				ring.WithLineWrap(pager.width),
 			)
 			break
 		}
@@ -429,19 +438,20 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 	}
 
-	// propagate events to child models.
-	// in certain cases there will be an early return
-	// in any of the cases above either because the event
-	// is not relevant for any downstream model or because
-	// ??? there was some other reason...??
+	// propagate event to child models.
 	pager.view, cmd = pager.view.Update(msg)
 	cmds = append(cmds, cmd)
 
 	pager.footer, cmd = pager.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
-	pager.input, cmd = pager.input.Update(msg)
-	cmds = append(cmds, cmd)
+	if !pager.ignoreInput {
+		pager.input, cmd = pager.input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+	// ignoring input is only valid for one pass
+	// revert it before the next pass
+	pager.ignoreInput = false
 
 	return pager, tea.Batch(cmds...)
 }
@@ -456,7 +466,8 @@ func (pager *Logger) View() string {
 				),
 			pager.footer.View(),
 		),
-		inputStyle.
+		lipgloss.NewStyle().
+			Padding(1, 0, 0, 1).
 			Render(
 				pager.input.View(),
 			),
@@ -485,7 +496,7 @@ func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []b
 }
 
 func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) int {
-	lines, err := pager.buffer.Offset(
+	itemCount, err := pager.buffer.Offset(
 		&pager.writer,
 		offset,
 		pager.height,
@@ -498,7 +509,7 @@ func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) 
 	pager.view.SetContent(pager.writer.String())
 	pager.writer.Reset()
 
-	return lines
+	return itemCount
 }
 
 func (pager *Logger) setDimensions(width, height int) {

@@ -60,7 +60,7 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) (i
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
 	var offset = writeIndex - n
 
-	var actualHeight, count int
+	var count int
 	for i := offset; i < writeIndex; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
@@ -74,12 +74,6 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) (i
 
 		for _, fn := range fns {
 			val = fn(index, val)
-		}
-
-		// we accept that the might come out with
-		// less lines then height would allow.
-		if actualHeight >= n {
-			return count, nil
 		}
 
 		// under the hood we pass in a bytes.Buffer
@@ -123,10 +117,9 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 			val = fn(index, val)
 		}
 
-		actualHeight += bytes.Count(val, []byte("\n"))
-
 		// we accept that the might come out with
 		// less lines then height would allow.
+		actualHeight += bytes.Count(val, []byte("\n"))
 		if actualHeight >= n {
 			return count, nil
 		}
@@ -171,78 +164,12 @@ func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error)
 	return fn(item)
 }
 
-// WithIndent returns a slice of byte in which
-// the stream label and the formatted JSON are
-// separated by the delimiter "@". If the data
-// portion cannot be formatted the unformatted
-// data is appended to the result slice.
-func WithIndent() func([]byte) ([]byte, error) {
-	return func(b []byte) ([]byte, error) {
-
-		if b == nil {
-			return nil, nil
-		}
-
-		offset := bytes.IndexByte(b, byte('|'))
-		if offset < 0 {
-			return nil, ErrMalformedLog
-		}
-
-		var label = b[0:offset]
-		var data = bytes.TrimPrefix(
-			bytes.TrimSuffix(
-				b[offset+1:],
-				[]byte("\n"),
-			),
-			[]byte(" "),
-		)
-
-		out, err := prettyjson.Format(data)
-		if err != nil {
-			// in case of an error we don't care tbh. But at least show the
-			// dev the log in unformatted
-			return append(append(label, byte('@')), data...), nil
-		}
-
-		return append(append(label, byte('@')), out...), nil
-	}
-}
-
 //WithLineWrap wraps the slice of bytes based on the
 // provided width where the resulting byte slice include
 // \n after a maximum of width bytes.
 func WithLineWrap(width int) func(int, []byte) []byte {
 	return func(index int, b []byte) []byte {
 		return wrap.Bytes(b, width)
-	}
-}
-
-func WithSelectedLine(index int) func(int, []byte) []byte {
-	return func(i int, b []byte) []byte {
-		if i != index {
-			return b
-		}
-
-		offset := bytes.IndexByte(b, byte('|'))
-
-		val := lipgloss.NewStyle().
-			Foreground(styles.DefaultColor.Highlight).
-			Render(
-				string(b[offset+1:]),
-			)
-
-		// for some reason a lot of empty spaces are
-		// added to the end of the styled string which
-		// are messing up the formatting
-		var cutoff = len(val) - 1
-		for i := len(val) - 1; i >= 0; i-- {
-			if val[i] != byte('\n') && val[i] != byte(' ') {
-				break
-			}
-			cutoff = i
-		}
-
-		return append(b[0:offset+1], val[:cutoff]...)
 	}
 }
 
