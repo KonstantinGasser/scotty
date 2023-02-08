@@ -42,6 +42,10 @@ func (buf Buffer) Cap() uint32 {
 	return buf.capacity
 }
 
+func (buff Buffer) Nil(index int) bool {
+	return buff.data[index] == nil
+}
+
 func (buf *Buffer) Append(p []byte) {
 	buf.data[buf.write] = p
 	buf.write = (buf.write + 1) % buf.capacity
@@ -50,12 +54,13 @@ func (buf *Buffer) Append(p []byte) {
 // Window write up to N of the last appended items to the io.Writer
 // To modify items before writing them to the writer, a function can be provided.
 //
-func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) error {
+func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) (int, error) {
 
 	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
 	var offset = writeIndex - n
 
+	var count int
 	for i := offset; i < writeIndex; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
@@ -64,6 +69,8 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) er
 		if val == nil {
 			continue
 		}
+
+		val = append([]byte("["+strconv.Itoa(index)+"]"), val...)
 
 		for _, fn := range fns {
 			val = fn(index, val)
@@ -78,21 +85,22 @@ func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) er
 		// by setting a capacity using Grow(N) where N is the educated guess
 		// of how many bytes are expected to be written.
 		if _, err := w.Write(val); err != nil {
-			return err
+			return count, err
 		}
+		count++
 	}
 
-	return nil
+	return count, nil
 }
 
-func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte) []byte) error {
+func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte) []byte) (int, error) {
 
 	var cap = int(buf.capacity)
 
 	// we are doing line wrapping. As such the resulting
 	// string height might end up being height the the requested height.
 	// Keep track of the actual height and break if reached
-	var actualHeight int
+	var actualHeight, count int
 
 	for i := offset; i < offset+n; i++ {
 
@@ -103,16 +111,17 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 			continue
 		}
 
+		val = append([]byte("["+strconv.Itoa(index)+"]"), val...)
+
 		for _, fn := range fns {
 			val = fn(index, val)
 		}
 
-		actualHeight += bytes.Count(val, []byte("\n"))
-
 		// we accept that the might come out with
 		// less lines then height would allow.
+		actualHeight += bytes.Count(val, []byte("\n"))
 		if actualHeight >= n {
-			return nil
+			return count, nil
 		}
 
 		// under the hood we pass in a bytes.Buffer
@@ -124,11 +133,12 @@ func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte
 		// by setting a capacity using Grow(N) where N is the educated guess
 		// of how many bytes are expected to be written.
 		if _, err := w.Write(val); err != nil {
-			return err
+			return count, err
 		}
+		count++
 	}
 
-	return nil
+	return count, nil
 }
 
 var (
@@ -154,54 +164,16 @@ func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error)
 	return fn(item)
 }
 
-// WithIndent returns a slice of byte in which
-// the stream label and the formatted JSON are
-// separated by the delimiter "@". If the data
-// portion cannot be formatted the unformatted
-// data is appended to the result slice.
-func WithIndent() func([]byte) ([]byte, error) {
-	return func(b []byte) ([]byte, error) {
-
-		if b == nil {
-			return nil, nil
-		}
-
-		offset := bytes.IndexByte(b, byte('|'))
-		if offset < 0 {
-			return nil, ErrMalformedLog
-		}
-
-		var label = b[0:offset]
-		var data = bytes.TrimPrefix(
-			bytes.TrimSuffix(
-				b[offset+1:],
-				[]byte("\n"),
-			),
-			[]byte(" "),
-		)
-
-		out, err := prettyjson.Format(data)
-		if err != nil {
-			// in case of an error we don't care tbh. But at least show the
-			// dev the log in unformatted
-			return append(append(label, byte('@')), data...), nil
-		}
-
-		debug.Print("formatted:\n%q\n", out)
-		return append(append(label, byte('@')), out...), nil
-	}
-}
-
 //WithLineWrap wraps the slice of bytes based on the
 // provided width where the resulting byte slice include
 // \n after a maximum of width bytes.
 func WithLineWrap(width int) func(int, []byte) []byte {
 	return func(index int, b []byte) []byte {
-		return wrap.Bytes(append([]byte("["+strconv.Itoa(index)+"]"), b[:]...), width)
+		return wrap.Bytes(b, width)
 	}
 }
 
-func WithSelectedLine(index int) func(int, []byte) []byte {
+func WithInlineFormatting(width int, index int) func(int, []byte) []byte {
 	return func(i int, b []byte) []byte {
 		if i != index {
 			return b
@@ -209,23 +181,52 @@ func WithSelectedLine(index int) func(int, []byte) []byte {
 
 		offset := bytes.IndexByte(b, byte('|'))
 
-		val := lipgloss.NewStyle().
-			Foreground(styles.DefaultColor.Highlight).
-			Render(
-				string(b[offset+1:]),
-			)
-
+		data := b[offset+1:]
 		// for some reason a lot of empty spaces are
 		// added to the end of the styled string which
 		// are messing up the formatting
-		var cutoff = len(val) - 1
-		for i := len(val) - 1; i >= 0; i-- {
-			if val[i] != byte('\n') && val[i] != byte(' ') {
+		var cutoff = len(data) - 1
+		for i := len(data) - 1; i >= 0; i-- {
+			if data[i] != byte('\n') && data[i] != byte(' ') {
 				break
 			}
 			cutoff = i
 		}
+		data = data[:cutoff]
 
-		return append(b[0:offset+1], val[:cutoff]...)
+		pretty, err := prettyjson.Format(data)
+		if err != nil {
+			debug.Print("unable to pretty-print json: %v\n", err)
+			return append(
+				[]byte(
+					lipgloss.NewStyle().
+						Bold(true).
+						Border(lipgloss.DoubleBorder(), false, false, false, true).
+						BorderForeground(styles.DefaultColor.Border).
+						Render(
+							lipgloss.JoinVertical(lipgloss.Left,
+								string(b[:offset]),
+								string(wrap.Bytes(data[:cutoff], width-1)),
+							),
+						),
+				),
+				byte('\n'),
+			)
+		}
+		return append(
+			[]byte(
+				lipgloss.NewStyle().
+					Bold(true).
+					Border(lipgloss.DoubleBorder(), false, false, false, true).
+					BorderForeground(styles.DefaultColor.Border).
+					Render(
+						lipgloss.JoinVertical(lipgloss.Left,
+							string(b[:offset]),
+							string(wrap.Bytes(pretty, width-1)),
+						),
+					),
+			),
+			byte('\n'),
+		)
 	}
 }

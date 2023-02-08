@@ -7,7 +7,7 @@
 
 # Why scotty?
 
-Often times when you develop an application on your local system it's not enough to run a single application but maybe many different once.
+Often times when you develop an application on your local system it's not enough to run a single application but maybe many different ones.
 The idea behind `scotty` originated from the resulting pain of having many terminal windows printing logs and stitching together the logs you
 need in order to understand the bug you're searching for..tedious
 
@@ -26,6 +26,7 @@ brew install scotty
 ## From source
 ```
 go install github.com/KonstantinGasser/scotty@latest
+go install github.com/KonstantinGasser/scotty/beam@latest
 ```
 
 # How it works?
@@ -39,7 +40,7 @@ redirect `stderr` to `stdout` using `2>&1`.
 ## ...from stdout
 
 ```
-cat uss_enterprise_engine.log | beam engine-service -d
+cat uss_enterprise_engine.log | beam -d engine-service
 ```
 
 This above command cats the `uss_enterprise_engine.log` to stdout which is then piped to the stdin of `beam`. Note the beam's first argument
