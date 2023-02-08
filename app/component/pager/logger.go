@@ -145,9 +145,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			pager.awaitInput = true
 
-			pager.input.Focus()
-			cmds = append(cmds, textinput.Blink)
-
 			// we need to kick of and continue to render
 			// incoming logs. If we don't kick of the
 			// rerendering the current logs are not wrapped
@@ -157,6 +154,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				true,
 				ring.WithLineWrap(pager.width),
 			)
+
+			pager.input.Focus()
 
 		case "enter":
 			if !pager.awaitInput {
@@ -202,6 +201,8 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pager.relativeIndex = -1
 			pager.absoluteIndex = -1
 
+			pager.input.Reset()
+			pager.input.Blur()
 			// again the width of the log view changes on
 			// exit as such we need to force a rerender
 			// in order to fix the line wraps of each log
@@ -246,6 +247,10 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 				ring.WithLineWrap(pager.width),
 			)
+			// for this key stroke we don't need the msg any other where
+			// and we putted to the input model the stork is registered
+			// which we don't want
+			return pager, tea.Batch(cmds...)
 
 		// selects the next log line to be parsed and
 		// displayed. Input ignored when relativeIndex >= buffer.cap
@@ -301,6 +306,10 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ring.WithLineWrap(pager.width),
 			)
 
+			// for this key stroke we don't need the msg any other where
+			// and we putted to the input model the stork is registered
+			// which we don't want
+			return pager, tea.Batch(cmds...)
 		}
 
 	// event dispatched from bubbletea when the screen size changes.
@@ -418,23 +427,6 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			true,
 			ring.WithLineWrap(pager.width),
 		)
-
-	// event dispatched by the command model whenever the user
-	// enters on an input requesting to parse a log line.
-	// The msg of type parserIndex is an integer and represents
-	// the captured requested index.
-	case parserIndex:
-		pager.offsetStart = int(msg)
-		pager.absoluteIndex = pager.offsetStart
-		pager.relativeIndex = 0
-
-		pager.pageSize = pager.renderOffset(
-			pager.offsetStart,
-			ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
-			ring.WithLineWrap(pager.width),
-		)
-
-		return pager, tea.Batch(cmds...)
 	}
 
 	// propagate events to child models.
@@ -445,10 +437,10 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	pager.view, cmd = pager.view.Update(msg)
 	cmds = append(cmds, cmd)
 
-	pager.input, cmd = pager.input.Update(msg)
+	pager.footer, cmd = pager.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
-	pager.footer, cmd = pager.footer.Update(msg)
+	pager.input, cmd = pager.input.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return pager, tea.Batch(cmds...)
