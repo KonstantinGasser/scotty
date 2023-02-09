@@ -45,11 +45,11 @@ type subscriber struct {
 	color lipgloss.Color
 }
 
-// Logger implements the tea.Model interface.
-// Furthermore, Logger allows to tail logs.
-// Logger does not not store the logs its only
+// Pager implements the tea.Model interface.
+// Furthermore, Pager allows to tail logs.
+// Pager does not not store the logs its only
 // porose is it to display them.
-type Logger struct {
+type Pager struct {
 	buffer ring.Buffer
 	writer bytes.Buffer
 
@@ -102,12 +102,13 @@ type Logger struct {
 	footer tea.Model
 }
 
-func NewLogger(width, height int) *Logger {
+func New(width, height int) *Pager {
 
 	w, h := width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 
 	view := viewport.New(w, h)
 	view.Height = h
+	view.Width = w
 	view.MouseWheelEnabled = true
 	view.Style = pagerStyle.Width(w)
 
@@ -115,7 +116,7 @@ func NewLogger(width, height int) *Logger {
 	input.Placeholder = "line number (use k/j to move and ESC to exit)"
 	input.Prompt = ":"
 
-	return &Logger{
+	return &Pager{
 		buffer: ring.New(uint32(12)),
 		writer: bytes.Buffer{},
 
@@ -131,11 +132,11 @@ func NewLogger(width, height int) *Logger {
 	}
 }
 
-func (pager *Logger) Init() tea.Cmd {
+func (pager *Pager) Init() tea.Cmd {
 	return nil
 }
 
-func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -366,9 +367,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// event dispatched each time a new stream connects to
 	// the multiplexer. on-event we need to update the footer
 	// model with the new stream information as well as update
-	// the loggers state. The logger keeps track of connected beams
+	// the Pagers state. The Pager keeps track of connected beams
 	// however only cares about the color to use when rendering the logs.
-	// Logger will ensure that the color for the printed logs of a stream
+	// Pager will ensure that the color for the printed logs of a stream
 	// are matching the color information in the footer
 	case plexer.Subscriber:
 
@@ -399,9 +400,9 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// event dispatched by the multiplexer each time a client/stream
 	// sends a log linen.
-	// The logger needs to add the ansi color code stored for the stream
+	// The Pager needs to add the ansi color code stored for the stream
 	// to the dispatched message before adding the data to the ring buffer.
-	// Once added to the ring buffer the logger queries for the latest N
+	// Once added to the ring buffer the Pager queries for the latest N
 	// records (where N is equal to the height of the current viewport.Model)
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
@@ -451,7 +452,7 @@ func (pager *Logger) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return pager, tea.Batch(cmds...)
 }
 
-func (pager *Logger) View() string {
+func (pager *Pager) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinVertical(lipgloss.Left,
 			// pagerStyle.
@@ -469,7 +470,7 @@ func (pager *Logger) View() string {
 	)
 }
 
-func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []byte) []byte) int {
+func (pager *Pager) renderWindow(rows int, toBottom bool, opts ...func(int, []byte) []byte) int {
 	itemCount, err := pager.buffer.Window(
 		&pager.writer,
 		pager.height,
@@ -490,7 +491,7 @@ func (pager *Logger) renderWindow(rows int, toBottom bool, opts ...func(int, []b
 	return itemCount
 }
 
-func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) int {
+func (pager *Pager) renderOffset(offset int, opts ...func(int, []byte) []byte) int {
 	itemCount, err := pager.buffer.Offset(
 		&pager.writer,
 		offset,
@@ -507,7 +508,7 @@ func (pager *Logger) renderOffset(offset int, opts ...func(int, []byte) []byte) 
 	return itemCount
 }
 
-func (pager *Logger) setDimensions(width, height int) {
+func (pager *Pager) setDimensions(width, height int) {
 	pager.width, pager.height = width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 	pager.view.Width, pager.view.Height = width, height
 }

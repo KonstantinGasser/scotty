@@ -76,7 +76,7 @@ func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message
 
 		views: map[int]tea.Model{
 			welcomeView: welcome.New(width, height),
-			logTailView: pager.NewLogger(width, height), // have this pre-initialized as it will be need no matter what
+			logTailView: pager.New(width, height), // have this pre-initialized as it will be need no matter what
 		},
 
 		width:  width,
