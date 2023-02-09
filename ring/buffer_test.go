@@ -138,7 +138,7 @@ func TestWindowN(t *testing.T) {
 
 		w = strings.Builder{}
 
-		if _, err := buf.Window(&w, tc.n, tc.fn); err != nil {
+		if _, err := buf.Peek(&w, tc.n, tc.fn); err != nil {
 			t.Fatalf("[%s] unable to Window buffer, got an unexpected error: %v", tc.name, err)
 		}
 
@@ -176,7 +176,7 @@ func BenchmarkWindowN(b *testing.B) {
 		size := 50 // pager height in full screen on 16'' monitor
 
 		for i := 0; i < bench.N; i++ {
-			_, err := buf.Window(&w, size, nil)
+			_, err := buf.Peek(&w, size, nil)
 			if err != nil {
 				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
 			}
@@ -202,7 +202,7 @@ func BenchmarkWindowNWithPreGrow(b *testing.B) {
 
 		w.Grow((size * screenWidth) * 2)
 		for i := 0; i < bench.N; i++ {
-			_, err := buf.Window(&w, size, func(i int, v []byte) []byte {
+			_, err := buf.Peek(&w, size, func(i int, v []byte) []byte {
 				if len(v) > screenWidth {
 					return v[:screenWidth]
 				}
@@ -231,7 +231,7 @@ func BenchmarkWindowNWithBytesBuffer(b *testing.B) {
 		size := 50 // pager height in full screen on 16'' monitor
 
 		for i := 0; i < bench.N; i++ {
-			_, err := buf.Window(&w, size, nil)
+			_, err := buf.Peek(&w, size, nil)
 			if err != nil {
 				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
 			}
@@ -258,7 +258,7 @@ func BenchmarkWindowNWithBytesBufferGrow(b *testing.B) {
 		w.Grow(size * screenWidth)
 
 		for i := 0; i < bench.N; i++ {
-			_, err := buf.Window(&w, size, WithLineWrap(screenWidth))
+			_, err := buf.Peek(&w, size, WithLineWrap(screenWidth))
 			if err != nil {
 				bench.Fatalf("[windowing (N=50)] got an unexpected error: %v", err)
 			}

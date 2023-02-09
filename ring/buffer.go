@@ -51,10 +51,9 @@ func (buf *Buffer) Append(p []byte) {
 	buf.write = (buf.write + 1) % buf.capacity
 }
 
-// Window write up to N of the last appended items to the io.Writer
-// To modify items before writing them to the writer, a function can be provided.
-//
-func (buf Buffer) Window(w io.Writer, n int, fns ...func(int, []byte) []byte) (int, error) {
+// Peek looks up up-to N of the last entries written in the buffer.
+// The number of items written to the writer is returned.
+func (buf Buffer) Peek(w io.Writer, n int, fns ...func(int, []byte) []byte) (int, error) {
 
 	// write := w.Write
 	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index

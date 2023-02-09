@@ -17,7 +17,7 @@ import (
 
 const (
 	bottomSectionHeight = 1
-	inputSectionHeight  = 2
+	inputSectionHeight  = 1
 
 	borderMargin = 0
 
@@ -172,12 +172,10 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			pager.offsetStart = index
-			pager.absoluteIndex = pager.offsetStart
-			pager.relativeIndex = 0
+			pager.initFormattingMode(index)
 
-			pager.pageSize = pager.renderOffset(
-				pager.offsetStart,
+			pager.updatePage(
+				pager.absoluteIndex,
 				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 				ring.WithLineWrap(pager.width),
 			)
@@ -203,20 +201,18 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				height,
 			)
 
-			pager.awaitInput = false
-			pager.offsetStart = -1
-			pager.relativeIndex = -1
-			pager.absoluteIndex = -1
+			pager.resetFormattingMode()
 
-			pager.input.Reset()
-			pager.input.Blur()
 			// again the width of the log view changes on
 			// exit as such we need to force a rerender
 			// in order to fix the line wraps of each log
-			pager.renderWindow(
+			contents, _ := pager.peekBuffer(
 				pager.height,
-				true,
+				ring.WithLineWrap(pager.width),
 			)
+			pager.writer.Reset()
+			pager.view.SetContent(contents)
+			pager.view.GotoBottom()
 
 		// selects the previous log line to be parsed
 		// and displayed. Input ignores when relativeIndex <= 0
@@ -235,25 +231,19 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// only show the next upper element not an entire
 			// new page like we do when scrolling down.
 			if pager.relativeIndex < 0 {
-				pager.relativeIndex = 0
-				pager.offsetStart--
-				if pager.offsetStart < 0 {
-					pager.offsetStart = 0
-				}
 
-				pager.pageSize = pager.renderOffset(
-					pager.offsetStart,
+				pager.previousPage(
 					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 					ring.WithLineWrap(pager.width),
 				)
+
 				break
 			}
 
-			pager.pageSize = pager.renderOffset(
-				pager.offsetStart,
-				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
-				ring.WithLineWrap(pager.width),
+			pager.updatePage(
+				pager.absoluteIndex,
 			)
+
 			// for this key stroke we don't need the msg any other where
 			// and we putted to the input model the stork is registered
 			// which we don't want
@@ -274,12 +264,9 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pager.absoluteIndex--
 				pager.relativeIndex--
 
-				pager.pageSize = pager.renderOffset(
-					pager.offsetStart,
-					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
-					ring.WithLineWrap(pager.width),
+				pager.updatePage(
+					pager.absoluteIndex,
 				)
-
 				break
 			}
 
@@ -288,17 +275,12 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// if so we need to adjust the page/go to the next
 			// page an rerender the view again
 			if pager.relativeIndex >= pager.pageSize {
-				pager.offsetStart += pager.relativeIndex
-				// reset relativeIndex since its relative to
-				// the current page. When the page changes
-				// the relative index is 0
-				pager.relativeIndex = 0
 
-				pager.pageSize = pager.renderOffset(
-					pager.offsetStart,
+				pager.nextPage(
 					ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 					ring.WithLineWrap(pager.width),
 				)
+
 				break
 			}
 
@@ -307,10 +289,8 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// lines indicate how many items are included
 			// in the render (hard to tell solely based on the string
 			// from the pager.writer)
-			pager.pageSize = pager.renderOffset(
-				pager.offsetStart,
-				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
-				ring.WithLineWrap(pager.width),
+			pager.updatePage(
+				pager.absoluteIndex,
 			)
 
 			// for this key stroke we don't need the msg any other where
@@ -329,22 +309,25 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Width,
 			msg.Height,
 		)
-		pager.view.Style = pagerStyle.Width(pager.width)
 
 		if pager.awaitInput && pager.relativeIndex >= 0 {
-			pager.pageSize = pager.renderOffset(
-				pager.offsetStart,
+
+			pager.updatePage(
+				pager.absoluteIndex,
 				ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
 				ring.WithLineWrap(pager.width),
 			)
+
 			break
 		}
 
-		pager.renderWindow(
+		contents, _ := pager.peekBuffer(
 			pager.height,
-			true,
 			ring.WithLineWrap(pager.width),
 		)
+		pager.writer.Reset()
+		pager.view.SetContent(contents)
+		pager.view.GotoBottom()
 
 	// event dispatched each time a beam disconnects from scotty.
 	// The message itself is the label of the stream which
@@ -427,11 +410,13 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		pager.renderWindow(
+		contents, _ := pager.peekBuffer(
 			pager.height,
-			true,
 			ring.WithLineWrap(pager.width),
 		)
+		pager.writer.Reset()
+		pager.view.SetContent(contents)
+		pager.view.GotoBottom()
 	}
 
 	// propagate event to child models.
@@ -455,10 +440,6 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (pager *Pager) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinVertical(lipgloss.Left,
-			// pagerStyle.
-			// 	Render(
-			// 		pager.view.View(),
-			// 	),
 			pager.view.View(),
 			pager.footer.View(),
 		),
@@ -470,45 +451,122 @@ func (pager *Pager) View() string {
 	)
 }
 
-func (pager *Pager) renderWindow(rows int, toBottom bool, opts ...func(int, []byte) []byte) int {
-	itemCount, err := pager.buffer.Window(
-		&pager.writer,
+// previousPage renders the current window shifted up by 1
+// and selects the relativeIndex of zero.
+func (pager *Pager) previousPage(opts ...func(int, []byte) []byte) {
+
+	if pager.offsetStart == 0 {
+		return
+	}
+
+	pager.relativeIndex = 0
+	pager.offsetStart--
+	if pager.offsetStart < 0 {
+		pager.offsetStart = 0
+	}
+
+	contents, pageSize := pager.offsetBuffer(
+		pager.offsetStart,
 		pager.height,
-		opts...,
+		ring.WithInlineFormatting(pager.width, pager.absoluteIndex),
+		ring.WithLineWrap(pager.width),
 	)
-	if err != nil {
-		debug.Debug(err.Error())
-	}
-
-	pager.view.SetContent(pager.writer.String())
 	pager.writer.Reset()
-
-	if !toBottom {
-		return itemCount
-	}
-
-	pager.view.GotoBottom()
-	return itemCount
+	pager.pageSize = pageSize
+	pager.view.SetContent(contents)
 }
 
-func (pager *Pager) renderOffset(offset int, opts ...func(int, []byte) []byte) int {
-	itemCount, err := pager.buffer.Offset(
+// updatePage requests the same offset window from the buffer
+// however with a different line marked as selected
+func (pager *Pager) updatePage(selected int, opts ...func(int, []byte) []byte) {
+
+	contents, pageSize := pager.offsetBuffer(
+		pager.offsetStart,
+		pager.height,
+		ring.WithInlineFormatting(pager.width, selected),
+		ring.WithLineWrap(pager.width),
+	)
+	pager.writer.Reset()
+	pager.pageSize = pageSize
+
+	pager.view.SetContent(contents)
+}
+
+// nextPage "scrolls" the buffer down by one page defined bei the current viewport height.
+// The relativeIndex referring to the line in the current window selected is set to zero
+// again.
+func (pager *Pager) nextPage(opts ...func(int, []byte) []byte) {
+
+	pager.offsetStart += pager.relativeIndex
+	// reset relativeIndex since its relative to
+	// the current page. When the page changes
+	// the relative index is 0
+	pager.relativeIndex = 0
+
+	contents, pageSize := pager.offsetBuffer(
+		pager.offsetStart,
+		pager.height,
+		opts...,
+	)
+	pager.writer.Reset()
+
+	pager.pageSize = pageSize
+
+	pager.view.SetContent(contents)
+}
+
+// peekBuffer is a wrapper to read up to N of the last items form the buffer into
+// the pager.writer. peakBuffer does not reset the pager.writer.
+func (pager Pager) peekBuffer(n int, opts ...func(int, []byte) []byte) (string, int) {
+
+	pageSize, err := pager.buffer.Peek(
 		&pager.writer,
-		offset,
 		pager.height,
 		opts...,
 	)
 	if err != nil {
 		debug.Debug(err.Error())
+		return "", pageSize
 	}
 
-	pager.view.SetContent(pager.writer.String())
-	pager.writer.Reset()
+	return pager.writer.String(), pageSize
+}
 
-	return itemCount
+func (pager Pager) offsetBuffer(start, end int, opts ...func(int, []byte) []byte) (string, int) {
+
+	pageSize, err := pager.buffer.Offset(
+		&pager.writer,
+		start,
+		end,
+		opts...,
+	)
+	if err != nil {
+		debug.Debug(err.Error())
+		return "", pageSize
+	}
+
+	return pager.writer.String(), pageSize
 }
 
 func (pager *Pager) setDimensions(width, height int) {
 	pager.width, pager.height = width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 	pager.view.Width, pager.view.Height = width, height
+
+	pager.view.Style.Width(pager.width)
+}
+
+func (pager *Pager) initFormattingMode(offset int) {
+	pager.offsetStart = offset
+	pager.absoluteIndex = pager.offsetStart
+	pager.relativeIndex = 0
+}
+
+func (pager *Pager) resetFormattingMode() {
+	pager.awaitInput = false
+	pager.offsetStart = -1
+	pager.relativeIndex = -1
+	pager.absoluteIndex = -1
+
+	pager.input.Reset()
+	pager.input.Blur()
 }
