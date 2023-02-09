@@ -11,13 +11,15 @@ Often times when you develop an application on your local system it's not enough
 The idea behind `scotty` originated from the resulting pain of having many terminal windows printing logs and stitching together the logs you
 need in order to understand the bug you're searching for..tedious
 
-With `scotty` you can multiplex your application logs into one consolidated terminal window apply filers on specific streams and query your logs (well once its implemented..working on it)
+With `scotty` you can multiplex your application logs into ***one consolidated*** terminal window apply ***filers*** on specific streams and ***format*** structred (JSON format) logs. In the future the secondary goal of scotty is it to allow you to ***query/aggregate*** your logs
 
 ![](/resources/example_v0.0.1.png)
 # Installation guide
 
 
 ## Homebrew
+
+*Note:* brew tab does not exisit yet...
 ```
 brew tab KonstantinGasser/scotty
 brew install scotty
