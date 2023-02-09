@@ -19,7 +19,7 @@ With `scotty` you can multiplex your application logs into ***one consolidated**
 
 ## Homebrew
 
-*Note:* brew tab does not exisit yet...
+*Note:* brew tab does not exist yet...
 ```
 brew tab KonstantinGasser/scotty
 brew install scotty
