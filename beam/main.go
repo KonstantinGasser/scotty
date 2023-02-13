@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func main() {
@@ -39,4 +42,36 @@ func main() {
 	}
 
 	stream.beam(quite)
+}
+
+func printErr(msg string, err error, tips ...string) {
+
+	fmt.Println(
+		msg,
+		"\n",
+		lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FA5252")).
+			Render(err.Error()),
+	)
+
+	if len(tips) > 0 {
+		fmt.Println()
+	}
+
+	for i, tip := range tips {
+		fmt.Println(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FDE57F")).
+			Render(fmt.Sprintf("%d: %s", i+1, tip)),
+		)
+	}
+}
+
+func printWarn(msg string) {
+	fmt.Println(
+		lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FDE57F")).
+			Render(msg),
+	)
 }
