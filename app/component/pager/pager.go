@@ -120,7 +120,7 @@ func New(width, height int) *Pager {
 	debug.Print("[pager.New] width: %d (%d), height: %d (%d)\n", w, view.Width, h, view.Height)
 
 	input := textinput.New()
-	input.Placeholder = "line number (use k/j to move and ESC to exit)"
+	input.Placeholder = "line number (use k/j to move and ESC/q to exit)"
 	input.Prompt = ":"
 
 	return &Pager{
@@ -193,7 +193,7 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// exits the parsing mode. Has no effect
 		// while not in parsing mode (awaitInput == false)
-		case "esc":
+		case "esc", "q":
 			if !pager.awaitInput {
 				break
 			}

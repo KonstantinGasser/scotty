@@ -8,7 +8,6 @@ import (
 type bindings struct {
 	Up   key.Binding
 	Down key.Binding
-	// View key.Binding
 	Help key.Binding
 	Quit key.Binding
 }
@@ -38,8 +37,8 @@ var defaultBindings = bindings{
 		key.WithHelp("?", "toggle help"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "exit scotty"),
+		key.WithKeys("ctrl+c"),
+		key.WithHelp("ctrl+c", "exit scotty"),
 	),
 }
 

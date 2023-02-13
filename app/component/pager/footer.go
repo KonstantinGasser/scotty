@@ -121,7 +121,7 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// invoked by parent model when leaving
 		// formatting mode thus we want to reset
 		// values used to show hidden notifications
-		case "esc":
+		case "esc", "q":
 			f.isFormatMode = false
 			for i := range f.streams {
 				f.streams[i].hasNewMessages = false
