@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/muesli/reflow/wrap"
@@ -195,7 +194,6 @@ func WithInlineFormatting(width int, index int) func(int, []byte) []byte {
 
 		pretty, err := prettyjson.Format(data)
 		if err != nil {
-			debug.Print("unable to pretty-print json: %v\n", err)
 			return append(
 				[]byte(
 					lipgloss.NewStyle().

@@ -19,7 +19,7 @@ const (
 	bottomSectionHeight = 1
 	inputSectionHeight  = 1
 
-	borderMargin = 0
+	borderMargin = 1
 
 	// wow literally no idea why this number hence
 	// the variable name - if you get why tell me and
@@ -31,9 +31,7 @@ const (
 )
 
 var (
-	pagerStyle = lipgloss.NewStyle() //.
-	// Border(lipgloss.RoundedBorder()).
-	// BorderForeground(styles.DefaultColor.Border)
+	pagerStyle = lipgloss.NewStyle().Padding(0, 1)
 
 	inputStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -111,7 +109,6 @@ type Pager struct {
 }
 
 func New(width, height int) *Pager {
-	// 							height-bottomSectionHeight-inputSectionHeight-magicNumber
 	w, h := width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 
 	view := viewport.New(w, h)
@@ -212,8 +209,6 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				width,
 				height,
 			)
-
-			debug.Print("[tea.KeyMsg(esc)] width: %d (%d), height: %d (%d)\n", pager.width, pager.view.Width, pager.height, pager.view.Height)
 
 			// again the width of the log view changes on
 			// exit as such we need to force a rerender
@@ -321,8 +316,6 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Width,
 			msg.Height,
 		)
-
-		debug.Print("[tea.WindowSizeMsg] width: %d (%d), height: %d (%d)\n", pager.width, pager.view.Width, pager.height, pager.view.Height)
 
 		if pager.awaitInput && pager.relativeIndex >= 0 {
 
@@ -457,26 +450,9 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (pager *Pager) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		pager.footer.View(),
-		lipgloss.NewStyle().
-			Width(pager.width-2).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.DefaultColor.Border).
-			Render(
-				pager.view.View(),
-			),
+		pager.view.View(),
 		pager.input.View(),
 	)
-	// return lipgloss.JoinVertical(lipgloss.Left,
-	// 	lipgloss.JoinVertical(lipgloss.Left,
-	// 		pager.view.View(),
-	// 		pager.footer.View(),
-	// 	),
-	// 	lipgloss.NewStyle().
-	// 		Padding(1, 0, 0, 1).
-	// 		Render(
-	// 			pager.input.View(),
-	// 		),
-	// )
 }
 
 // previousPage renders the current window shifted up by 1
