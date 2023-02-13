@@ -86,12 +86,12 @@ func (s stream) beam(quite <-chan struct{}) {
 				if err == io.EOF {
 					return
 				}
-				fmt.Printf("unable to read log-line:\n\n%v", err)
+				printErr("unable to read log from stdin", err)
 				return
 			}
 
 			if _, err := s.writer.Write(b); err != nil {
-				fmt.Printf("unable to beam log-line to scotty:\n\n%v", err)
+				printErr("beam encountered and issue while beaming the logs...", err)
 				return
 			}
 		}

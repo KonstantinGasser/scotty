@@ -2,12 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 func main() {
@@ -19,13 +16,7 @@ func main() {
 
 	label := flag.Arg(0)
 	if len(label) <= 0 {
-		fmt.Println(
-			lipgloss.NewStyle().Foreground(
-				lipgloss.Color("#ff0000"),
-			).Render(
-				"please provide a label for the stream\n\texample: \"beam engine-svc\"",
-			),
-		)
+		printWarn("please provide a label for the stream\n\texample: \"beam engine-svc\"")
 		return
 	}
 
@@ -40,12 +31,9 @@ func main() {
 
 	stream, err := newStream(label, *protocol, *addr, *daemon)
 	if err != nil {
-		fmt.Println(
-			lipgloss.NewStyle().Foreground(
-				lipgloss.Color("#ff0000"),
-			).Render(
-				fmt.Sprintf("unable to open beam to scotty: %v", err),
-			),
+		printErr("unable to open beam to scotty...", err,
+			"make sure scotty is running and has started with no errors",
+			"if you have configured scotty to use a socket/connection different to the default,\nmake sure your beam command specifies socttys location",
 		)
 		return
 	}
