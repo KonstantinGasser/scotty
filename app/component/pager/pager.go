@@ -31,9 +31,9 @@ const (
 )
 
 var (
-	pagerStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.DefaultColor.Border)
+	pagerStyle = lipgloss.NewStyle() //.
+	// Border(lipgloss.RoundedBorder()).
+	// BorderForeground(styles.DefaultColor.Border)
 
 	inputStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -54,9 +54,11 @@ type Pager struct {
 	writer bytes.Buffer
 
 	beams map[string]lipgloss.Color
+
 	// stores the length of the longest stream
 	// label in order to align the start of the logs
 	maxLabelLength int
+
 	// underlying model which handles
 	// scrolling and rendering of the logs
 	view viewport.Model
@@ -73,25 +75,31 @@ type Pager struct {
 	// buffer one must add the offsetStart to the
 	// relativeIndex to get the absolute index.
 	relativeIndex int
+
 	// absoluteIndex refers to the actual index in the
 	// buffer which is currently formatted
 	absoluteIndex int
+
 	// offsetStart if used when paging through the logs
 	// and formatting log lines. It refers to the index
 	// with which the pager starts (first log of the page)
 	offsetStart int
+
 	// pageSize refers to the number of items currently
 	// visible in the view - line wraps are not included
 	// an item which takes up two lines counts as one
 	pageSize int
+
 	// awaitInput indicated if ECS is pressed.
 	// if awaitInput == false the input for commands
 	// is focused else moved out of focus
 	awaitInput bool
+
 	// input is the input field to select
 	// an index to format and input further
 	// commands
 	input textinput.Model
+
 	// some characters inputted we don't want to
 	// propagate down to the textinput.Model
 	// as they are treated as regular chars
@@ -103,7 +111,7 @@ type Pager struct {
 }
 
 func New(width, height int) *Pager {
-
+	// 							height-bottomSectionHeight-inputSectionHeight-magicNumber
 	w, h := width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 
 	view := viewport.New(w, h)
@@ -111,6 +119,8 @@ func New(width, height int) *Pager {
 	view.Width = w
 	view.MouseWheelEnabled = true
 	view.Style = pagerStyle.Width(w)
+
+	debug.Print("[pager.New] width: %d (%d), height: %d (%d)\n", w, view.Width, h, view.Height)
 
 	input := textinput.New()
 	input.Placeholder = "line number (use k/j to move and ESC to exit)"
@@ -191,6 +201,8 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
+			pager.resetFormattingMode()
+
 			width, height, err := styles.WindowSize()
 			if err != nil {
 				debug.Print("[tea.KeyMsg(esc)] unable to get tty width and height: %w\n", err)
@@ -201,7 +213,7 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				height,
 			)
 
-			pager.resetFormattingMode()
+			debug.Print("[tea.KeyMsg(esc)] width: %d (%d), height: %d (%d)\n", pager.width, pager.view.Width, pager.height, pager.view.Height)
 
 			// again the width of the log view changes on
 			// exit as such we need to force a rerender
@@ -309,6 +321,8 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Width,
 			msg.Height,
 		)
+
+		debug.Print("[tea.WindowSizeMsg] width: %d (%d), height: %d (%d)\n", pager.width, pager.view.Width, pager.height, pager.view.Height)
 
 		if pager.awaitInput && pager.relativeIndex >= 0 {
 
@@ -426,6 +440,9 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	pager.footer, cmd = pager.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
+	// only there to avoid certain chars to be used as
+	// input for the input field.
+	// chars include: "j", "k"
 	if !pager.ignoreInput {
 		pager.input, cmd = pager.input.Update(msg)
 		cmds = append(cmds, cmd)
@@ -439,16 +456,27 @@ func (pager *Pager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (pager *Pager) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.JoinVertical(lipgloss.Left,
-			pager.view.View(),
-			pager.footer.View(),
-		),
+		pager.footer.View(),
 		lipgloss.NewStyle().
-			Padding(1, 0, 0, 1).
+			Width(pager.width-2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(styles.DefaultColor.Border).
 			Render(
-				pager.input.View(),
+				pager.view.View(),
 			),
+		pager.input.View(),
 	)
+	// return lipgloss.JoinVertical(lipgloss.Left,
+	// 	lipgloss.JoinVertical(lipgloss.Left,
+	// 		pager.view.View(),
+	// 		pager.footer.View(),
+	// 	),
+	// 	lipgloss.NewStyle().
+	// 		Padding(1, 0, 0, 1).
+	// 		Render(
+	// 			pager.input.View(),
+	// 		),
+	// )
 }
 
 // previousPage renders the current window shifted up by 1
@@ -550,9 +578,7 @@ func (pager Pager) offsetBuffer(start, end int, opts ...func(int, []byte) []byte
 
 func (pager *Pager) setDimensions(width, height int) {
 	pager.width, pager.height = width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
-	pager.view.Width, pager.view.Height = width, height
-
-	pager.view.Style.Width(pager.width)
+	pager.view.Width, pager.view.Height = pager.width, pager.height
 }
 
 func (pager *Pager) initFormattingMode(offset int) {

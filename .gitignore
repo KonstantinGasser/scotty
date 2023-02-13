@@ -1,7 +1,10 @@
 .v0
 beam
+.goreleaser.yml
 .DS_Store
 .vscode
 */*.out
 *.log
 **/*.test
+
+dist/
