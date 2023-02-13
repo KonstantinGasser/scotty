@@ -3,7 +3,7 @@ beam
 .goreleaser.yml
 .DS_Store
 .vscode
-*/*.out
+**/*.out
 *.log
 **/*.test
 
