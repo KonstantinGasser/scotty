@@ -118,6 +118,7 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			f.isFormatMode = true
+
 		// invoked by parent model when leaving
 		// formatting mode thus we want to reset
 		// values used to show hidden notifications

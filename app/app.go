@@ -62,7 +62,7 @@ type App struct {
 	unsubscribe <-chan plexer.Unsubscribe
 }
 
-func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, subs <-chan plexer.Subscriber, unsubs <-chan plexer.Unsubscribe) (*App, error) {
+func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, subs <-chan plexer.Subscriber, unsubs <-chan plexer.Unsubscribe) (*App, error) {
 
 	width, height, err := windowSize()
 	if err != nil {
@@ -76,7 +76,7 @@ func New(q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message
 
 		views: map[int]tea.Model{
 			welcomeView: welcome.New(width, height),
-			logTailView: pager.New(width, height), // have this pre-initialized as it will be need no matter what
+			logTailView: pager.New(width, height, bufferSize), // have this pre-initialized as it will be need no matter what
 		},
 
 		width:  width,

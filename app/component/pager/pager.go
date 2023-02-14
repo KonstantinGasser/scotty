@@ -108,7 +108,7 @@ type Pager struct {
 	footer tea.Model
 }
 
-func New(width, height int) *Pager {
+func New(width, height, bufferSize int) *Pager {
 	w, h := width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
 
 	view := viewport.New(w, h)
@@ -124,7 +124,7 @@ func New(width, height int) *Pager {
 	input.Prompt = ":"
 
 	return &Pager{
-		buffer: ring.New(uint32(12)),
+		buffer: ring.New(uint32(bufferSize)),
 		writer: bytes.Buffer{},
 
 		beams:          map[string]lipgloss.Color{},
