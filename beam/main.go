@@ -14,7 +14,7 @@ var version = "dev"
 
 func main() {
 
-	if len(os.Args) >= 1 && os.Args[1] == "version" {
+	if len(os.Args) >= 2 && os.Args[1] == "version" {
 		fmt.Printf("scotty:\t%s\n", version)
 		return
 	}
