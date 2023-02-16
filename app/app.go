@@ -3,11 +3,14 @@ package app
 import (
 	"fmt"
 
+	"github.com/KonstantinGasser/scotty/ring"
+
+	"github.com/KonstantinGasser/scotty/app/component/formatter"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
-	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 const (
@@ -17,22 +20,31 @@ const (
 	// one or more log streams have connected
 	// and are streaming logs
 	// show logs in tailing window
-	logTailView
+	tailView
 	// a query was execute w/o tailing
 	// show view with query results
-	queryView
-	// a query was executed with tailing
-	// show logs in tailing window with query filters
-	queryTailView
+	formatView
 )
 
 type App struct {
 	quite chan<- struct{}
 
-	// help view
-	help help.Model
-
 	keys bindings
+
+	// width and height of the terminal
+	// updates as it changes
+	width, height int
+
+	// streams keeps track of all streams which connected
+	// to scotty within the same session and store a unique
+	// color for each stream. Used when writing and displaying
+	// logs from the different streams
+	streams map[string]lipgloss.Color
+
+	// state can be either of (welcomeView | tailView | formatView)
+	// and based on the state View returns the status and the current
+	// view from the views map
+	state int
 
 	// views is a map of tea.Model which can be either of type component/pager
 	// or component/view and represent the views which should be displayed
@@ -44,10 +56,10 @@ type App struct {
 	// "dashboard" configurations which can be used to pre-initialize scotty
 	views map[int]tea.Model
 
-	// width and height of the terminal
-	// updates as it changes
-	width, height int
-	state         int
+	// display status information. Previously
+	// called head or footer however end position
+	// is not clear so status is more generic for a name
+	status tea.Model
 
 	// errs receives errors happening in the multiplexer
 	// while working/reading from streams
@@ -69,19 +81,24 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		return nil, fmt.Errorf("unable to determine the initial dimensions of the terminal: %w", err)
 	}
 
+	buffer := ring.New(uint32(bufferSize))
+
 	return &App{
 		quite: q,
-		help:  help.New(),
 		keys:  defaultBindings,
 
+		width: width,
+
+		streams: make(map[string]lipgloss.Color),
+
+		state: welcomeView,
 		views: map[int]tea.Model{
 			welcomeView: welcome.New(width, height),
-			logTailView: pager.New(width, height, bufferSize), // have this pre-initialized as it will be need no matter what
+			tailView:    pager.New(width, height, &buffer),
+			formatView:  formatter.New(width, height, &buffer),
 		},
 
-		width:  width,
 		height: height,
-		state:  welcomeView,
 
 		errs:        errs,
 		messages:    msgs,
@@ -89,12 +106,6 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		unsubscribe: unsubs,
 	}, nil
 }
-
-/* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */
-func (app *App) consumeMsg() tea.Msg          { return <-app.messages }
-func (app *App) consumeErrs() tea.Msg         { return <-app.errs }
-func (app *App) consumeSubscriber() tea.Msg   { return <-app.subscriber }
-func (app *App) consumerUnsubscribe() tea.Msg { return <-app.unsubscribe }
 
 // Init kicks off all the background listening jobs to receive
 // tea.Msg coming from outside the app.App such as the multiplexer.Socket
@@ -126,7 +137,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// currently the app is not doing anything with the message as its child models are taking care
 	// of it. However, the app requests bubbletea to wait and listen for new messages pushed to
-	// channels
+	// channels - this ends now!
 	case plexer.Message, plexer.Error, plexer.Subscriber, plexer.Unsubscribe:
 
 		switch msg.(type) {
@@ -142,7 +153,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// enable tailing of logs view
 		if app.state == welcomeView {
-			app.state = logTailView
+			app.state = tailView
 		}
 	}
 
@@ -156,3 +167,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (app *App) View() string {
 	return app.views[app.state].View()
 }
+
+/* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */
+func (app *App) consumeMsg() tea.Msg          { return <-app.messages }
+func (app *App) consumeErrs() tea.Msg         { return <-app.errs }
+func (app *App) consumeSubscriber() tea.Msg   { return <-app.subscriber }
+func (app *App) consumerUnsubscribe() tea.Msg { return <-app.unsubscribe }
