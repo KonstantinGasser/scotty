@@ -14,6 +14,7 @@ import (
 	"github.com/KonstantinGasser/scotty/app/styles"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -29,6 +30,15 @@ const (
 	// a query was execute w/o tailing
 	// show view with query results
 	formatView
+
+	// space must be reserved for the status either at
+	// the top or the bottom however must be taken in
+	// account for the other views
+	statusHeight = 2
+
+	// positioned at the bottom of the application
+	// height of the input model for commands
+	inputHeight = 1
 )
 
 type App struct {
@@ -61,6 +71,9 @@ type App struct {
 	// view from the views map
 	state int
 
+	// if true the ":" was hit in the previous message and the user is typing
+	awaitInput bool
+
 	// views is a map of tea.Model which can be either of type component/pager
 	// or component/view and represent the views which should be displayed
 	// in the next render
@@ -75,6 +88,9 @@ type App struct {
 	// called head or footer however end position
 	// is not clear so status is more generic for a name
 	status tea.Model
+
+	// input to execute commands
+	input textinput.Model
 
 	// errs receives errors happening in the multiplexer
 	// while working/reading from streams
@@ -98,12 +114,16 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 
 	buffer := ring.New(uint32(bufferSize))
 
+	input := textinput.New()
+	input.Placeholder = "line number (use k/j to move and ESC/q to exit)"
+	input.Prompt = ":"
+
 	return &App{
 		quite: q,
 		keys:  defaultBindings,
 
 		width:  width,
-		height: height,
+		height: height - statusHeight - inputHeight,
 
 		buffer:  &buffer,
 		streams: make(map[string]lipgloss.Color),
@@ -111,10 +131,13 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		state: welcomeView,
 		views: map[int]tea.Model{
 			welcomeView: welcome.New(width, height),
-			tailView:    pager.New(width, height, &buffer),
-			formatView:  formatter.New(width, height, &buffer),
+			tailView:    pager.New(width, height-statusHeight-inputHeight, &buffer),
+			formatView:  formatter.New(width, height-statusHeight-inputHeight, &buffer),
 		},
 		status: status.New(width, height),
+
+		input:      input,
+		awaitInput: false,
 
 		errs:        errs,
 		messages:    msgs,
@@ -143,12 +166,28 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if key.Matches(msg, app.keys.Quit) {
+		switch {
+		// nop, right
+		case key.Matches(msg, app.keys.Quit):
 			app.quite <- struct{}{}
 			return app, tea.Quit
+		// indicated that the dev wants to switch the view.
+		// Once this key is hit we need to wait for input
+		case key.Matches(msg, app.keys.Input):
+			app.awaitInput = true
+			app.input.Focus()
+			return app, tea.Batch(cmds...)
+		case key.Matches(msg, app.keys.Exit):
+			app.awaitInput = false
+			app.input.Blur()
 		}
 
 	case tea.WindowSizeMsg:
+		msg = tea.WindowSizeMsg{
+			Width:  msg.Width,
+			Height: msg.Height - statusHeight - inputHeight,
+		}
+
 		app.width = msg.Width
 		app.height = msg.Height
 
@@ -238,11 +277,22 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	app.views[app.state], cmd = app.views[app.state].Update(msg)
 	cmds = append(cmds, cmd)
 
+	app.input, cmd = app.input.Update(msg)
+	cmds = append(cmds, cmd)
+
 	return app, tea.Batch(cmds...)
 }
 
 func (app *App) View() string {
-	return app.views[app.state].View()
+	if app.state == welcomeView {
+		return app.views[app.state].View()
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		app.status.View(),
+		app.views[app.state].View(),
+		app.input.View(),
+	)
 }
 
 /* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */

@@ -14,18 +14,12 @@ import (
 )
 
 const (
-	bottomSectionHeight = 1
-	inputSectionHeight  = 1
-
 	borderMargin = 1
 
 	// wow literally no idea why this number hence
 	// the variable name - if you get why tell me and
 	// pls open a PR..else pls don't change it
 	magicNumber = 2
-
-	awaitInput = iota + 1
-	hasInput
 )
 
 var (
@@ -75,7 +69,7 @@ type Model struct {
 }
 
 func New(width, height int, buffer *ring.Buffer) *Model {
-	w, h := width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
+	w, h := width-borderMargin, height
 
 	view := viewport.New(w, h)
 	view.Height = h
@@ -184,6 +178,6 @@ func (model Model) peekBuffer(n int, opts ...func(int, []byte) []byte) (string, 
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width, model.height = width-borderMargin, height-bottomSectionHeight-inputSectionHeight-magicNumber
+	model.width, model.height = width-borderMargin, height
 	model.view.Width, model.view.Height = model.width, model.height
 }
