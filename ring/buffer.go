@@ -38,9 +38,10 @@ func (buff Buffer) Nil(index int) bool {
 	return buff.data[index] == nil
 }
 
-func (buf *Buffer) Append(p []byte) {
+func (buf *Buffer) Write(p []byte) (int, error) {
 	buf.data[buf.write] = p
 	buf.write = (buf.write + 1) % buf.capacity
+	return len(p), nil
 }
 
 // Peek looks up up-to N of the last entries written in the buffer.

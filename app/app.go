@@ -2,13 +2,18 @@ package app
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/KonstantinGasser/scotty/ring"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
+	"github.com/KonstantinGasser/scotty/app/component/status"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
+	"github.com/KonstantinGasser/scotty/app/styles"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -35,11 +40,21 @@ type App struct {
 	// updates as it changes
 	width, height int
 
+	// any incoming multiplexer.Message
+	// is written to the buffer. However the
+	// does not need to read from the buffer, thus
+	// only an io.Writer
+	buffer io.Writer
+
 	// streams keeps track of all streams which connected
 	// to scotty within the same session and store a unique
 	// color for each stream. Used when writing and displaying
 	// logs from the different streams
 	streams map[string]lipgloss.Color
+
+	// tracks the length of the longest stream label currently
+	// connected - only used to apply spacing between labels and logs
+	maxLabelLength int
 
 	// state can be either of (welcomeView | tailView | formatView)
 	// and based on the state View returns the status and the current
@@ -87,8 +102,10 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		quite: q,
 		keys:  defaultBindings,
 
-		width: width,
+		width:  width,
+		height: height,
 
+		buffer:  &buffer,
 		streams: make(map[string]lipgloss.Color),
 
 		state: welcomeView,
@@ -97,8 +114,7 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 			tailView:    pager.New(width, height, &buffer),
 			formatView:  formatter.New(width, height, &buffer),
 		},
-
-		height: height,
+		status: status.New(width, height),
 
 		errs:        errs,
 		messages:    msgs,
@@ -127,34 +143,95 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if quite := app.resolveKey(msg); quite != nil {
+		if key.Matches(msg, app.keys.Quit) {
 			app.quite <- struct{}{}
-			return app, quite
+			return app, tea.Quit
 		}
+
 	case tea.WindowSizeMsg:
 		app.width = msg.Width
 		app.height = msg.Height
 
-	// currently the app is not doing anything with the message as its child models are taking care
-	// of it. However, the app requests bubbletea to wait and listen for new messages pushed to
-	// channels - this ends now!
-	case plexer.Message, plexer.Error, plexer.Subscriber, plexer.Unsubscribe:
-
-		switch msg.(type) {
-		case plexer.Error:
-			cmds = append(cmds, app.consumeErrs)
-		case plexer.Subscriber:
-			cmds = append(cmds, app.consumeSubscriber)
-		case plexer.Unsubscribe:
-			cmds = append(cmds, app.consumerUnsubscribe)
-		case plexer.Message:
-			cmds = append(cmds, app.consumeMsg)
+	// event dispatched each time a new stream connects to
+	// the multiplexer. on-event we need to update the footer
+	// model with the new stream information as well as update
+	// the Models state. The Model keeps track of connected beams
+	// however only cares about the color to use when rendering the logs.
+	// Model will ensure that the color for the printed logs of a stream
+	// are matching the color information in the footer
+	case plexer.Subscriber:
+		// update max label length for indenting
+		// while displaying logs
+		if len(msg) > app.maxLabelLength {
+			app.maxLabelLength = len(msg)
 		}
 
-		// enable tailing of logs view
+		label := string(msg)
+
+		if _, ok := app.streams[label]; !ok {
+			color, _ := styles.RandColor()
+			app.streams[label] = color
+		}
+
+		app.status, _ = app.status.Update(status.Connection{
+			Label: label,
+			Color: app.streams[label],
+		})
+		cmds = append(cmds, app.consumeSubscriber)
+
+		return app, tea.Batch(cmds...)
+
+	// event dispatched each time a beam disconnects from scotty.
+	// The message itself is the label of the stream which
+	// disconnected. On a disconnect we need to recompute the
+	// length of the longest stream label in order to maintain
+	// pretty indention for logging the logs with the label prefix
+	case plexer.Unsubscribe:
+		// we only need to reassign the max value
+		// if the current max is disconnecting
+		if len(msg) >= app.maxLabelLength {
+			max := 0
+			for label := range app.streams {
+				if len(label) > max && label != string(msg) {
+					max = len(label)
+				}
+			}
+			app.maxLabelLength = max
+		}
+		cmds = append(cmds, app.consumerUnsubscribe)
+
+	// event dispatched by the multiplexer each time a client/stream
+	// sends a log linen.
+	// The App needs to add the ansi color code stored for the stream
+	// to the dispatched message before adding the data to the ring buffer.
+	// Further processing happening in active view (views[state]).
+	// For references see:
+	// - pager.Update()
+	case plexer.Message:
+		// in all cases the first view we show whenever
+		// the first message is received is the pager
 		if app.state == welcomeView {
 			app.state = tailView
 		}
+
+		color := app.streams[msg.Label]
+
+		space := app.maxLabelLength - len(msg.Label)
+		if space < 0 {
+			space = 0
+		}
+
+		prefix := lipgloss.NewStyle().
+			Foreground(color).
+			Render(
+				msg.Label+strings.Repeat(" ", space),
+			) + " | "
+
+		app.buffer.Write(append([]byte(prefix), msg.Data...))
+		cmds = append(cmds, app.consumeMsg)
+
+	case plexer.Error:
+		// good question guess pipe to status???
 	}
 
 	// update current model

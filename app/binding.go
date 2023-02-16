@@ -2,7 +2,6 @@ package app
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type bindings struct {
@@ -40,17 +39,4 @@ var defaultBindings = bindings{
 		key.WithKeys("ctrl+c"),
 		key.WithHelp("ctrl+c", "exit scotty"),
 	),
-}
-
-func (app *App) resolveKey(msg tea.KeyMsg) tea.Cmd {
-
-	switch true {
-	case key.Matches(msg, app.keys.Quit):
-		return tea.Quit
-	case key.Matches(msg, app.keys.Help):
-		app.help.ShowAll = !app.help.ShowAll
-
-	}
-
-	return nil
 }

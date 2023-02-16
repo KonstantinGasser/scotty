@@ -2,7 +2,6 @@ package pager
 
 import (
 	"bytes"
-	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
@@ -138,58 +137,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.view.SetContent(contents)
 		model.view.GotoBottom()
 
-	// event dispatched each time a beam disconnects from scotty.
-	// The message itself is the label of the stream which
-	// disconnected. On a disconnect we need to recompute the
-	// length of the longest stream label in order to maintain
-	// pretty indention for logging the logs with the label prefix
-	case plexer.Unsubscribe:
-		// // we only need to reassign the max value
-		// // if the current max is disconnecting
-		// if len(msg) >= model.maxLabelLength {
-		// 	max := 0
-		// 	for label := range model.beams {
-		// 		if len(label) > max && label != string(msg) {
-		// 			max = len(label)
-		// 		}
-		// 	}
-		// 	model.maxLabelLength = max
-		// }
-
-	// event dispatched each time a new stream connects to
-	// the multiplexer. on-event we need to update the footer
-	// model with the new stream information as well as update
-	// the Models state. The Model keeps track of connected beams
-	// however only cares about the color to use when rendering the logs.
-	// Model will ensure that the color for the printed logs of a stream
-	// are matching the color information in the footer
-	case plexer.Subscriber:
-
-		// // update max label length for indenting
-		// // while displaying logs
-		// if len(msg) > model.maxLabelLength {
-		// 	model.maxLabelLength = len(msg)
-		// }
-
-		// label := string(msg)
-
-		// if _, ok := model.beams[label]; !ok {
-		// 	color, _ := styles.RandColor()
-		// 	model.beams[label] = color
-
-		// 	model.footer, _ = model.footer.Update(subscriber{
-		// 		label: label,
-		// 		color: color,
-		// 	})
-		// }
-
-		// model.footer, _ = model.footer.Update(subscriber{
-		// 	label: label,
-		// 	color: model.beams[label],
-		// })
-
-		// return pager, tea.Batch(cmds...)
-
 	// event dispatched by the multiplexer each time a client/stream
 	// sends a log linen.
 	// The Model needs to add the ansi color code stored for the stream
@@ -198,21 +145,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// records (where N is equal to the height of the current viewport.Model)
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
-		color := model.beams[msg.Label]
-
-		space := model.maxLabelLength - len(msg.Label)
-		if space < 0 {
-			space = 0
-		}
-
-		prefix := lipgloss.NewStyle().
-			Foreground(color).
-			Render(
-				msg.Label+strings.Repeat(" ", space),
-			) + " | "
-
-		model.buffer.Append(append([]byte(prefix), msg.Data...))
-
 		contents, _ := model.peekBuffer(
 			model.height,
 			ring.WithLineWrap(model.width),
@@ -220,6 +152,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.writer.Reset()
 		model.view.SetContent(contents)
 		model.view.GotoBottom()
+		debug.Print("got a message in pager\n")
 	}
 
 	// propagate event to child models.
@@ -230,9 +163,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model *Model) View() string {
-	return lipgloss.JoinVertical(lipgloss.Left,
-		model.view.View(),
-	)
+	return model.view.View()
 }
 
 // peekBuffer is a wrapper to read up to N of the last items form the buffer into

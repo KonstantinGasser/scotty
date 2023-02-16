@@ -1,4 +1,4 @@
-package pager
+package status
 
 import (
 	"fmt"
@@ -27,6 +27,11 @@ const (
 	labelDisconnected    = "SIGINT"
 	labelNewNotification = "(incoming)"
 )
+
+type Connection struct {
+	Label string
+	Color lipgloss.Color
+}
 
 type stream struct {
 	label        string
@@ -83,7 +88,7 @@ type Model struct {
 	isFormatMode bool
 }
 
-func newFooter(w, h int) *Model {
+func New(w, h int) *Model {
 	return &Model{
 		width: w,
 		err:   nil,
@@ -136,27 +141,27 @@ func (f *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// stays the same unless the same stream connects with a different label).
 	// Each stream has a random background color for readability the Model
 	// either uses a white or black foreground color
-	// case subscriber:
-	// 	fg := styles.InverseColor(msg.color)
-	// 	index, ok := f.streamIndex[msg.label]
-	// 	if !ok {
-	// 		f.streams = append(f.streams, stream{
-	// 			label:   msg.label,
-	// 			colorBg: msg.color,
-	// 			colorFg: fg,
-	// 			style: lipgloss.NewStyle().
-	// 				Background(msg.color).
-	// 				Foreground(fg).
-	// 				Padding(0, 1).
-	// 				Bold(true),
-	// 			count: 0,
-	// 		})
-	// 		// don't forget to update the index map
-	// 		f.streamIndex[msg.label] = len(f.streams) - 1
-	// 		break
-	// 	}
+	case Connection:
+		fg := styles.InverseColor(msg.Color)
+		index, ok := f.streamIndex[msg.Label]
+		if !ok {
+			f.streams = append(f.streams, stream{
+				label:   msg.Label,
+				colorBg: msg.Color,
+				colorFg: fg,
+				style: lipgloss.NewStyle().
+					Background(msg.Color).
+					Foreground(fg).
+					Padding(0, 1).
+					Bold(true),
+				count: 0,
+			})
+			// don't forget to update the index map
+			f.streamIndex[msg.Label] = len(f.streams) - 1
+			break
+		}
 
-	// 	f.streams[index].disconnected = false
+		f.streams[index].disconnected = false
 
 	case plexer.Unsubscribe:
 		index := f.streamIndex[string(msg)]
