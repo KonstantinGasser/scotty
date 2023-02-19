@@ -146,7 +146,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.writer.Reset()
 		model.view.SetContent(contents)
 		model.view.GotoBottom()
-		debug.Print("got a message in pager\n")
 	}
 
 	// propagate event to child models.

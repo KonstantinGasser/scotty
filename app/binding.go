@@ -9,6 +9,7 @@ type bindings struct {
 	Down  key.Binding
 	Input key.Binding
 	Exit  key.Binding
+	Enter key.Binding
 	Quit  key.Binding
 }
 
@@ -26,14 +27,15 @@ func (b bindings) FullHelp() [][]key.Binding {
 var defaultBindings = bindings{
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "move up"),
 	),
 	Down: key.NewBinding(
 		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "move down"),
 	),
 	Input: key.NewBinding(
 		key.WithKeys(":"),
+	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
 	),
 	Exit: key.NewBinding(
 		key.WithKeys("esc"),

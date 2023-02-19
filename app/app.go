@@ -3,8 +3,10 @@ package app
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
@@ -74,6 +76,16 @@ type App struct {
 	// if true the ":" was hit in the previous message and the user is typing
 	awaitInput bool
 
+	// hasInput is true only if awaitInput is true prio and the user has typed
+	// in a valid command. If true indicated that a user request is running
+	hasInput bool
+
+	// ignoreKey is used to avoid adding certain keys to the input model
+	// which would display the keys. Ignored keys are:
+	// - "j"
+	// - "k"
+	ignoreKey bool
+
 	// views is a map of tea.Model which can be either of type component/pager
 	// or component/view and represent the views which should be displayed
 	// in the next render
@@ -138,6 +150,8 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 
 		input:      input,
 		awaitInput: false,
+		hasInput:   false,
+		ignoreKey:  false,
 
 		errs:        errs,
 		messages:    msgs,
@@ -177,9 +191,36 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.awaitInput = true
 			app.input.Focus()
 			return app, tea.Batch(cmds...)
+		// only triggered if input is expected.
+		// Evaluates the input and coordinates the required
+		// execution. Current allowed input patterns:
+		// - [0-9]{1,} -> switch view to formatter with requested input
+		// - f:[a-zA-Z_-0-9]{1,} -> add filter on log view
+		case key.Matches(msg, app.keys.Enter) && app.awaitInput:
+			value := app.input.Value()
+			index, err := strconv.Atoi(value)
+			if err != nil {
+				debug.Print("unable to parse index: %q: %w", value, err)
+			}
+			app.hasInput = true
+
+			cmds = append(cmds, formatter.RequestView(index))
+			app.state = formatView
+
+		case key.Matches(msg, app.keys.Up) && app.hasInput:
+			cmds = append(cmds, formatter.RequestUp())
+			app.ignoreKey = true
+
+		case key.Matches(msg, app.keys.Down) && app.hasInput:
+			cmds = append(cmds, formatter.RequestDown())
+			app.ignoreKey = true
+
 		case key.Matches(msg, app.keys.Exit):
 			app.awaitInput = false
 			app.input.Blur()
+
+			cmds = append(cmds, formatter.RequestQuite())
+			app.state = tailView
 		}
 
 	case tea.WindowSizeMsg:
@@ -277,8 +318,11 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	app.views[app.state], cmd = app.views[app.state].Update(msg)
 	cmds = append(cmds, cmd)
 
-	app.input, cmd = app.input.Update(msg)
-	cmds = append(cmds, cmd)
+	if !app.ignoreKey {
+		app.input, cmd = app.input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+	app.ignoreKey = false
 
 	return app, tea.Batch(cmds...)
 }
