@@ -33,7 +33,7 @@ func makeStringN(n int, fn func(i int) string) string {
 	return out
 }
 
-func TestAppend(t *testing.T) {
+func TestWrite(t *testing.T) {
 
 	var factor uint32 = 2
 
@@ -65,7 +65,7 @@ func TestAppend(t *testing.T) {
 		buf = New(factor)
 
 		for _, v := range tc.input {
-			buf.Append(v)
+			buf.Write(v)
 		}
 
 		for i := 0; i < len(tc.want); i++ {
@@ -133,7 +133,7 @@ func TestWindowN(t *testing.T) {
 		// prepare buffer for reading
 		buf = New(factor)
 		for _, v := range tc.input {
-			buf.Append(v)
+			buf.Write(v)
 		}
 
 		w = strings.Builder{}
@@ -148,7 +148,7 @@ func TestWindowN(t *testing.T) {
 	}
 }
 
-func BenchmarkAppend(b *testing.B) {
+func BenchmarkWrite(b *testing.B) {
 	b.ReportAllocs()
 
 	buf := New(12)
@@ -156,7 +156,7 @@ func BenchmarkAppend(b *testing.B) {
 	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
 
 	for i := 0; i < b.N; i++ {
-		buf.Append(payload)
+		buf.Write(payload)
 	}
 }
 
@@ -167,7 +167,7 @@ func BenchmarkWindowN(b *testing.B) {
 	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
 
 	for i := 0; i < (1<<12)+128; i++ {
-		buf.Append(payload)
+		buf.Write(payload)
 	}
 
 	b.ReportAllocs()
@@ -191,7 +191,7 @@ func BenchmarkWindowNWithPreGrow(b *testing.B) {
 	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
 
 	for i := 0; i < (1<<12)+128; i++ {
-		buf.Append(payload)
+		buf.Write(payload)
 	}
 
 	b.ReportAllocs()
@@ -222,7 +222,7 @@ func BenchmarkWindowNWithBytesBuffer(b *testing.B) {
 	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
 
 	for i := 0; i < (1<<12)+128; i++ {
-		buf.Append(payload)
+		buf.Write(payload)
 	}
 
 	b.ReportAllocs()
@@ -246,7 +246,7 @@ func BenchmarkWindowNWithBytesBufferGrow(b *testing.B) {
 	payload := []byte(`{"level":"warn","ts":1674335370.996341,"caller":"application/structred.go:34","msg":"caution this indicates X","index":188,"ts":1674335370.996334}`)
 
 	for i := 0; i < (1<<12)+128; i++ {
-		buf.Append(payload)
+		buf.Write(payload)
 	}
 
 	b.ReportAllocs()

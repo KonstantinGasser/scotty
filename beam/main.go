@@ -10,7 +10,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var version = "dev"
+
 func main() {
+
+	if len(os.Args) >= 2 && os.Args[1] == "version" {
+		fmt.Printf("scotty:\t%s\n", version)
+		return
+	}
 
 	protocol := flag.String("protocol", "unix", "logs can be stream/piped through unix sockets or tcp sockets")
 	addr := flag.String("addr", "/tmp/scotty.sock", "specify a custom unix socket to use or a tcp:ip addr")

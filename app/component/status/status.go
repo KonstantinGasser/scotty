@@ -1,4 +1,4 @@
-package pager
+package status
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	footerStyle = lipgloss.NewStyle().
+	ModelStyle = lipgloss.NewStyle().
 			Padding(0, 1).
 			Border(lipgloss.DoubleBorder(), false, false, true, false)
 
@@ -27,6 +27,11 @@ const (
 	labelDisconnected    = "SIGINT"
 	labelNewNotification = "(incoming)"
 )
+
+type Connection struct {
+	Label string
+	Color lipgloss.Color
+}
 
 type stream struct {
 	label        string
@@ -45,12 +50,12 @@ type stream struct {
 	hasNewMessages bool
 }
 
-type footer struct {
+type Model struct {
 	width, height int
 
 	// any error happing anywhere
 	// in the application should be shown
-	// in the footer.
+	// in the Model.
 	// err represents the latest error
 	err error
 
@@ -67,14 +72,14 @@ type footer struct {
 	// Problem we are trying to solve with this is the
 	// fact that maps don't guaranty same ordering when
 	// looping over the map. However, this leeds to the
-	// footer switching the stream info boxes which is annoying...
+	// Model switching the stream info boxes which is annoying...
 	streamIndex map[string]int
 	// streams is the slice with the actual information about a stream.
 	// using the streamsIndex we can do a O(1) lookup for a specific stream
 	// but maintain ordering when looping over the list when calling View()
 	streams []stream
 
-	// isFormatMode is indicated by the footers parent model.
+	// isFormatMode is indicated by the Models parent model.
 	// It tells whether or not the user is currently browsing
 	// through the logs.
 	// If true and a new message is received by a stream we want
@@ -83,8 +88,8 @@ type footer struct {
 	isFormatMode bool
 }
 
-func newFooter(w, h int) *footer {
-	return &footer{
+func New(w, h int) *Model {
+	return &Model{
 		width: w,
 		err:   nil,
 
@@ -98,11 +103,11 @@ func newFooter(w, h int) *footer {
 	}
 }
 
-func (f *footer) Init() tea.Cmd {
+func (f *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (f *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -129,30 +134,30 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	// whenever a stream connects to scotty the event
-	// is propagated. The footer uses the event to
+	// is propagated. The Model uses the event to
 	// display connected stream and the number of logs streamed.
 	// Streams which disconnect temporally are removed from the
-	// footer state (color coding is delegated from the pager and thus
+	// Model state (color coding is delegated from the pager and thus
 	// stays the same unless the same stream connects with a different label).
-	// Each stream has a random background color for readability the footer
+	// Each stream has a random background color for readability the Model
 	// either uses a white or black foreground color
-	case subscriber:
-		fg := styles.InverseColor(msg.color)
-		index, ok := f.streamIndex[msg.label]
+	case Connection:
+		fg := styles.InverseColor(msg.Color)
+		index, ok := f.streamIndex[msg.Label]
 		if !ok {
 			f.streams = append(f.streams, stream{
-				label:   msg.label,
-				colorBg: msg.color,
+				label:   msg.Label,
+				colorBg: msg.Color,
 				colorFg: fg,
 				style: lipgloss.NewStyle().
-					Background(msg.color).
+					Background(msg.Color).
 					Foreground(fg).
 					Padding(0, 1).
 					Bold(true),
 				count: 0,
 			})
 			// don't forget to update the index map
-			f.streamIndex[msg.label] = len(f.streams) - 1
+			f.streamIndex[msg.Label] = len(f.streams) - 1
 			break
 		}
 
@@ -184,7 +189,7 @@ func (f *footer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return f, tea.Batch(cmds...)
 }
 
-func (f *footer) View() string {
+func (f *Model) View() string {
 
 	var items = []string{}
 
@@ -237,7 +242,7 @@ func (f *footer) View() string {
 		)
 	}
 
-	return footerStyle.
+	return ModelStyle.
 		Padding(0, 1).
 		Width(f.width - 1). // account for padding left/right
 		Render(

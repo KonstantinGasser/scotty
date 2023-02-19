@@ -19,21 +19,14 @@ type Buffer struct {
 }
 
 // New initiates a new ring buffer with a set capacity.
-// The provided factor can be any number however one must
-// note that the capacity is the result of 1 << factor to
-// ensure an end capacity of the power of 2.
-// Example factors:
-// 	factor of 10 -> 1 << 10 == 1024
-// 	factor of 12 -> 1 << 12 == 4096
-// The resulting capacity is the number of slots available in
-// the ring buffer. To calculate the approximated memory size
+// To calculate the approximated memory size
 // one has to take the size of the on average expected []byte
-// stored in the buffer and compute: (1<<factor)*avg(item_size)
-func New(factor uint32) Buffer {
+// stored in the buffer and compute: capacity*avg(item_size)
+func New(size uint32) Buffer {
 	return Buffer{
-		capacity: 1 << factor,
+		capacity: size,
 		write:    0,
-		data:     make([][]byte, 1<<factor),
+		data:     make([][]byte, size),
 	}
 }
 
@@ -45,9 +38,10 @@ func (buff Buffer) Nil(index int) bool {
 	return buff.data[index] == nil
 }
 
-func (buf *Buffer) Append(p []byte) {
+func (buf *Buffer) Write(p []byte) (int, error) {
 	buf.data[buf.write] = p
 	buf.write = (buf.write + 1) % buf.capacity
+	return len(p), nil
 }
 
 // Peek looks up up-to N of the last entries written in the buffer.
