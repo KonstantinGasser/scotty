@@ -22,6 +22,18 @@ import (
 )
 
 const (
+	cmdUnset = iota
+	cmdFormat
+	cmdFilter
+)
+
+var (
+	placeholderDefault = "use \":\" to enter log formatting or \"ctrl+f\" to filter the logs"
+	placeholderFormat  = "line number (use k/j to move and ESC/q to exit)"
+	placeholderFilter  = "type the name of a stream to highlight its logs"
+)
+
+const (
 	// scotty has just been started
 	// show welcome page
 	welcomeView = iota
@@ -86,6 +98,11 @@ type App struct {
 	// - "k"
 	ignoreKey bool
 
+	// requestedCommand stores the key which triggered a command and
+	// is used to differentiate between follow-up actions after
+	// the "enter" key has been hit.
+	requestedCommand int
+
 	// views is a map of tea.Model which can be either of type component/pager
 	// or component/view and represent the views which should be displayed
 	// in the next render
@@ -127,7 +144,7 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 	buffer := ring.New(uint32(bufferSize))
 
 	input := textinput.New()
-	input.Placeholder = "line number (use k/j to move and ESC/q to exit)"
+	input.Placeholder = placeholderDefault
 	input.Prompt = ":"
 
 	return &App{
@@ -148,10 +165,11 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		},
 		status: status.New(width, height),
 
-		input:      input,
-		awaitInput: false,
-		hasInput:   false,
-		ignoreKey:  false,
+		input:            input,
+		awaitInput:       false,
+		hasInput:         false,
+		ignoreKey:        false,
+		requestedCommand: cmdUnset,
 
 		errs:        errs,
 		messages:    msgs,
@@ -188,34 +206,42 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// indicated that the dev wants to switch the view.
 		// Once this key is hit we need to wait for input
 		case key.Matches(msg, app.keys.Input):
+			app.input.Reset()
+			app.input.Placeholder = placeholderFormat
 			app.awaitInput = true
 			app.input.Focus()
+			app.requestedCommand = cmdFormat
+
 			return app, tea.Batch(cmds...)
+
+		case key.Matches(msg, app.keys.Filter):
+			app.input.Reset()
+			app.input.Placeholder = placeholderFilter
+			app.awaitInput = true
+			app.input.Focus()
+			app.requestedCommand = cmdFilter
+
+			return app, tea.Batch(cmds...)
+
 		// only triggered if input is expected.
 		// Evaluates the input and coordinates the required
 		// execution. Current allowed input patterns:
 		// - [0-9]{1,} -> switch view to formatter with requested input
 		// - f:[a-zA-Z_-0-9]{1,} -> add filter on log view
 		case key.Matches(msg, app.keys.Enter) && app.awaitInput:
-			value := app.input.Value()
-			index, err := strconv.Atoi(value)
-			if err != nil {
-				debug.Print("unable to parse index: %q: %w", value, err)
-			}
-			app.hasInput = true
 
-			cmds = append(cmds, formatter.RequestView(index))
-			app.state = formatView
+			cmd = app.executeCommand()
+			cmds = append(cmds, cmd)
 
 		// propagate event to formatter and request to format
 		// previous log line
-		case key.Matches(msg, app.keys.Up) && app.hasInput:
+		case key.Matches(msg, app.keys.Up) && app.state == formatView && app.hasInput:
 			cmds = append(cmds, formatter.RequestUp())
 			app.ignoreKey = true
 
 		// propagate event to formatter and request to format
 		// next log line
-		case key.Matches(msg, app.keys.Down) && app.hasInput:
+		case key.Matches(msg, app.keys.Down) && app.state == formatView && app.hasInput:
 			cmds = append(cmds, formatter.RequestDown())
 			app.ignoreKey = true
 
@@ -224,19 +250,18 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, app.keys.Exit):
 			app.awaitInput = false
 			app.input.Blur()
+			app.input.Placeholder = placeholderDefault
 
 			cmds = append(cmds, formatter.RequestQuite())
 			app.state = tailView
 		}
 
 	case tea.WindowSizeMsg:
-		msg = tea.WindowSizeMsg{
-			Width:  msg.Width,
-			Height: msg.Height - statusHeight - inputHeight,
-		}
-
 		app.width = msg.Width
-		app.height = msg.Height
+		app.height = msg.Height - statusHeight - inputHeight
+
+		msg.Width = app.width
+		msg.Height = app.height
 
 	// event dispatched each time a new stream connects to
 	// the multiplexer. on-event we need to update the footer
@@ -343,6 +368,30 @@ func (app *App) View() string {
 		app.views[app.state].View(),
 		app.input.View(),
 	)
+}
+
+// executeCommands interprets the users input
+// and based on the previous keystroke a follow-up
+// action in form of an tea.Cmd is evaluated.
+func (app *App) executeCommand() tea.Cmd {
+
+	value := app.input.Value()
+
+	switch app.requestedCommand {
+	case cmdFormat:
+		index, err := strconv.Atoi(value)
+		if err != nil {
+			debug.Print("unable to parse index: %q: %w", value, err)
+		}
+		app.hasInput = true
+
+		app.state = formatView
+		return formatter.RequestView(index)
+
+	case cmdFilter:
+		debug.Print("filter: %s\n", value)
+	}
+	return nil
 }
 
 /* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */

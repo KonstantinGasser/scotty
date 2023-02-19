@@ -5,12 +5,13 @@ import (
 )
 
 type bindings struct {
-	Up    key.Binding
-	Down  key.Binding
-	Input key.Binding
-	Exit  key.Binding
-	Enter key.Binding
-	Quit  key.Binding
+	Up     key.Binding
+	Down   key.Binding
+	Input  key.Binding
+	Filter key.Binding
+	Exit   key.Binding
+	Enter  key.Binding
+	Quit   key.Binding
 }
 
 func (b bindings) ShortHelp() []key.Binding {
@@ -33,6 +34,9 @@ var defaultBindings = bindings{
 	),
 	Input: key.NewBinding(
 		key.WithKeys(":"),
+	),
+	Filter: key.NewBinding(
+		key.WithKeys("ctrl+f"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),

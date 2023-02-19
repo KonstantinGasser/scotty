@@ -77,8 +77,6 @@ func New(width, height int, buffer *ring.Buffer) *Model {
 	view.MouseWheelEnabled = true
 	view.Style = pagerStyle.Width(w)
 
-	debug.Print("[model.New] width: %d (%d), height: %d (%d)\n", w, view.Width, h, view.Height)
-
 	input := textinput.New()
 	input.Placeholder = "line number (use k/j to move and ESC/q to exit)"
 	input.Prompt = ":"

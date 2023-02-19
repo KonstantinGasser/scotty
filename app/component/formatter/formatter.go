@@ -115,8 +115,6 @@ func New(width, height int, buffer *ring.Buffer) *Model {
 	view.MouseWheelEnabled = true
 	view.Style = modelStyle.Width(w)
 
-	debug.Print("[model.New] width: %d (%d), height: %d (%d)\n", w, view.Width, h, view.Height)
-
 	return &Model{
 		buffer: buffer,
 		writer: bytes.Buffer{},
