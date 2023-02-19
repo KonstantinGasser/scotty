@@ -207,14 +207,20 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, formatter.RequestView(index))
 			app.state = formatView
 
+		// propagate event to formatter and request to format
+		// previous log line
 		case key.Matches(msg, app.keys.Up) && app.hasInput:
 			cmds = append(cmds, formatter.RequestUp())
 			app.ignoreKey = true
 
+		// propagate event to formatter and request to format
+		// next log line
 		case key.Matches(msg, app.keys.Down) && app.hasInput:
 			cmds = append(cmds, formatter.RequestDown())
 			app.ignoreKey = true
 
+		// terminate formatting view and propagate event to formatter,
+		// reinstate tailView as view for app to render
 		case key.Matches(msg, app.keys.Exit):
 			app.awaitInput = false
 			app.input.Blur()
