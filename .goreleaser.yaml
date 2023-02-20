@@ -15,7 +15,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -X=main.version={{ .Version }}
+      - -s -w -X=main.version={{ .Version }}
 
 release:
   prerelease: auto
@@ -52,9 +52,15 @@ changelog:
 brews:
   - name: scotty
     homepage: https://github.com/KonstantinGasser/scotty
+    description: "Multiplex log streams in your local environment"
+    license: Apache-2.0
+    caveats: ""
     tap:
       owner: KonstantinGasser
       name: homebrew-tap
+      branch: main
+    download_strategy: CurlDownloadStrategy
+
 
 
 

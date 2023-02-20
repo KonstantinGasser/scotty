@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -136,10 +135,8 @@ type App struct {
 
 func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, subs <-chan plexer.Subscriber, unsubs <-chan plexer.Unsubscribe) (*App, error) {
 
-	width, height, err := windowSize()
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine the initial dimensions of the terminal: %w", err)
-	}
+	// dummy width and height until bubbletea sends first tea.WindowSizeMsg
+	width, height := 100, 124
 
 	buffer := ring.New(uint32(bufferSize))
 
