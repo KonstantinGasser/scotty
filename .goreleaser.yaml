@@ -14,6 +14,9 @@ builds:
     goarch:
       - amd64
       - arm64
+    goarm:
+      - 6
+      - 7
     ldflags:
       - -s -w -X=main.version={{ .Version }}
 
@@ -59,6 +62,9 @@ brews:
       owner: KonstantinGasser
       name: homebrew-tap
       branch: main
+    commit_author:
+      name: KonstantinGasser
+      email: konstantin.gasser@me.com
     download_strategy: CurlDownloadStrategy
 
 
