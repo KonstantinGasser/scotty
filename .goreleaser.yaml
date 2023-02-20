@@ -65,7 +65,6 @@ brews:
     commit_author:
       name: KonstantinGasser
       email: konstantin.gasser@me.com
-    download_strategy: CurlDownloadStrategy
 
 
 
