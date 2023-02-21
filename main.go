@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
-	"net/http/pprof"
 	"os"
 
 	"github.com/KonstantinGasser/scotty/app"
@@ -52,20 +50,20 @@ func main() {
 		tea.WithAltScreen(),
 	)
 
-	go func() {
-		mux := http.NewServeMux()
+	// go func() {
+	// 	mux := http.NewServeMux()
 
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-		server := &http.Server{
-			Addr:    ":8081",
-			Handler: mux,
-		}
-		server.ListenAndServe()
-	}()
+	// 	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	// 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	// 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	// 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	// 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	// 	server := &http.Server{
+	// 		Addr:    ":8081",
+	// 		Handler: mux,
+	// 	}
+	// 	server.ListenAndServe()
+	// }()
 
 	if _, err := bubble.Run(); err != nil {
 		fmt.Printf("unable to start scotty: %v", err)

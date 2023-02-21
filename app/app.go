@@ -33,9 +33,11 @@ var (
 )
 
 const (
+	// first tea.WindowSizeMsg has not been send yet
+	initializing = iota
 	// scotty has just been started
 	// show welcome page
-	welcomeView = iota
+	welcomeView
 	// one or more log streams have connected
 	// and are streaming logs
 	// show logs in tailing window
@@ -44,14 +46,14 @@ const (
 	// show view with query results
 	formatView
 
-	// space must be reserved for the status either at
-	// the top or the bottom however must be taken in
-	// account for the other views
-	statusHeight = 2
+	// // space must be reserved for the status either at
+	// // the top or the bottom however must be taken in
+	// // account for the other views
+	// statusHeight = 2
 
-	// positioned at the bottom of the application
-	// height of the input model for commands
-	inputHeight = 1
+	// // positioned at the bottom of the application
+	// // height of the input model for commands
+	// inputHeight = 1
 )
 
 type App struct {
@@ -135,9 +137,6 @@ type App struct {
 
 func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, subs <-chan plexer.Subscriber, unsubs <-chan plexer.Unsubscribe) (*App, error) {
 
-	// dummy width and height until bubbletea sends first tea.WindowSizeMsg
-	width, height := 100, 124
-
 	buffer := ring.New(uint32(bufferSize))
 
 	input := textinput.New()
@@ -148,19 +147,19 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		quite: q,
 		keys:  defaultBindings,
 
-		width:  width,
-		height: height - statusHeight - inputHeight,
+		width:  0,
+		height: 0,
 
 		buffer:  &buffer,
 		streams: make(map[string]lipgloss.Color),
 
-		state: welcomeView,
+		state: initializing,
 		views: map[int]tea.Model{
-			welcomeView: welcome.New(width, height),
-			tailView:    pager.New(width, height-statusHeight-inputHeight, &buffer),
-			formatView:  formatter.New(width, height-statusHeight-inputHeight, &buffer),
+			welcomeView: welcome.New(),
+			tailView:    pager.New(&buffer),
+			formatView:  formatter.New(&buffer),
 		},
-		status: status.New(width, height),
+		status: status.New(),
 
 		input:            input,
 		awaitInput:       false,
@@ -192,6 +191,33 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 		cmd  tea.Cmd
 	)
+
+	if app.state == initializing {
+
+		window, ok := msg.(tea.WindowSizeMsg)
+		if !ok {
+			return app, nil
+		}
+
+		app.width = window.Width
+		app.height = styles.AvailableHeight(window.Height)
+
+		// before we can start we need to wait for bubbletea to
+		// send the first tea.WindowSizeMsg and we must propagate
+		// the message to all views + status in order to initialize them
+		if app.state == initializing {
+			for view, model := range app.views {
+				app.views[view], cmd = model.Update(msg)
+				cmds = append(cmds, cmd)
+			}
+			app.status, cmd = app.status.Update(msg)
+			cmds = append(cmds, cmd)
+
+			app.state = welcomeView
+		}
+
+		return app, tea.Batch(cmds...)
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -255,10 +281,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		app.width = msg.Width
-		app.height = msg.Height - statusHeight - inputHeight
-
-		msg.Width = app.width
-		msg.Height = app.height
+		app.height = styles.AvailableHeight(msg.Height)
 
 	// event dispatched each time a new stream connects to
 	// the multiplexer. on-event we need to update the footer
@@ -356,8 +379,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (app *App) View() string {
-	if app.state == welcomeView {
-		return app.views[app.state].View()
+	if app.state == initializing || app.state == welcomeView {
+		return app.views[welcomeView].View()
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,

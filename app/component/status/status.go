@@ -51,6 +51,7 @@ type stream struct {
 }
 
 type Model struct {
+	ready         bool
 	width, height int
 
 	// any error happing anywhere
@@ -88,9 +89,9 @@ type Model struct {
 	isFormatMode bool
 }
 
-func New(w, h int) *Model {
+func New() *Model {
 	return &Model{
-		width: w,
+		ready: false,
 		err:   nil,
 
 		mtx:            sync.RWMutex{},
@@ -103,11 +104,11 @@ func New(w, h int) *Model {
 	}
 }
 
-func (f *Model) Init() tea.Cmd {
+func (model *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (f *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -115,22 +116,27 @@ func (f *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		f.width = msg.Width
-		// f.height = msg.Height -> not really interested in the tty height
-		return f, nil
+		if !model.ready {
+			model.ready = true
+		}
+		model.width = msg.Width
+		model.height = styles.AvailableHeight(msg.Height)
+
+		// model.height = msg.Height -> not really interested in the tty height
+		return model, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
-			f.isFormatMode = true
+			model.isFormatMode = true
 
 		// invoked by parent model when leaving
 		// formatting mode thus we want to reset
 		// values used to show hidden notifications
 		case "esc", "q":
-			f.isFormatMode = false
-			for i := range f.streams {
-				f.streams[i].hasNewMessages = false
+			model.isFormatMode = false
+			for i := range model.streams {
+				model.streams[i].hasNewMessages = false
 			}
 		}
 	// whenever a stream connects to scotty the event
@@ -143,9 +149,9 @@ func (f *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// either uses a white or black foreground color
 	case Connection:
 		fg := styles.InverseColor(msg.Color)
-		index, ok := f.streamIndex[msg.Label]
+		index, ok := model.streamIndex[msg.Label]
 		if !ok {
-			f.streams = append(f.streams, stream{
+			model.streams = append(model.streams, stream{
 				label:   msg.Label,
 				colorBg: msg.Color,
 				colorFg: fg,
@@ -157,53 +163,57 @@ func (f *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				count: 0,
 			})
 			// don't forget to update the index map
-			f.streamIndex[msg.Label] = len(f.streams) - 1
+			model.streamIndex[msg.Label] = len(model.streams) - 1
 			break
 		}
 
-		f.streams[index].disconnected = false
+		model.streams[index].disconnected = false
 
 	case plexer.Unsubscribe:
-		index := f.streamIndex[string(msg)]
-		f.streams[index].disconnected = true
+		index := model.streamIndex[string(msg)]
+		model.streams[index].disconnected = true
 
 	case plexer.Error:
 		// QUESTION @KonstantinGasser:
 		// How do I unset the error say after 15 seconds?
-		f.err = msg
+		model.err = msg
 	case plexer.Message:
 		// lookup the stream which dispatched the event
 		// and increase the log count
-		index, ok := f.streamIndex[msg.Label]
+		index, ok := model.streamIndex[msg.Label]
 		if !ok {
 			break
 		}
 
-		f.streams[index].count++
+		model.streams[index].count++
 
-		if f.isFormatMode && !f.streams[index].hasNewMessages {
-			f.streams[index].hasNewMessages = true
+		if model.isFormatMode && !model.streams[index].hasNewMessages {
+			model.streams[index].hasNewMessages = true
 		}
 	}
 
-	return f, tea.Batch(cmds...)
+	return model, tea.Batch(cmds...)
 }
 
-func (f *Model) View() string {
+func (model *Model) View() string {
+
+	if !model.ready {
+		return "initializing..."
+	}
 
 	var items = []string{}
 
-	if len(f.streams) <= 0 && f.err == nil {
+	if len(model.streams) <= 0 && model.err == nil {
 		txt := "beam the logs up, scotty is ready"
 		items = append(items,
 			styles.StatusBarLogCount(txt),
 		)
 	}
 
-	for i, stream := range f.streams {
+	for i, stream := range model.streams {
 
 		var padding = spacing
-		if i >= len(f.streams)-1 {
+		if i >= len(model.streams)-1 {
 			padding = ""
 		}
 
@@ -235,16 +245,16 @@ func (f *Model) View() string {
 		)
 	}
 
-	if f.err != nil {
+	if model.err != nil {
 		items = append(items,
 			styles.Spacer(2).Render("	"), // add some space next to the beams
-			styles.ErrorInfo(f.err.Error()),
+			styles.ErrorInfo(model.err.Error()),
 		)
 	}
 
 	return ModelStyle.
 		Padding(0, 1).
-		Width(f.width - 1). // account for padding left/right
+		Width(model.width - 1). // account for padding left/right
 		Render(
 			lipgloss.JoinHorizontal(lipgloss.Left,
 				items...,

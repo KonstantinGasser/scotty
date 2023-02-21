@@ -65,6 +65,8 @@ func RequestQuite() tea.Cmd {
 // Model does not not store the logs its only
 // porose is it to display them.
 type Model struct {
+	ready bool
+
 	buffer *ring.Buffer
 	writer bytes.Buffer
 
@@ -106,24 +108,19 @@ type Model struct {
 	pageSize int
 }
 
-func New(width, height int, buffer *ring.Buffer) *Model {
-	w, h := width-borderMargin, height
-
-	view := viewport.New(w, h)
-	view.Height = h
-	view.Width = w
-	view.MouseWheelEnabled = true
-	view.Style = modelStyle.Width(w)
+func New(buffer *ring.Buffer) *Model {
 
 	return &Model{
+		ready: false,
+
 		buffer: buffer,
 		writer: bytes.Buffer{},
 
 		beams:          map[string]lipgloss.Color{},
 		maxLabelLength: 0,
-		view:           view,
-		width:          w,
-		height:         h,
+		view:           viewport.Model{},
+		width:          0,
+		height:         0,
 		relativeIndex:  -1,
 	}
 }
@@ -256,6 +253,19 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// of the available screen size.
 	case tea.WindowSizeMsg:
 
+		if !model.ready {
+			model.width = msg.Width - borderMargin
+			model.height = styles.AvailableHeight(msg.Height)
+
+			model.view = viewport.New(model.width-borderMargin, model.height)
+			model.view.Width = model.width - borderMargin
+			model.view.Height = model.height
+			model.view.MouseWheelEnabled = true
+
+			model.ready = true
+			break
+		}
+
 		model.setDimensions(
 			msg.Width,
 			msg.Height,
@@ -276,6 +286,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model *Model) View() string {
+
+	if !model.ready {
+		return "initializing..."
+	}
+
 	return model.view.View()
 }
 
@@ -359,7 +374,7 @@ func (model Model) offsetBuffer(start, end int, opts ...func(int, []byte) []byte
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width, model.height = width-borderMargin, height
+	model.width, model.height = width-borderMargin, styles.AvailableHeight(height)
 	model.view.Width, model.view.Height = model.width, model.height
 }
 

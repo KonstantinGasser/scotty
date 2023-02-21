@@ -40,6 +40,8 @@ type subscriber struct {
 // Model does not not store the logs its only
 // porose is it to display them.
 type Model struct {
+	ready bool
+
 	buffer *ring.Buffer
 	writer bytes.Buffer
 
@@ -68,28 +70,22 @@ type Model struct {
 	pageSize int
 }
 
-func New(width, height int, buffer *ring.Buffer) *Model {
-	w, h := width-borderMargin, height
-
-	view := viewport.New(w, h)
-	view.Height = h
-	view.Width = w
-	view.MouseWheelEnabled = true
-	view.Style = pagerStyle.Width(w)
+func New(buffer *ring.Buffer) *Model {
 
 	input := textinput.New()
 	input.Placeholder = "line number (use k/j to move and ESC/q to exit)"
 	input.Prompt = ":"
 
 	return &Model{
+		ready:  false,
 		buffer: buffer,
 		writer: bytes.Buffer{},
 
 		beams:          map[string]lipgloss.Color{},
 		maxLabelLength: 0,
-		view:           view,
-		width:          w,
-		height:         h,
+		view:           viewport.Model{},
+		width:          0,
+		height:         0,
 	}
 }
 
@@ -115,6 +111,18 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// However, if the parsing mode is on the width is only 2/3
 	// of the available screen size.
 	case tea.WindowSizeMsg:
+		if !model.ready {
+			model.width = msg.Width - borderMargin
+			model.height = styles.AvailableHeight(msg.Height)
+
+			model.view = viewport.New(model.width, model.height)
+			model.view.Width = model.width - borderMargin
+			model.view.Height = model.height
+			model.view.MouseWheelEnabled = true
+
+			model.ready = true
+			break
+		}
 
 		model.setDimensions(
 			msg.Width,
@@ -154,6 +162,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model *Model) View() string {
+	if !model.ready {
+		return "initializing..."
+	}
+
 	return model.view.View()
 }
 
@@ -175,6 +187,6 @@ func (model Model) peekBuffer(n int, opts ...func(int, []byte) []byte) (string, 
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width, model.height = width-borderMargin, height
+	model.width, model.height = width-borderMargin, styles.AvailableHeight(height)
 	model.view.Width, model.view.Height = model.width, model.height
 }

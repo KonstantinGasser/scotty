@@ -57,13 +57,15 @@ var (
 )
 
 type Model struct {
+	ready         bool
 	width, height int
 }
 
-func New(width int, height int) *Model {
+func New() *Model {
 	return &Model{
-		width:  width,
-		height: height,
+		ready:  false,
+		width:  0,
+		height: 0,
 	}
 }
 
@@ -75,6 +77,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		if !m.ready {
+			m.ready = true
+		}
 		m.width = msg.Width
 		m.height = msg.Height
 	}
