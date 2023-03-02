@@ -357,7 +357,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Label+strings.Repeat(" ", space),
 			) + " | "
 
-		app.buffer.Write(msg.Label, append([]byte(prefix), msg.Data...)) // allocation!!! append of byte
+		app.buffer.Write(msg.Label, append([]byte(prefix), msg.Data...))
 		cmds = append(cmds, app.consumeMsg)
 
 	case plexer.Error:
