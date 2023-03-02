@@ -359,7 +359,7 @@ func (model *Model) nextPage(opts ...func(int, []byte) []byte) {
 
 func (model Model) offsetBuffer(start, end int, opts ...func(int, []byte) []byte) (string, int) {
 
-	pageSize, err := model.buffer.Offset(
+	pageSize, err := model.buffer.ReadOffset(
 		&model.writer,
 		start,
 		end,

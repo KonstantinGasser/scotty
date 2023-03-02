@@ -173,17 +173,17 @@ func (model *Model) View() string {
 // the model.writer. peakBuffer does not reset the model.writer.
 func (model Model) peekBuffer(n int, opts ...func(int, []byte) []byte) (string, int) {
 
-	pageSize, err := model.buffer.Peek(
+	written, err := model.buffer.Read(
 		&model.writer,
 		model.height,
 		opts...,
 	)
 	if err != nil {
 		debug.Debug(err.Error())
-		return "", pageSize
+		return "", written
 	}
 
-	return model.writer.String(), pageSize
+	return model.writer.String(), written
 }
 
 func (model *Model) setDimensions(width, height int) {
