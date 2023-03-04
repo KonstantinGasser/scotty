@@ -18,17 +18,15 @@ With `scotty` you can multiplex your application logs into ***one consolidated**
 
 
 ## Homebrew
-
-*Note:* brew tap does not exist yet...
 ```
-brew tap KonstantinGasser/scotty
-brew install scotty
+brew tap KonstantinGasser/tap
+brew install scotty beam
 ```
 
 ## From source
 ```
-go install github.com/KonstantinGasser/scotty@latest
-go install github.com/KonstantinGasser/scotty/beam@latest
+go install github.com/KonstantinGasser/scotty@v0.0.1
+go install github.com/KonstantinGasser/beam@v0.0.1
 ```
 
 # How it works?
