@@ -113,12 +113,20 @@ func (buf *Buffer) ReadOffset(w *bytes.Buffer, offset int, rangeN int, fns ...fu
 	cap := int(buf.capacity)
 
 	var b []byte
+skip:
 	for i := offset; i < offset+rangeN; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
 		if len(buf.data[index].Data) == 0 {
 			continue
+		}
+
+		for _, f := range buf.filters {
+			ok := f(buf.data[index].Label, buf.data[index].Data)
+			if !ok {
+				continue skip
+			}
 		}
 
 		b = buf.data[index].Data

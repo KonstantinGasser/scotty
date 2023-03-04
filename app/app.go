@@ -6,7 +6,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
-	"github.com/KonstantinGasser/scotty/ring/filter"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
@@ -139,8 +138,6 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 
 	buffer := ring.New(uint32(bufferSize))
 
-	buffer.Filter(filter.WithHighlight("ping-svc"))
-
 	input := textinput.New()
 	input.Placeholder = placeholderDefault
 	input.Prompt = ":"
@@ -230,7 +227,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return app, tea.Quit
 		// indicated that the dev wants to switch the view.
 		// Once this key is hit we need to wait for input
-		case key.Matches(msg, app.keys.Input):
+		case key.Matches(msg, app.keys.Input) && app.state != initializing && app.state != welcomeView:
 			app.input.Reset()
 			app.input.Placeholder = placeholderFormat
 			app.awaitInput = true
@@ -239,7 +236,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return app, tea.Batch(cmds...)
 
-		case key.Matches(msg, app.keys.Filter):
+		case key.Matches(msg, app.keys.Filter) && app.state != initializing && app.state != welcomeView:
 			app.input.Reset()
 			app.input.Placeholder = placeholderFilter
 			app.awaitInput = true
