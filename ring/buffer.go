@@ -7,6 +7,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
+	"github.com/KonstantinGasser/scotty/ring/filter"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/muesli/reflow/wrap"
@@ -21,6 +22,7 @@ type Buffer struct {
 	capacity uint32
 	write    uint32
 	data     []Log
+	filters  []filter.Func
 }
 
 // New initiates a new ring buffer with a set capacity.
@@ -37,6 +39,10 @@ func New(size uint32) Buffer {
 
 func (buf Buffer) Cap() uint32 {
 	return buf.capacity
+}
+
+func (buf *Buffer) Filter(fn filter.Func) {
+	buf.filters = append(buf.filters, fn)
 }
 
 func (buff Buffer) Nil(index int) bool {
@@ -62,12 +68,21 @@ func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []
 	cap := int(buf.capacity)
 
 	var b []byte
+
+skip:
 	for i := offset; i < int(buf.write); i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
 		if len(buf.data[index].Data) == 0 {
 			continue
+		}
+
+		for _, f := range buf.filters {
+			ok := f(buf.data[index].Label, buf.data[index].Data)
+			if !ok {
+				continue skip
+			}
 		}
 
 		b = buf.data[index].Data

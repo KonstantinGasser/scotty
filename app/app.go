@@ -6,6 +6,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
+	"github.com/KonstantinGasser/scotty/ring/filter"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
@@ -137,6 +138,8 @@ type App struct {
 func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-chan plexer.Message, subs <-chan plexer.Subscriber, unsubs <-chan plexer.Unsubscribe) (*App, error) {
 
 	buffer := ring.New(uint32(bufferSize))
+
+	buffer.Filter(filter.WithHighlight("ping-svc"))
 
 	input := textinput.New()
 	input.Placeholder = placeholderDefault
