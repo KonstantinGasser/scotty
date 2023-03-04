@@ -1,7 +1,6 @@
 package app
 
 import (
-	"io"
 	"strconv"
 	"strings"
 
@@ -69,7 +68,7 @@ type App struct {
 	// is written to the buffer. However the
 	// does not need to read from the buffer, thus
 	// only an io.Writer
-	buffer io.Writer
+	buffer *ring.Buffer
 
 	// streams keeps track of all streams which connected
 	// to scotty within the same session and store a unique
@@ -358,7 +357,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Label+strings.Repeat(" ", space),
 			) + " | "
 
-		app.buffer.Write(append([]byte(prefix), msg.Data...))
+		app.buffer.Write(msg.Label, append([]byte(prefix), msg.Data...))
 		cmds = append(cmds, app.consumeMsg)
 
 	case plexer.Error:

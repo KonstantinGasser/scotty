@@ -98,6 +98,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
 		cmd  tea.Cmd
+		err  error
 	)
 
 	switch msg := msg.(type) {
@@ -129,12 +130,17 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Height,
 		)
 
-		contents, _ := model.peekBuffer(
+		model.pageSize, err = model.buffer.Read(
+			&model.writer,
 			model.height,
 			ring.WithLineWrap(model.width),
 		)
+		if err != nil {
+			debug.Debug(err.Error())
+		}
+
+		model.view.SetContent(model.writer.String())
 		model.writer.Reset()
-		model.view.SetContent(contents)
 		model.view.GotoBottom()
 
 	// event dispatched by the multiplexer each time a client/stream
@@ -145,12 +151,18 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// records (where N is equal to the height of the current viewport.Model)
 	// and pass the string to the viewport.Model for rendering
 	case plexer.Message:
-		contents, _ := model.peekBuffer(
+
+		model.pageSize, err = model.buffer.Read(
+			&model.writer,
 			model.height,
 			ring.WithLineWrap(model.width),
 		)
+		if err != nil {
+			debug.Debug(err.Error())
+		}
+
+		model.view.SetContent(model.writer.String())
 		model.writer.Reset()
-		model.view.SetContent(contents)
 		model.view.GotoBottom()
 	}
 
@@ -167,23 +179,6 @@ func (model *Model) View() string {
 	}
 
 	return model.view.View()
-}
-
-// peekBuffer is a wrapper to read up to N of the last items form the buffer into
-// the model.writer. peakBuffer does not reset the model.writer.
-func (model Model) peekBuffer(n int, opts ...func(int, []byte) []byte) (string, int) {
-
-	pageSize, err := model.buffer.Peek(
-		&model.writer,
-		model.height,
-		opts...,
-	)
-	if err != nil {
-		debug.Debug(err.Error())
-		return "", pageSize
-	}
-
-	return model.writer.String(), pageSize
 }
 
 func (model *Model) setDimensions(width, height int) {

@@ -144,7 +144,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case requestedView:
 		model.initFormattingMode(int(msg))
 
-		model.updatePage(
+		model.reloadPage(
 			model.absoluteIndex,
 			ring.WithInlineFormatting(model.width, model.absoluteIndex),
 			ring.WithLineWrap(model.width),
@@ -175,7 +175,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// new page like we do when scrolling down.
 		if model.relativeIndex < 0 {
 
-			model.previousPage(
+			model.moveUp(
 				ring.WithInlineFormatting(model.width, model.absoluteIndex),
 				ring.WithLineWrap(model.width),
 			)
@@ -183,7 +183,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		model.updatePage(
+		model.reloadPage(
 			model.absoluteIndex,
 			ring.WithInlineFormatting(model.width, model.absoluteIndex),
 			ring.WithLineWrap(model.width),
@@ -209,7 +209,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.absoluteIndex--
 			model.relativeIndex--
 
-			model.updatePage(
+			model.reloadPage(
 				model.absoluteIndex,
 				ring.WithInlineFormatting(model.width, model.absoluteIndex),
 				ring.WithLineWrap(model.width),
@@ -223,7 +223,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// page an rerender the view again
 		if model.relativeIndex >= model.pageSize {
 
-			model.nextPage(
+			model.moveDown(
 				ring.WithInlineFormatting(model.width, model.absoluteIndex),
 				ring.WithLineWrap(model.width),
 			)
@@ -236,7 +236,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// lines indicate how many items are included
 		// in the render (hard to tell solely based on the string
 		// from the model.writer)
-		model.updatePage(
+		model.reloadPage(
 			model.absoluteIndex,
 			ring.WithInlineFormatting(model.width, model.absoluteIndex),
 			ring.WithLineWrap(model.width),
@@ -271,7 +271,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Height,
 		)
 
-		model.updatePage(
+		model.reloadPage(
 			model.absoluteIndex,
 			ring.WithInlineFormatting(model.width, model.absoluteIndex),
 			ring.WithLineWrap(model.width),
@@ -294,9 +294,9 @@ func (model *Model) View() string {
 	return model.view.View()
 }
 
-// previousPage renders the current window shifted up by 1
+// moveUp renders the current window shifted up by 1
 // and selects the relativeIndex of zero.
-func (model *Model) previousPage(opts ...func(int, []byte) []byte) {
+func (model *Model) moveUp(opts ...func(int, []byte) []byte) {
 
 	if model.offsetStart == 0 {
 		return
@@ -319,9 +319,9 @@ func (model *Model) previousPage(opts ...func(int, []byte) []byte) {
 	model.view.SetContent(contents)
 }
 
-// updatePage requests the same offset window from the buffer
+// reloadPage requests the same offset window from the buffer
 // however with a different line marked as selected
-func (model *Model) updatePage(selected int, opts ...func(int, []byte) []byte) {
+func (model *Model) reloadPage(selected int, opts ...func(int, []byte) []byte) {
 
 	contents, pageSize := model.offsetBuffer(
 		model.offsetStart,
@@ -334,10 +334,10 @@ func (model *Model) updatePage(selected int, opts ...func(int, []byte) []byte) {
 	model.view.SetContent(contents)
 }
 
-// nextPage "scrolls" the buffer down by one page defined bei the current viewport height.
+// moveDown "scrolls" the buffer down by one page defined bei the current viewport height.
 // The relativeIndex referring to the line in the current window selected is set to zero
 // again.
-func (model *Model) nextPage(opts ...func(int, []byte) []byte) {
+func (model *Model) moveDown(opts ...func(int, []byte) []byte) {
 
 	model.offsetStart += model.relativeIndex
 	// reset relativeIndex since its relative to
@@ -359,7 +359,7 @@ func (model *Model) nextPage(opts ...func(int, []byte) []byte) {
 
 func (model Model) offsetBuffer(start, end int, opts ...func(int, []byte) []byte) (string, int) {
 
-	pageSize, err := model.buffer.Offset(
+	pageSize, err := model.buffer.ReadOffset(
 		&model.writer,
 		start,
 		end,

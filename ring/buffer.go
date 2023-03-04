@@ -3,19 +3,24 @@ package ring
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/muesli/reflow/wrap"
 )
 
+type Log struct {
+	Label string
+	Data  []byte
+}
+
 type Buffer struct {
 	capacity uint32
 	write    uint32
-	data     [][]byte
+	data     []Log
 }
 
 // New initiates a new ring buffer with a set capacity.
@@ -26,7 +31,7 @@ func New(size uint32) Buffer {
 	return Buffer{
 		capacity: size,
 		write:    0,
-		data:     make([][]byte, size),
+		data:     make([]Log, size),
 	}
 }
 
@@ -35,102 +40,94 @@ func (buf Buffer) Cap() uint32 {
 }
 
 func (buff Buffer) Nil(index int) bool {
-	return buff.data[index] == nil
+	return len(buff.data[index].Data) == 0
 }
 
-func (buf *Buffer) Write(p []byte) (int, error) {
-	buf.data[buf.write] = p
+func (buf *Buffer) Write(label string, data []byte) (int, error) {
+	buf.data[buf.write].Label = label
+	// previously the index was append on each read.
+	// However, scotty does more iterations reading from the buffer
+	// then writing. As such it is more efficient to append the index on write
+	buf.data[buf.write].Data = append([]byte("["+strconv.Itoa(int(buf.write))+"]"), data...)
+
 	buf.write = (buf.write + 1) % buf.capacity
-	return len(p), nil
+	return len(label) + len(data), nil
 }
 
-// Peek looks up up-to N of the last entries written in the buffer.
-// The number of items written to the writer is returned.
-func (buf Buffer) Peek(w io.Writer, n int, fns ...func(int, []byte) []byte) (int, error) {
+func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []byte) (int, error) {
 
-	// write := w.Write
-	var writeIndex, cap int = int(buf.write), int(buf.capacity) // capture the latest write index
-	var offset = writeIndex - n
+	var lines, written int
 
-	var count int
-	for i := offset; i < writeIndex; i++ {
+	offset := int(buf.write) - rangeN
+	cap := int(buf.capacity)
+
+	var b []byte
+	for i := offset; i < int(buf.write); i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
-		val := buf.data[index]
-		if val == nil {
+		if len(buf.data[index].Data) == 0 {
 			continue
 		}
 
-		val = append([]byte("["+strconv.Itoa(index)+"]"), val...)
-
+		b = buf.data[index].Data
 		for _, fn := range fns {
-			val = fn(index, val)
+			b = fn(index, b)
 		}
 
-		// under the hood we pass in a bytes.Buffer
-		// which again is using a slice of bytes where data
-		// is appended to whenever write is called. However, this
-		// is a potential bottleneck as runtime.growslice and
-		// runtime.memmove will be called more frequently to adjust the
-		// bytes.Buffer's buffer. Can be mitigated to a degree
-		// by setting a capacity using Grow(N) where N is the educated guess
-		// of how many bytes are expected to be written.
-		if _, err := w.Write(val); err != nil {
-			return count, err
+		// rangeN defines the max lines which can be currently displayed,
+		// we need to take in account that lines in the buffer might wrap depending
+		// on the current width of the screen resulting in writing >= rangeN lines
+		// to the bytes.Buffer
+		lines += bytes.Count(b, []byte("\n"))
+		if lines >= rangeN {
+			return written, nil
 		}
-		count++
+
+		if _, err := w.Write(b); err != nil {
+			return written, err
+		}
+		written++
 	}
-
-	return count, nil
+	return written, nil
 }
 
-func (buf Buffer) Offset(w io.Writer, offset int, n int, fns ...func(int, []byte) []byte) (int, error) {
+func (buf *Buffer) ReadOffset(w *bytes.Buffer, offset int, rangeN int, fns ...func(int, []byte) []byte) (int, error) {
 
-	var cap = int(buf.capacity)
+	var lines, written int
+	cap := int(buf.capacity)
 
-	// we are doing line wrapping. As such the resulting
-	// string height might end up being height the the requested height.
-	// Keep track of the actual height and break if reached
-	var actualHeight, count int
-
-	for i := offset; i < offset+n; i++ {
+	var b []byte
+	for i := offset; i < offset+rangeN; i++ {
 
 		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
-		val := buf.data[index]
-		if val == nil {
+		if len(buf.data[index].Data) == 0 {
 			continue
 		}
 
-		val = append([]byte("["+strconv.Itoa(index)+"]"), val...)
-
+		b = buf.data[index].Data
 		for _, fn := range fns {
-			val = fn(index, val)
+			b = fn(index, b)
 		}
 
-		// we accept that the might come out with
-		// less lines then height would allow.
-		actualHeight += bytes.Count(val, []byte("\n"))
-		if actualHeight >= n {
-			return count, nil
+		// rangeN defines the max lines which can be currently displayed,
+		// we need to take in account that lines in the buffer might wrap depending
+		// on the current width of the screen resulting in writing >= rangeN lines
+		// to the bytes.Buffer
+		lines += bytes.Count(b, []byte("\n"))
+
+		if lines >= rangeN {
+			return written, nil
 		}
 
-		// under the hood we pass in a bytes.Buffer
-		// which again is using a slice of bytes where data
-		// is appended to whenever write is called. However, this
-		// is a potential bottleneck as runtime.growslice and
-		// runtime.memmove will be called more frequently to adjust the
-		// bytes.Buffer's buffer. Can be mitigated to a degree
-		// by setting a capacity using Grow(N) where N is the educated guess
-		// of how many bytes are expected to be written.
-		if _, err := w.Write(val); err != nil {
-			return count, err
+		debug.Print("data: %s\n", b)
+		if _, err := w.Write(b); err != nil {
+			return written, err
 		}
-		count++
+		written++
 	}
-
-	return count, nil
+	return written, nil
 }
 
 var (
@@ -150,8 +147,8 @@ func (buf Buffer) At(index int, fn func([]byte) ([]byte, error)) ([]byte, error)
 		return nil, ErrIndexOutOfBounds
 	}
 
-	var item = make([]byte, len(buf.data[index]))
-	copy(item, buf.data[index])
+	var item = make([]byte, len(buf.data[index].Data))
+	copy(item, buf.data[index].Data)
 
 	return fn(item)
 }
