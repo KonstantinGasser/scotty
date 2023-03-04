@@ -268,7 +268,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// terminate formatting view and propagate event to formatter,
 		// reinstate tailView as view for app to render
-		case key.Matches(msg, app.keys.Exit):
+		case key.Matches(msg, app.keys.Exit) && app.state != initializing && app.state != welcomeView:
 			app.awaitInput = false
 			app.input.Blur()
 			app.input.Reset()
@@ -408,7 +408,8 @@ func (app *App) executeCommand() tea.Cmd {
 		return formatter.RequestView(index)
 
 	case cmdFilter:
-		app.buffer.Filter(filter.WithHighlight(value))
+		streams := strings.Split(value, ",")
+		app.buffer.Filter(filter.WithHighlight(streams...))
 		return status.RequestFocus(value)
 	}
 	return nil
