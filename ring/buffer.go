@@ -79,8 +79,8 @@ skip:
 		}
 
 		for _, f := range buf.filters {
-			ok := f(buf.data[index].Label, buf.data[index].Data)
-			if !ok {
+			debug.Print("filter: for index: %d\n", index)
+			if ok := f(buf.data[index].Label, buf.data[index].Data); !ok {
 				continue skip
 			}
 		}
@@ -113,6 +113,7 @@ func (buf *Buffer) ReadOffset(w *bytes.Buffer, offset int, rangeN int, fns ...fu
 	cap := int(buf.capacity)
 
 	var b []byte
+
 skip:
 	for i := offset; i < offset+rangeN; i++ {
 
@@ -123,8 +124,7 @@ skip:
 		}
 
 		for _, f := range buf.filters {
-			ok := f(buf.data[index].Label, buf.data[index].Data)
-			if !ok {
+			if ok := f(buf.data[index].Label, buf.data[index].Data); !ok {
 				continue skip
 			}
 		}
@@ -144,7 +144,6 @@ skip:
 			return written, nil
 		}
 
-		debug.Print("data: %s\n", b)
 		if _, err := w.Write(b); err != nil {
 			return written, err
 		}

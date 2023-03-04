@@ -6,6 +6,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
+	"github.com/KonstantinGasser/scotty/ring/filter"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
@@ -251,9 +252,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// - [0-9]{1,} -> switch view to formatter with requested input
 		// - f:[a-zA-Z_-0-9]{1,} -> add filter on log view
 		case key.Matches(msg, app.keys.Enter) && app.awaitInput:
-
-			cmd = app.executeCommand()
-			cmds = append(cmds, cmd)
+			cmds = append(cmds, app.executeCommand())
 
 		// propagate event to formatter and request to format
 		// previous log line
@@ -272,6 +271,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, app.keys.Exit):
 			app.awaitInput = false
 			app.input.Blur()
+			app.input.Reset()
 			app.input.Placeholder = placeholderDefault
 
 			cmds = append(cmds, formatter.RequestQuite())
@@ -408,7 +408,8 @@ func (app *App) executeCommand() tea.Cmd {
 		return formatter.RequestView(index)
 
 	case cmdFilter:
-		debug.Print("filter: %s\n", value)
+		app.buffer.Filter(filter.WithHighlight(value))
+		return status.RequestFocus(value)
 	}
 	return nil
 }

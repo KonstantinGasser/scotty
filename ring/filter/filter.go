@@ -5,8 +5,13 @@ package filter
 // decides to include the item or not
 type Func func(label string, data []byte) bool
 
-func WithHighlight(stream string) Func {
+func WithHighlight(streams ...string) Func {
 	return func(label string, data []byte) bool {
-		return label == stream
+		for _, s := range streams {
+			if s != label {
+				return false
+			}
+		}
+		return true
 	}
 }

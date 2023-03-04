@@ -42,7 +42,7 @@ var defaultBindings = bindings{
 		key.WithKeys("enter"),
 	),
 	Exit: key.NewBinding(
-		key.WithKeys("esc"),
+		// key.WithKeys("esc"),
 		key.WithKeys("q"),
 	),
 	Quit: key.NewBinding(

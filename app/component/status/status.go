@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -40,6 +41,7 @@ type stream struct {
 	style        lipgloss.Style
 	count        int
 	disconnected bool
+	focused      bool
 
 	// works in conjunction with isFormatMode
 	// and is flipped when the parent mode
@@ -124,6 +126,17 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// model.height = msg.Height -> not really interested in the tty height
 		return model, nil
+
+	// a filter was applied we want to highlight the color
+	// of the requested stream while reducing the others
+	case RequestedFocus:
+		index, ok := model.streamIndex[string(msg)]
+		if !ok {
+			debug.Print("[app.model.status] unable to focus stream with label %q - stream unknown\n", msg)
+			break
+		}
+		model.streams[index].focused = true
+		debug.Print("status focus: %+v\n", model.streams[index])
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -260,4 +273,12 @@ func (model *Model) View() string {
 				items...,
 			),
 		)
+}
+
+type RequestedFocus string
+
+func RequestFocus(stream string) tea.Cmd {
+	return func() tea.Msg {
+		return RequestFocus(stream)
+	}
 }
