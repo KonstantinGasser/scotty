@@ -31,6 +31,10 @@ var (
 	placeholderDefault = "use \":\" to enter log formatting or \"ctrl+f\" to filter the logs"
 	placeholderFormat  = "line number (use k/j to move and ESC/q to exit)"
 	placeholderFilter  = "type the name of a stream to highlight its logs"
+
+	promptDefault = ""
+	promptFormat  = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render("index: ")
+	promptFilter  = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render("filter: ")
 )
 
 const (
@@ -142,7 +146,7 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 
 	input := textinput.New()
 	input.Placeholder = placeholderDefault
-	input.Prompt = ":"
+	input.Prompt = promptDefault
 
 	return &App{
 		quite: q,
@@ -234,6 +238,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.input.Placeholder = placeholderFormat
 			app.awaitInput = true
 			app.input.Focus()
+			app.input.Prompt = promptFormat
 			app.requestedCommand = cmdFormat
 
 			return app, tea.Batch(cmds...)
@@ -243,6 +248,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.input.Placeholder = placeholderFilter
 			app.awaitInput = true
 			app.input.Focus()
+			app.input.Prompt = promptFilter
 			app.requestedCommand = cmdFilter
 
 			return app, tea.Batch(cmds...)
@@ -253,6 +259,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// - [0-9]{1,} -> switch view to formatter with requested input
 		// - f:[a-zA-Z_-0-9]{1,} -> add filter on log view
 		case key.Matches(msg, app.keys.Enter) && app.awaitInput:
+			app.input.Reset()
 			cmds = append(cmds, app.executeCommand())
 
 		// propagate event to formatter and request to format
@@ -274,6 +281,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.input.Blur()
 			app.input.Reset()
 			app.input.Placeholder = placeholderDefault
+			app.input.Prompt = promptDefault
 
 			// unset any filter if some where set
 			if app.requestedCommand == cmdFilter {
