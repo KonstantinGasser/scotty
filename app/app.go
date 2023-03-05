@@ -256,13 +256,13 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// propagate event to formatter and request to format
 		// previous log line
-		case key.Matches(msg, app.keys.Up) && app.state == formatView && app.hasInput:
+		case key.Matches(msg, app.keys.Up) && !key.Matches(msg, app.keys.Filter) && app.state == formatView && app.hasInput:
 			cmds = append(cmds, formatter.RequestUp())
 			app.ignoreKey = true
 
 		// propagate event to formatter and request to format
 		// next log line
-		case key.Matches(msg, app.keys.Down) && app.state == formatView && app.hasInput:
+		case key.Matches(msg, app.keys.Down) && !key.Matches(msg, app.keys.Filter) && app.state == formatView && app.hasInput:
 			cmds = append(cmds, formatter.RequestDown())
 			app.ignoreKey = true
 
@@ -274,6 +274,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.input.Reset()
 			app.input.Placeholder = placeholderDefault
 
+			// need to force re-render models to query latest logs
 			cmds = append(cmds, formatter.RequestQuite())
 			app.state = tailView
 		}
@@ -366,6 +367,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// update current model
 	app.views[app.state], cmd = app.views[app.state].Update(msg)
+	cmds = append(cmds, cmd)
+
+	app.status, cmd = app.status.Update(msg)
 	cmds = append(cmds, cmd)
 
 	if !app.ignoreKey {
