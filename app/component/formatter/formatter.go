@@ -210,7 +210,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// selects the next log line to be parsed and
 	// displayed. Input ignored when relativeIndex >= buffer.cap
 	case requestedDown:
-		model.relativeIndex++                     // index of the within the current page
+		model.relativeIndex++ // index of the within the current page
+		// call to nextIndex prevents index to point to Nil/Empty data as well
 		if err := model.nextIndex(); err != nil { // overall index of the selected item in the buffer
 			// previous index would be out of buffer's range - do noting
 			break
