@@ -259,8 +259,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// - [0-9]{1,} -> switch view to formatter with requested input
 		// - f:[a-zA-Z_-0-9]{1,} -> add filter on log view
 		case key.Matches(msg, app.keys.Enter) && app.awaitInput:
-			app.input.Reset()
 			cmds = append(cmds, app.executeCommand())
+			app.input.Reset()
 
 		// propagate event to formatter and request to format
 		// previous log line
@@ -286,6 +286,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// unset any filter if some where set
 			if app.requestedCommand == cmdFilter {
 				app.buffer.UnsetFilter()
+				cmds = append(cmds, status.RequestUnFocus())
 			}
 
 			cmds = append(cmds, formatter.RequestQuite(), event.RequestReload())
@@ -425,9 +426,13 @@ func (app *App) executeCommand() tea.Cmd {
 		return formatter.RequestView(index)
 
 	case cmdFilter:
-		streams := strings.Split(value, ",")
+		streams := []string{}
+		for _, s := range strings.Split(value, ",") {
+			streams = append(streams, strings.TrimSpace(s))
+		}
+
 		app.buffer.Filter(filter.WithHighlight(streams...))
-		return tea.Batch(status.RequestFocus(value), event.RequestReload())
+		return tea.Batch(status.RequestFocus(streams...), event.RequestReload())
 	}
 	return nil
 }
