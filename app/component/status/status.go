@@ -132,6 +132,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// model.height = msg.Height -> not really interested in the tty height
 		return model, nil
 
+	case requestedUnFocus:
+		for i := range model.streams {
+			model.streams[i].focused = false
+		}
 	// a filter was applied we want to highlight the color
 	// of the requested stream while reducing the others
 	case requestedFocus:
@@ -207,11 +211,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		model.streams[index].count++
 
-		if model.isFormatMode && !model.streams[index].hasNewMessages {
-			model.streams[index].hasNewMessages = true
-		}
-
-		if model.hasFilter && !model.streams[index].focused && !model.streams[index].hasNewMessages {
+		if model.isFormatMode && !model.streams[index].hasNewMessages && !model.streams[index].focused {
 			model.streams[index].hasNewMessages = true
 		}
 	}
@@ -258,8 +258,8 @@ func (model *Model) View() string {
 
 			if !stream.focused {
 				items = append(items, stream.style.
-					Background(lipgloss.Color("7")).
-					Foreground(lipgloss.Color("8")).
+					Background(lipgloss.Color("#c0c0c0")).
+					Foreground(lipgloss.Color("#808080")).
 					Render(stream.label+":"+fmt.Sprint(info)),
 					padding,
 				)
@@ -306,16 +306,33 @@ func (model *Model) View() string {
 		)
 	}
 
+	streams := lipgloss.NewStyle().Render(
+		lipgloss.JoinHorizontal(lipgloss.Top,
+			items...,
+		),
+	)
+
 	// display filter to the right of the status bar
-	if model.hasFilter {
-		items = append(items, styles.Spacer(10).Render(""))
-		items = append(items, filterStyle.Render(fmt.Sprintf("filters: %v", filtered)))
+	filter := "non set"
+	if len(filtered) > 0 {
+		filter = filterStyle.Render(fmt.Sprintf("filters: %v", filtered))
 	}
+
+	// add space between streams and filter to push the filter
+	// to the right of the status bar
+	items = append(items,
+		styles.Spacer(
+			model.width-lipgloss.Width(streams)-lipgloss.Width(filter)-10,
+		).Render(""),
+	)
+
+	items = append(items, filter)
+
 	return ModelStyle.
 		Padding(0, 1).
 		Width(model.width - 1). // account for padding left/right
 		Render(
-			lipgloss.JoinHorizontal(lipgloss.Left,
+			lipgloss.JoinHorizontal(lipgloss.Top,
 				items...,
 			),
 		)
@@ -326,5 +343,13 @@ type requestedFocus []string
 func RequestFocus(streams ...string) tea.Cmd {
 	return func() tea.Msg {
 		return requestedFocus(streams)
+	}
+}
+
+type requestedUnFocus struct{}
+
+func RequestUnFocus() tea.Cmd {
+	return func() tea.Msg {
+		return requestedUnFocus{}
 	}
 }
