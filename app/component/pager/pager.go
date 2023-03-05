@@ -153,6 +153,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			debug.Print("[pager.Update(event.ReloadBuffer)] error: %v\n", err)
 		}
+
 		model.view.SetContent(model.writer.String())
 		model.writer.Reset()
 		model.view.GotoBottom()

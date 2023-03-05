@@ -49,9 +49,8 @@ var (
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
 				lipgloss.NewStyle().Bold(false).Render("\t- hit \":\" and type an index to format a specific line. Use k/j to format the previous or next log"),
-				lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with ESC)"),
-				lipgloss.NewStyle().Bold(false).Render("\t- hit \"f\" to focus on a specific stream (coming soon, I'm working on it)"),
-				lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" to apply a filter on all streams (coming soon, I'm working on it)"),
+				lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with q)"),
+				lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" and type a comma separated list of beams to highlight them (ctrl+f: beam-one,beam-two)"),
 			}, "\n"),
 		)
 )
