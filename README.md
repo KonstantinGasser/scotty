@@ -13,7 +13,7 @@ need in order to understand the bug you're searching for..tedious
 
 With `scotty` you can multiplex your application logs into ***one consolidated*** terminal window apply ***filterss*** on specific streams and ***format*** structred (JSON format) logs. In the future the secondary goal of scotty is it to allow you to ***query/aggregate*** your logs.
 
-![](/resources/example_v0.0.1.png)
+![](/resources/example_v0.0.2-rc.png)
 # Installation guide
 
 
