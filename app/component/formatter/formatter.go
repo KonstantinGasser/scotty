@@ -176,7 +176,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		model.relativeIndex--
-		model.absoluteIndex--
+		if err := model.previousIndex(); err != nil {
+			// previous index would be out of buffer's range - do noting
+			break
+		}
 
 		// requested index to format is outside (above)
 		// the current view as such we need to shift the
@@ -207,8 +210,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// selects the next log line to be parsed and
 	// displayed. Input ignored when relativeIndex >= buffer.cap
 	case requestedDown:
-		model.relativeIndex++ // index of the within the current page
-		model.absoluteIndex++ // overall index of the selected item in the buffer
+		model.relativeIndex++                     // index of the within the current page
+		if err := model.nextIndex(); err != nil { // overall index of the selected item in the buffer
+			// previous index would be out of buffer's range - do noting
+			break
+		}
 
 		// nil items in the buffer indicated that the buffer is not full
 		// and the requested index exists but has not been written to yet.
@@ -302,6 +308,45 @@ func (model *Model) View() string {
 	}
 
 	return model.view.View()
+}
+
+func (model *Model) previousIndex() error {
+	// in the best case the for loop evaluates to a O(1) operation
+	// where the absoluteIndex is included with the current buffer filter.
+	// otherwise, we need to loop until we found and index which satisfies
+	// the buffer filter and in fact is returned for a buffer read op
+	var try int = model.absoluteIndex
+	for {
+		try--
+		ok, err := model.buffer.TryRead(try)
+		debug.Print("[try(%d)] ok=%v - err: %s\n", try, ok, err)
+		if err != nil {
+			return err
+		}
+		if ok {
+			model.absoluteIndex = try
+			return nil
+		}
+	}
+}
+
+func (model *Model) nextIndex() error {
+	// in the best case the for loop evaluates to a O(1) operation
+	// where the absoluteIndex is included with the current buffer filter.
+	// otherwise, we need to loop until we found and index which satisfies
+	// the buffer filter and in fact is returned for a buffer read op
+	var try int = model.absoluteIndex
+	for {
+		try++
+		ok, err := model.buffer.TryRead(try)
+		if err != nil {
+			return err
+		}
+		if ok {
+			model.absoluteIndex = try
+			return nil
+		}
+	}
 }
 
 // moveUp renders the current window shifted up by 1

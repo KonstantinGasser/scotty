@@ -19,10 +19,10 @@ type Log struct {
 }
 
 type Buffer struct {
-	capacity uint32
-	write    uint32
-	data     []Log
-	filters  []filter.Func
+	capacity   uint32
+	write      uint32
+	data       []Log
+	filterFunc filter.Func
 }
 
 // New initiates a new ring buffer with a set capacity.
@@ -31,9 +31,10 @@ type Buffer struct {
 // stored in the buffer and compute: capacity*avg(item_size)
 func New(size uint32) Buffer {
 	return Buffer{
-		capacity: size,
-		write:    0,
-		data:     make([]Log, size),
+		capacity:   size,
+		write:      0,
+		data:       make([]Log, size),
+		filterFunc: filter.Default,
 	}
 }
 
@@ -42,11 +43,31 @@ func (buf Buffer) Cap() uint32 {
 }
 
 func (buf *Buffer) Filter(fn filter.Func) {
-	buf.filters = append(buf.filters, fn)
+	buf.filterFunc = fn
+}
+
+func (buf *Buffer) UnsetFilter() {
+	buf.filterFunc = filter.Default
 }
 
 func (buff Buffer) Nil(index int) bool {
 	return len(buff.data[index].Data) == 0
+}
+
+var (
+	ErrReadBeforeWrite = fmt.Errorf("requested index has not been written yet - empty data")
+)
+
+func (buf Buffer) TryRead(index int) (bool, error) {
+	if index > int(buf.capacity) || index < 0 {
+		return false, ErrIndexOutOfBounds
+	}
+
+	if len(buf.data[index].Data) <= 0 {
+		return false, ErrReadBeforeWrite
+	}
+	debug.Print("[buffer.Included] index=%d\n", index)
+	return buf.filterFunc(buf.data[index].Label, buf.data[index].Data), nil
 }
 
 func (buf *Buffer) Write(label string, data []byte) (int, error) {
@@ -69,20 +90,17 @@ func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []
 
 	var b []byte
 
-skip:
+	var index int
 	for i := offset; i < int(buf.write); i++ {
 
-		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+		index = (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
 		if len(buf.data[index].Data) == 0 {
 			continue
 		}
 
-		for _, f := range buf.filters {
-			debug.Print("filter: for index: %d\n", index)
-			if ok := f(buf.data[index].Label, buf.data[index].Data); !ok {
-				continue skip
-			}
+		if ok := buf.filterFunc(buf.data[index].Label, buf.data[index].Data); !ok {
+			continue
 		}
 
 		b = buf.data[index].Data
@@ -114,19 +132,17 @@ func (buf *Buffer) ReadOffset(w *bytes.Buffer, offset int, rangeN int, fns ...fu
 
 	var b []byte
 
-skip:
+	var index int
 	for i := offset; i < offset+rangeN; i++ {
 
-		index := (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
+		index = (cap - 1) - ((((-i - 1) + cap) % cap) % cap)
 
 		if len(buf.data[index].Data) == 0 {
 			continue
 		}
 
-		for _, f := range buf.filters {
-			if ok := f(buf.data[index].Label, buf.data[index].Data); !ok {
-				continue skip
-			}
+		if ok := buf.filterFunc(buf.data[index].Label, buf.data[index].Data); !ok {
+			continue
 		}
 
 		b = buf.data[index].Data
