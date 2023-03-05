@@ -12,6 +12,7 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/pager"
 	"github.com/KonstantinGasser/scotty/app/component/status"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/charmbracelet/bubbles/key"
@@ -274,8 +275,12 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.input.Reset()
 			app.input.Placeholder = placeholderDefault
 
-			// need to force re-render models to query latest logs
-			cmds = append(cmds, formatter.RequestQuite())
+			// unset any filter if some where set
+			if app.requestedCommand == cmdFilter {
+				app.buffer.UnsetFilter()
+			}
+
+			cmds = append(cmds, formatter.RequestQuite(), event.RequestReload())
 			app.state = tailView
 		}
 
@@ -414,7 +419,7 @@ func (app *App) executeCommand() tea.Cmd {
 	case cmdFilter:
 		streams := strings.Split(value, ",")
 		app.buffer.Filter(filter.WithHighlight(streams...))
-		return status.RequestFocus(value)
+		return tea.Batch(status.RequestFocus(value), event.RequestReload())
 	}
 	return nil
 }
