@@ -10,12 +10,14 @@ func Default(label string, data []byte) bool {
 }
 
 func WithHighlight(streams ...string) Func {
+
 	return func(label string, data []byte) bool {
+		var ok bool = false
 		for _, s := range streams {
-			if s != label {
-				return false
+			if s == label {
+				ok = true
 			}
 		}
-		return true
+		return ok
 	}
 }
