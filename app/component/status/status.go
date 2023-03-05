@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -133,20 +133,23 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return model, nil
 
 	case requestedUnFocus:
+		model.hasFilter = false
 		for i := range model.streams {
 			model.streams[i].focused = false
 		}
 	// a filter was applied we want to highlight the color
 	// of the requested stream while reducing the others
 	case requestedFocus:
-		for _, s := range msg {
-			index, ok := model.streamIndex[string(s)]
-			if !ok {
-				debug.Print("[status.Update(requestedFocus)] unable to focus stream with label %q - stream unknown\n", s)
-				break
+		model.hasFilter = true
+
+		for key, index := range model.streamIndex {
+
+			if ok := slices.Contains(msg, key); !ok {
+				model.streams[index].focused = false
+				continue
 			}
+
 			model.streams[index].focused = true
-			model.hasFilter = true
 		}
 
 	case tea.KeyMsg:
@@ -257,7 +260,7 @@ func (model *Model) View() string {
 			}
 
 			if !stream.focused {
-				items = append(items, stream.style.
+				items = append(items, stream.style.Copy().
 					Background(lipgloss.Color("#c0c0c0")).
 					Foreground(lipgloss.Color("#808080")).
 					Render(stream.label+":"+fmt.Sprint(info)),
@@ -313,7 +316,7 @@ func (model *Model) View() string {
 	)
 
 	// display filter to the right of the status bar
-	filter := "non set"
+	filter := "filters: non set"
 	if len(filtered) > 0 {
 		filter = filterStyle.Render(fmt.Sprintf("filters: %v", filtered))
 	}
