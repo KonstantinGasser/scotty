@@ -22,11 +22,13 @@ var (
 				Render(labelNewNotification)
 
 	spacing = styles.Spacer(1).Render("")
+
+	filterStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("7"))
 )
 
 const (
 	labelDisconnected    = "SIGINT"
-	labelNewNotification = "(incoming)"
+	labelNewNotification = "(+1)"
 )
 
 type Connection struct {
@@ -89,6 +91,9 @@ type Model struct {
 	// to add an indicated next to the stream info telling that new
 	// logs are available
 	isFormatMode bool
+
+	// hasFilter indicates that one or more streams are focused.
+	hasFilter bool
 }
 
 func New() *Model {
@@ -129,14 +134,16 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// a filter was applied we want to highlight the color
 	// of the requested stream while reducing the others
-	case RequestedFocus:
-		index, ok := model.streamIndex[string(msg)]
-		if !ok {
-			debug.Print("[app.model.status] unable to focus stream with label %q - stream unknown\n", msg)
-			break
+	case requestedFocus:
+		for _, s := range msg {
+			index, ok := model.streamIndex[string(s)]
+			if !ok {
+				debug.Print("[status.Update(requestedFocus)] unable to focus stream with label %q - stream unknown\n", s)
+				break
+			}
+			model.streams[index].focused = true
+			model.hasFilter = true
 		}
-		model.streams[index].focused = true
-		debug.Print("status focus: %+v\n", model.streams[index])
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -203,6 +210,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if model.isFormatMode && !model.streams[index].hasNewMessages {
 			model.streams[index].hasNewMessages = true
 		}
+
+		if model.hasFilter && !model.streams[index].focused && !model.streams[index].hasNewMessages {
+			model.streams[index].hasNewMessages = true
+		}
 	}
 
 	return model, tea.Batch(cmds...)
@@ -215,6 +226,7 @@ func (model *Model) View() string {
 	}
 
 	var items = []string{}
+	var filtered = []string{}
 
 	if len(model.streams) <= 0 && model.err == nil {
 		txt := "beam the logs up, scotty is ready"
@@ -223,15 +235,44 @@ func (model *Model) View() string {
 		)
 	}
 
+	var padding string = spacing
+	var info string
 	for i, stream := range model.streams {
 
-		var padding = spacing
 		if i >= len(model.streams)-1 {
 			padding = ""
 		}
 
 		// not space after last one thou
-		var info any = stream.count
+		info = fmt.Sprint(stream.count)
+
+		if model.hasFilter {
+
+			if stream.hasNewMessages {
+				info += newNotificationStyle
+			}
+
+			if stream.disconnected {
+				info += labelDisconnected
+			}
+
+			if !stream.focused {
+				items = append(items, stream.style.
+					Background(lipgloss.Color("7")).
+					Foreground(lipgloss.Color("8")).
+					Render(stream.label+":"+fmt.Sprint(info)),
+					padding,
+				)
+				continue
+			}
+
+			items = append(items, stream.style.
+				Render(stream.label+":"+fmt.Sprint(info)),
+				padding,
+			)
+			filtered = append(filtered, stream.label)
+			continue
+		}
 
 		if stream.disconnected {
 			items = append(items, stream.style.Render(
@@ -265,6 +306,11 @@ func (model *Model) View() string {
 		)
 	}
 
+	// display filter to the right of the status bar
+	if model.hasFilter {
+		items = append(items, styles.Spacer(10).Render(""))
+		items = append(items, filterStyle.Render(fmt.Sprintf("filters: %v", filtered)))
+	}
 	return ModelStyle.
 		Padding(0, 1).
 		Width(model.width - 1). // account for padding left/right
@@ -275,10 +321,10 @@ func (model *Model) View() string {
 		)
 }
 
-type RequestedFocus string
+type requestedFocus []string
 
-func RequestFocus(stream string) tea.Cmd {
+func RequestFocus(streams ...string) tea.Cmd {
 	return func() tea.Msg {
-		return RequestFocus(stream)
+		return requestedFocus(streams)
 	}
 }
