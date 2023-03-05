@@ -3,6 +3,7 @@ package pager
 import (
 	"bytes"
 
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
@@ -143,6 +144,19 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.writer.Reset()
 		model.view.GotoBottom()
 
+	case event.ReloadBuffer:
+		model.pageSize, err = model.buffer.Read(
+			&model.writer,
+			model.height,
+			ring.WithLineWrap(model.width),
+		)
+		if err != nil {
+			debug.Print("[pager.Update(event.ReloadBuffer)] error: %v\n", err)
+		}
+		model.view.SetContent(model.writer.String())
+		model.writer.Reset()
+		model.view.GotoBottom()
+
 	// event dispatched by the multiplexer each time a client/stream
 	// sends a log linen.
 	// The Model needs to add the ansi color code stored for the stream
@@ -158,7 +172,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ring.WithLineWrap(model.width),
 		)
 		if err != nil {
-			debug.Debug(err.Error())
+			debug.Print("[pager.Update(plexer.Message)] error: %v\n", err)
 		}
 
 		model.view.SetContent(model.writer.String())

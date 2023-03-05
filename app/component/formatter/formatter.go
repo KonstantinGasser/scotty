@@ -3,6 +3,7 @@ package formatter
 import (
 	"bytes"
 
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
@@ -157,6 +158,15 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.writer.Reset()
 		model.view.SetContent("") // unset content
 		return model, tea.Batch(cmds...)
+
+	// event published from parent model to force reload
+	// the screen with the latest data/filter from the buffer
+	case event.ReloadBuffer:
+		model.reloadPage(
+			model.absoluteIndex,
+			ring.WithInlineFormatting(model.width, model.absoluteIndex),
+			ring.WithLineWrap(model.width),
+		)
 
 	// selects the previous log line to be parsed
 	// and displayed. Input ignores when relativeIndex <= 0
