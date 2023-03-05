@@ -35,7 +35,7 @@ Somehow your logs need to be send or say beamed to `scotty`. This is why scotty 
 Beam pushes everything it reads from stdin to scotty. Just be aware that things printed to stderr won't work..but we can
 redirect `stderr` to `stdout` using `2>&1`. 
 
-# Examples
+# How to use it?
 
 ## ...from stdout
 
@@ -54,11 +54,17 @@ go run -race cmd/my/application.go 2>&1 | beam my-application
 
 Here `application.go` produces logs printed to stderr this is why we need to add `2>&1` to redirect the output to stdout. The pipe to `beam` stays unchanged.
 
-# Format a log line
+## Format a log line
 
 Especially when logs are structured we humans have it hard to read the unformatted JSON. Hit the `:` key and type the line number of the log you want to format.
 
 ***Hint***: once the log line is displayed use the arrow keys for up and down (or `j`, `k`) to parse the previous or next line
+
+## Filter on streams
+
+When you need to only look at certain logs form a subset of streams your can apply a filter. Hit `ctrl+f` followed by a comma separated list of the streams you want to focus on.
+While the filter is applied you can browse through the subset of logs as usual with `: <index>`.
+To remove set filters hit the `q` key
 
 # Options with beam
 
