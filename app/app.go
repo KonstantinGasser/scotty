@@ -6,7 +6,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
-	"github.com/KonstantinGasser/scotty/ring/filter"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
 	"github.com/KonstantinGasser/scotty/app/component/pager"
@@ -426,13 +425,50 @@ func (app *App) executeCommand() tea.Cmd {
 		return formatter.RequestView(index)
 
 	case cmdFilter:
-		streams := []string{}
-		for _, s := range strings.Split(value, ",") {
-			streams = append(streams, strings.TrimSpace(s))
+
+		const (
+			overwrite = iota
+			add
+			remove
+		)
+
+		var streams []string
+		var operation = overwrite
+
+		if strings.HasPrefix(value, "+") {
+			operation = add
 		}
 
-		app.buffer.Filter(filter.WithHighlight(streams...))
-		return tea.Batch(status.RequestFocus(streams...), event.RequestReload())
+		if strings.HasPrefix(value, "-") {
+			operation = remove
+		}
+
+		switch operation {
+		case overwrite:
+			for _, s := range strings.Split(value, ",") {
+				streams = append(streams, strings.TrimSpace(s))
+			}
+			app.buffer.ApplyFilter(func(item, label string, data []byte) bool {
+				return item == label
+			}, streams...)
+
+			return tea.Batch(status.RequestFocus(streams...), event.RequestReload())
+		case add:
+			for _, s := range strings.Split(value[1:], ",") {
+				streams = append(streams, strings.TrimSpace(s))
+			}
+			app.buffer.AddFilter(streams...)
+
+			return tea.Batch(status.RequestFocus(streams...), event.RequestReload())
+
+		// remove op can only remove single items at a time
+		case remove:
+			stream := strings.TrimSpace(value[1:])
+			app.buffer.RemoveFilter(stream)
+
+			return tea.Batch(status.RequestRemoveFocus(stream), event.RequestReload())
+		}
+
 	}
 	return nil
 }

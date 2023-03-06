@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring/filter"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
@@ -23,6 +22,7 @@ type Buffer struct {
 	write      uint32
 	data       []Log
 	filterFunc filter.Func
+	filter     *filter.Filter
 }
 
 // New initiates a new ring buffer with a set capacity.
@@ -31,10 +31,10 @@ type Buffer struct {
 // stored in the buffer and compute: capacity*avg(item_size)
 func New(size uint32) Buffer {
 	return Buffer{
-		capacity:   size,
-		write:      0,
-		data:       make([]Log, size),
-		filterFunc: filter.Default,
+		capacity: size,
+		write:    0,
+		data:     make([]Log, size),
+		filter:   nil,
 	}
 }
 
@@ -42,12 +42,20 @@ func (buf Buffer) Cap() uint32 {
 	return buf.capacity
 }
 
-func (buf *Buffer) Filter(fn filter.Func) {
-	buf.filterFunc = fn
+func (buf *Buffer) ApplyFilter(fn filter.FilterFunc, fields ...string) {
+	buf.filter = filter.New(fn, fields...)
+}
+
+func (buf *Buffer) AddFilter(fields ...string) {
+	buf.filter.Append(fields...)
+}
+
+func (buf *Buffer) RemoveFilter(field string) {
+	buf.filter.Remove(field)
 }
 
 func (buf *Buffer) UnsetFilter() {
-	buf.filterFunc = filter.Default
+	buf.filterFunc = nil
 }
 
 func (buff Buffer) Nil(index int) bool {
@@ -66,7 +74,7 @@ func (buf Buffer) TryRead(index int) (bool, error) {
 	if len(buf.data[index].Data) <= 0 {
 		return false, ErrReadBeforeWrite
 	}
-	debug.Print("[buffer.Included] index=%d\n", index)
+
 	return buf.filterFunc(buf.data[index].Label, buf.data[index].Data), nil
 }
 
@@ -99,8 +107,10 @@ func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []
 			continue
 		}
 
-		if ok := buf.filterFunc(buf.data[index].Label, buf.data[index].Data); !ok {
-			continue
+		if buf.filter != nil {
+			if ok := buf.filter.Test(buf.data[index].Label, buf.data[index].Data); !ok {
+				continue
+			}
 		}
 
 		b = buf.data[index].Data
@@ -141,8 +151,10 @@ func (buf *Buffer) ReadOffset(w *bytes.Buffer, offset int, rangeN int, fns ...fu
 			continue
 		}
 
-		if ok := buf.filterFunc(buf.data[index].Label, buf.data[index].Data); !ok {
-			continue
+		if buf.filter != nil {
+			if ok := buf.filter.Test(buf.data[index].Label, buf.data[index].Data); !ok {
+				continue
+			}
 		}
 
 		b = buf.data[index].Data
