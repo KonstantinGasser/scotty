@@ -22,6 +22,7 @@ func main() {
 	network := flag.String("network", "unix", "network interface to listen for beams (option: tcp)")
 	addr := flag.String("addr", "/tmp/scotty.sock", "address for the network interface")
 	buffer := flag.Int("buffer", 4096, "buffer to store logs will hold up N items")
+	flag.Parse()
 
 	quite := make(chan struct{})
 
