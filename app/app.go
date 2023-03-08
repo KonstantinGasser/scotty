@@ -459,7 +459,7 @@ func (app *App) executeCommand() tea.Cmd {
 			}
 			app.buffer.AddFilter(streams...)
 
-			return tea.Batch(status.RequestFocus(streams...), event.RequestReload())
+			return tea.Batch(status.RequestAddFocus(streams...), event.RequestReload())
 
 		// remove op can only remove single items at a time
 		case remove:

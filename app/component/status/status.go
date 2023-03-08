@@ -148,6 +148,15 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				model.streams[index].hasNewMessages = false // logs are displayed again no need for indication
 				continue
 			}
+			model.streams[index].focused = false
+		}
+
+	case requestedAddFocus:
+		for key, index := range model.streamIndex {
+			if ok := slices.Contains(msg, key); ok {
+				model.streams[index].focused = true
+			}
+			continue
 		}
 
 	case requestedRemoveFocus:
@@ -351,6 +360,14 @@ type requestedFocus []string
 func RequestFocus(streams ...string) tea.Cmd {
 	return func() tea.Msg {
 		return requestedFocus(streams)
+	}
+}
+
+type requestedAddFocus []string
+
+func RequestAddFocus(streams ...string) tea.Cmd {
+	return func() tea.Msg {
+		return requestedAddFocus(streams)
 	}
 }
 
