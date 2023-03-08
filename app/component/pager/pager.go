@@ -8,7 +8,6 @@ import (
 	"github.com/KonstantinGasser/scotty/debug"
 	plexer "github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/ring"
-	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -73,10 +72,6 @@ type Model struct {
 
 func New(buffer *ring.Buffer) *Model {
 
-	input := textinput.New()
-	input.Placeholder = "line number (use k/j to move and ESC/q to exit)"
-	input.Prompt = ":"
-
 	return &Model{
 		ready:  false,
 		buffer: buffer,
@@ -131,18 +126,19 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Height,
 		)
 
-		model.pageSize, err = model.buffer.Read(
-			&model.writer,
-			model.height,
-			ring.WithLineWrap(model.width),
-		)
-		if err != nil {
-			debug.Debug(err.Error())
-		}
+		cmds = append(cmds, event.RequestReload())
+		// model.pageSize, err = model.buffer.Read(
+		// 	&model.writer,
+		// 	model.height,
+		// 	ring.WithLineWrap(model.width),
+		// )
+		// if err != nil {
+		// 	debug.Debug(err.Error())
+		// }
 
-		model.view.SetContent(model.writer.String())
-		model.writer.Reset()
-		model.view.GotoBottom()
+		// model.view.SetContent(model.writer.String())
+		// model.writer.Reset()
+		// model.view.GotoBottom()
 
 	case event.ReloadBuffer:
 		model.pageSize, err = model.buffer.Read(

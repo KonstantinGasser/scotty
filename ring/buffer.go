@@ -90,7 +90,7 @@ func (buf *Buffer) Write(label string, data []byte) (int, error) {
 
 func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []byte) (int, error) {
 
-	var lines, written int
+	var written int
 
 	offset := int(buf.write) - rangeN
 	cap := int(buf.capacity)
@@ -113,15 +113,6 @@ func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []
 		b = buf.data[index].Data
 		for _, fn := range fns {
 			b = fn(index, b)
-		}
-
-		// rangeN defines the max lines which can be currently displayed,
-		// we need to take in account that lines in the buffer might wrap depending
-		// on the current width of the screen resulting in writing >= rangeN lines
-		// to the bytes.Buffer
-		lines += bytes.Count(b, []byte("\n"))
-		if lines >= rangeN {
-			return written, nil
 		}
 
 		if _, err := w.Write(b); err != nil {
