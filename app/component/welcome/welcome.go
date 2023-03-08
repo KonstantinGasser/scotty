@@ -51,6 +51,7 @@ var (
 				lipgloss.NewStyle().Bold(false).Render("\t- hit \":\" and type an index to format a specific line. Use k/j to format the previous or next log"),
 				lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with q)"),
 				lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" and type a comma separated list of beams to highlight them (ctrl+f: beam-one,beam-two)"),
+				lipgloss.NewStyle().Bold(false).Render("\t  while in the filter mode you can add/remove individual beams by user the prefix +/- followed by the beam"),
 			}, "\n"),
 		)
 )

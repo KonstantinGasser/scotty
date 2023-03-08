@@ -11,18 +11,11 @@ require (
 )
 
 require (
-	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mna/pigeon v1.1.0 // indirect
-	github.com/pointlander/compress v1.1.1-0.20190518213731-ff44bd196cc3 // indirect
-	github.com/pointlander/jetset v1.0.1-0.20190518214125-eee7eff80bd4 // indirect
-	github.com/pointlander/peg v1.0.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/mod v0.9.0 // indirect
-	golang.org/x/tools v0.6.0 // indirect
 )
 
 require (
