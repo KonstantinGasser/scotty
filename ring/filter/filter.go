@@ -9,7 +9,7 @@ import (
 // decides to include the item or not
 type Func func(string, []byte) bool
 
-func Default(label string, data []byte) bool {
+func Default(item, label string, data []byte) bool {
 	return true
 }
 
@@ -43,6 +43,10 @@ func New(filter FilterFunc, fields ...string) *Filter {
 }
 
 func (filter Filter) Test(label string, data []byte) bool {
+
+	if len(filter.fields) == 0 {
+		return true
+	}
 
 	for _, field := range filter.fields {
 		if filter.fn(field, label, data) {

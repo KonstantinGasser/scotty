@@ -18,11 +18,10 @@ type Log struct {
 }
 
 type Buffer struct {
-	capacity   uint32
-	write      uint32
-	data       []Log
-	filterFunc filter.Func
-	filter     *filter.Filter
+	capacity uint32
+	write    uint32
+	data     []Log
+	filter   *filter.Filter
 }
 
 // New initiates a new ring buffer with a set capacity.
@@ -34,7 +33,7 @@ func New(size uint32) Buffer {
 		capacity: size,
 		write:    0,
 		data:     make([]Log, size),
-		filter:   nil,
+		filter:   filter.New(filter.Default),
 	}
 }
 
@@ -55,7 +54,7 @@ func (buf *Buffer) RemoveFilter(field string) {
 }
 
 func (buf *Buffer) UnsetFilter() {
-	buf.filterFunc = nil
+	buf.filter = filter.New(filter.Default)
 }
 
 func (buff Buffer) Nil(index int) bool {
@@ -75,7 +74,7 @@ func (buf Buffer) TryRead(index int) (bool, error) {
 		return false, ErrReadBeforeWrite
 	}
 
-	return buf.filterFunc(buf.data[index].Label, buf.data[index].Data), nil
+	return buf.filter.Test(buf.data[index].Label, buf.data[index].Data), nil
 }
 
 func (buf *Buffer) Write(label string, data []byte) (int, error) {
@@ -107,10 +106,8 @@ func (buf *Buffer) Read(w *bytes.Buffer, rangeN int, fns ...func(int, []byte) []
 			continue
 		}
 
-		if buf.filter != nil {
-			if ok := buf.filter.Test(buf.data[index].Label, buf.data[index].Data); !ok {
-				continue
-			}
+		if ok := buf.filter.Test(buf.data[index].Label, buf.data[index].Data); !ok {
+			continue
 		}
 
 		b = buf.data[index].Data
@@ -151,10 +148,8 @@ func (buf *Buffer) ReadOffset(w *bytes.Buffer, offset int, rangeN int, fns ...fu
 			continue
 		}
 
-		if buf.filter != nil {
-			if ok := buf.filter.Test(buf.data[index].Label, buf.data[index].Data); !ok {
-				continue
-			}
+		if ok := buf.filter.Test(buf.data[index].Label, buf.data[index].Data); !ok {
+			continue
 		}
 
 		b = buf.data[index].Data
