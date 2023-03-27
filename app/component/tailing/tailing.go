@@ -49,6 +49,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.view.Height = model.height
 			model.view.MouseWheelEnabled = true
 
+			model.pager.Dimensions(model.width, model.height)
 			model.ready = true
 			break
 		}
@@ -57,10 +58,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Width,
 			msg.Height,
 		)
+		model.pager.Dimensions(model.width, model.height)
+
 	case multiplexer.Message:
-		debug.Print("got a message in tailling model")
 		model.pager.MoveDown()
 		model.view.SetContent(model.pager.String())
+		model.view.GotoBottom()
+		debug.Print("%s\n", model.pager.String())
 	}
 
 	model.view, cmd = model.view.Update(msg)

@@ -67,7 +67,7 @@ func (pager *Pager) MoveDown() {
 	// windowing
 	if pager.written < pager.size {
 		pager.buffer[int(pager.written)] = next
-		pager.raw = shiftString(pager.raw, line, pager.ttyWidth)
+		pager.raw += line
 
 		pager.written++
 		return
@@ -77,7 +77,6 @@ func (pager *Pager) MoveDown() {
 	// for both the buffer and the raw string
 	pager.buffer = pager.buffer[1:] // cutof first value of the buffer
 	pager.buffer[len(pager.buffer)-1] = next
-
 }
 
 func shiftString(base string, line string, height int) string {
@@ -109,4 +108,9 @@ func linewrap(depth *int, line string, width int) string {
 
 func (pager *Pager) String() string {
 	return pager.raw
+}
+
+func (pager *Pager) Dimensions(width int, height int) {
+	pager.ttyWidth = width
+	pager.size = uint8(height)
 }
