@@ -13,6 +13,12 @@ type Pager struct {
 	// reader includes all required APIs
 	// to perform read operations on the ringbuffer
 	reader ring.Reader
+	// position is it pagers pointer to an index in the
+	// ring.Buffer. It is used to individually keep
+	// track of a pagers state of tailing and allows
+	// to freeze time and/or have multiple pagers with
+	// different positions
+	position uint32
 	// buffer holds those items which are currently
 	// visisble within the page - and is tight to the
 	// provided size
@@ -25,4 +31,32 @@ type Pager struct {
 	// the string is broken recursivly leading to possible less items
 	// represented by the `raw` string then present in the buffer
 	raw string
+}
+
+// MoveDown shifts the pagers content down by one item
+//
+// It should be called whenever a new Item is inserted
+// into the store.Store.buffer.
+// This function is most likely called frequentially
+// as such re-computing each state again is a wast of
+// CPU and memory since to move down really only means
+// that the start and the end of the buffer/raw-string
+// change.
+// To address this MoveDonw strips away the first line
+// in the raw-string and only adds the new line.
+// Similar for the buffer. The zero item of the buffer
+// is discarded while the new one is added at the end.
+func (pager *Pager) MoveDown() {
+
+	// next := pager.reader.At(pager.position)
+
+}
+
+func linewrap(depth *int, line string, width int) string {
+	if len(line) <= width {
+		return line
+	}
+
+	*depth = (*depth) + 1
+	return line[:width] + "\n" + linewrap(depth, line[width:], width)
 }

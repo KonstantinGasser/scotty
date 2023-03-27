@@ -13,5 +13,5 @@ func New(size uint32) *Store {
 }
 
 func (store Store) NewPager(size uint8) Pager {
-
+	return Pager{}
 }
