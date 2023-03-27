@@ -24,6 +24,8 @@ Developing with go-1.18 for potential usage of generics.
 
 Within the scotty repository there is a `/test` directory with a dummy application producting structured logs. This can be used for testing. With the flag `-delay` one can increase the random time-out between each logs which can be useful to either stress test a feature or slow down for debugging.
 
+Please also have a look at the UI library used in the project which is [bubbletea](https://github.com/charmbracelet/bubbletea). Bubbletea is a great and extensible framework build on the concept of [the Elm Architecture](https://guide.elm-lang.org/architecture/) - it's also worth browsing through their docs for a better understanding of how bubbletea works internally :).
+
 ### How to contribute
 
 1. Start a dialog on a ticket you want to solve, and discuss any open questions closing with a statement to work on the issue
