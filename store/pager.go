@@ -1,6 +1,10 @@
 package store
 
-import "github.com/KonstantinGasser/scotty/store/ring"
+import (
+	"strings"
+
+	"github.com/KonstantinGasser/scotty/store/ring"
+)
 
 type Pager struct {
 	// size refers to the page-size. The pager will hold
@@ -23,6 +27,10 @@ type Pager struct {
 	// visisble within the page - and is tight to the
 	// provided size
 	buffer []ring.Item
+	// written is used to intially see once the [size]buffer
+	// is full since until then we only need to append data not
+	// trim at the beginning
+	written uint8
 	// raw is the build string to display.
 	// Its a representation of the buffered items
 	// concatinated by a newline.
@@ -48,10 +56,45 @@ type Pager struct {
 // is discarded while the new one is added at the end.
 func (pager *Pager) MoveDown() {
 
-	// next := pager.reader.At(pager.position)
+	next := pager.reader.At(pager.position)
+
+	// actual height of the resulting string
+	var depth int
+	line := linewrap(&depth, next.Raw, pager.ttyWidth)
+
+	// filling up the buffer before we can start
+	// windowing
+	if pager.written < pager.size {
+		pager.buffer[int(pager.written)] = next
+		pager.raw = shiftString(pager.raw, line, pager.ttyWidth)
+
+		pager.written++
+		return
+	}
+
+	// move the window one to the right
+	// for both the buffer and the raw string
+	pager.buffer = pager.buffer[1:] // cutof first value of the buffer
+	pager.buffer[len(pager.buffer)-1] = next
 
 }
 
+func shiftString(base string, line string, height int) string {
+	// for now we ignore that any line where the height is
+	// > 1 implies that the pager's raw string is higher then
+	// the pager's actual size
+
+	cut := strings.IndexByte(base, byte('\n'))
+	if cut < 0 {
+		return base + line
+	}
+	return base[cut+1:] + line
+}
+
+// linewrap breaks a line based on the given width.
+// The function is not perfrect and not standard when it
+// comes to line breaking however for now it serves well
+// enough but is a canidate for replacement
 func linewrap(depth *int, line string, width int) string {
 	if len(line) <= width {
 		return line
