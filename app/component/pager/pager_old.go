@@ -39,7 +39,7 @@ type subscriber struct {
 // Furthermore, Model allows to tail logs.
 // Model does not not store the logs its only
 // porose is it to display them.
-type Model struct {
+type Model1 struct {
 	ready bool
 
 	buffer *ring.Buffer
@@ -70,9 +70,9 @@ type Model struct {
 	pageSize int
 }
 
-func New(buffer *ring.Buffer) *Model {
+func New(buffer *ring.Buffer) *Model1 {
 
-	return &Model{
+	return &Model1{
 		ready:  false,
 		buffer: buffer,
 		writer: bytes.Buffer{},
@@ -85,11 +85,11 @@ func New(buffer *ring.Buffer) *Model {
 	}
 }
 
-func (model *Model) Init() tea.Cmd {
+func (model *Model1) Init() tea.Cmd {
 	return nil
 }
 
-func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (model *Model1) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var (
 		cmds []tea.Cmd
@@ -184,7 +184,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return model, tea.Batch(cmds...)
 }
 
-func (model *Model) View() string {
+func (model *Model1) View() string {
 	if !model.ready {
 		return "initializing..."
 	}
@@ -192,7 +192,7 @@ func (model *Model) View() string {
 	return model.view.View()
 }
 
-func (model *Model) setDimensions(width, height int) {
+func (model *Model1) setDimensions(width, height int) {
 	model.width, model.height = width-borderMargin, styles.AvailableHeight(height)
 	model.view.Width, model.view.Height = model.width, model.height
 }
