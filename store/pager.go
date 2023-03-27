@@ -57,6 +57,7 @@ type Pager struct {
 func (pager *Pager) MoveDown() {
 
 	next := pager.reader.At(pager.position)
+	pager.position++
 
 	// actual height of the resulting string
 	var depth int
@@ -94,7 +95,9 @@ func shiftString(base string, line string, height int) string {
 // linewrap breaks a line based on the given width.
 // The function is not perfrect and not standard when it
 // comes to line breaking however for now it serves well
-// enough but is a canidate for replacement
+// enough but is a canidate for replacement.
+// Improvment could be to check if the last char is a whitespace
+// and if so to remove it before adding the new line.
 func linewrap(depth *int, line string, width int) string {
 	if len(line) <= width {
 		return line
@@ -102,4 +105,8 @@ func linewrap(depth *int, line string, width int) string {
 
 	*depth = (*depth) + 1
 	return line[:width] + "\n" + linewrap(depth, line[width:], width)
+}
+
+func (pager *Pager) String() string {
+	return pager.raw
 }

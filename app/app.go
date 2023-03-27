@@ -6,10 +6,11 @@ import (
 
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
+	"github.com/KonstantinGasser/scotty/store"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
-	"github.com/KonstantinGasser/scotty/app/component/pager"
 	"github.com/KonstantinGasser/scotty/app/component/status"
+	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -73,7 +74,8 @@ type App struct {
 	// is written to the buffer. However the
 	// does not need to read from the buffer, thus
 	// only an io.Writer
-	buffer *ring.Buffer
+	buffer   *ring.Buffer
+	logstore *store.Store
 
 	// streams keeps track of all streams which connected
 	// to scotty within the same session and store a unique
@@ -143,6 +145,8 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 
 	buffer := ring.New(uint32(bufferSize))
 
+	logstore := store.New(uint32(bufferSize))
+
 	input := textinput.New()
 	input.Placeholder = placeholderDefault
 	input.Prompt = promptDefault
@@ -154,13 +158,14 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		width:  0,
 		height: 0,
 
-		buffer:  &buffer,
-		streams: make(map[string]lipgloss.Color),
+		buffer:   &buffer,
+		logstore: logstore,
+		streams:  make(map[string]lipgloss.Color),
 
 		state: initializing,
 		views: map[int]tea.Model{
 			welcomeView: welcome.New(),
-			tailView:    pager.New(&buffer),
+			tailView:    tailing.New(logstore.NewPager(55, 100)), //pager.New(&buffer),
 			formatView:  formatter.New(&buffer),
 		},
 		status: status.New(),
@@ -372,6 +377,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			) + " | "
 
 		app.buffer.Write(msg.Label, append([]byte(prefix), msg.Data...))
+		app.logstore.Insert(msg.Label, msg.Data)
 		cmds = append(cmds, app.consumeMsg)
 
 	case plexer.Error:
