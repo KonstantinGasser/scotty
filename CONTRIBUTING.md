@@ -9,7 +9,7 @@ If you encounter any problem while working with `scotty` feel free to open a new
 
 ## Feature request
 
-Something is missing for in scotty? Make a proposal of your idea by creating an [issue](https://github.com/KonstantinGasser/scotty/issues/new?assignees=&labels=&template=feature_request.md&title=). 
+Something is missing for in scotty? Make a proposal of your idea by creating an [issue](https://github.com/KonstantinGasser/scotty/issues/new?assignees=&labels=&template=feature_request.md&title=).
 
 Try to explain why you think this feature could be useful also to others by solving which problem?
 
@@ -20,7 +20,9 @@ however please refer to issues and contributions within its repository**
 
 ### Local environment
 
-Developing with go-1.18 for potential usage of generics
+Developing with go-1.18 for potential usage of generics.
+
+Within the scotty repository there is a `/test` directory with a dummy application producting structured logs. This can be used for testing. With the flag `-delay` one can increase the random time-out between each logs which can be useful to either stress test a feature or slow down for debugging.
 
 ### How to contribute
 
