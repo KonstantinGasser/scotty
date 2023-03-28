@@ -60,14 +60,17 @@ func (pager *Pager) MoveDown() {
 	pager.position++
 
 	// actual height of the resulting string
-	var depth int
-	line := linewrap(&depth, next.Raw, pager.ttyWidth)
+	var depth int = 1
+	line := next.Raw[:next.DataPointer] + linewrap(
+		&depth, next.Raw[next.DataPointer:],
+		pager.ttyWidth-len(next.Label), len(next.Label)+3,
+	)
 
 	// filling up the buffer before we can start
 	// windowing
 	if pager.written < pager.size {
 		pager.buffer[int(pager.written)] = next
-		pager.raw += line
+		pager.raw += "\n" + line
 
 		pager.written++
 		return
@@ -77,6 +80,8 @@ func (pager *Pager) MoveDown() {
 	// for both the buffer and the raw string
 	pager.buffer = pager.buffer[1:] // cutof first value of the buffer
 	pager.buffer[len(pager.buffer)-1] = next
+
+	pager.raw = shiftString(pager.raw, line, depth)
 }
 
 func shiftString(base string, line string, height int) string {
@@ -86,9 +91,9 @@ func shiftString(base string, line string, height int) string {
 
 	cut := strings.IndexByte(base, byte('\n'))
 	if cut < 0 {
-		return base + line
+		return base + "\n" + line
 	}
-	return base[cut+1:] + line
+	return base[cut+1:] + "\n" + line
 }
 
 // linewrap breaks a line based on the given width.
@@ -97,13 +102,19 @@ func shiftString(base string, line string, height int) string {
 // enough but is a canidate for replacement.
 // Improvment could be to check if the last char is a whitespace
 // and if so to remove it before adding the new line.
-func linewrap(depth *int, line string, width int) string {
+// Also escape seqences or ansi colors are counted as
+// char which they shouldn't thou.
+func linewrap(depth *int, line string, width int, padding int) string {
 	if len(line) <= width {
+		if *depth > 1 {
+			return strings.Repeat(" ", padding) + line
+		}
 		return line
 	}
 
 	*depth = (*depth) + 1
-	return line[:width] + "\n" + linewrap(depth, line[width:], width)
+
+	return line[:width] + "\n" + linewrap(depth, line[width:], width, padding)
 }
 
 func (pager *Pager) String() string {

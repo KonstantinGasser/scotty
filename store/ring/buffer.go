@@ -5,9 +5,10 @@ type Reader interface {
 }
 
 type Item struct {
-	Label    string
-	Raw      string
-	Revision uint8
+	Label       string
+	Raw         string
+	DataPointer int
+	Revision    uint8
 }
 
 type Buffer struct {

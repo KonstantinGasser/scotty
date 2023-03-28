@@ -12,10 +12,11 @@ func New(size uint32) *Store {
 	}
 }
 
-func (store *Store) Insert(label string, data []byte) {
+func (store *Store) Insert(label string, offset int, data []byte) {
 	store.buffer.Insert(ring.Item{
-		Label: label,
-		Raw:   string(data),
+		Label:       label,
+		Raw:         string(data),
+		DataPointer: offset,
 	})
 }
 

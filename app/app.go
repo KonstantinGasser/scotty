@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 
@@ -376,8 +377,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Label+strings.Repeat(" ", space),
 			) + " | "
 
-		app.buffer.Write(msg.Label, append([]byte(prefix), msg.Data...))
-		app.logstore.Insert(msg.Label, msg.Data)
+		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), bytes.TrimSpace(msg.Data)...))
 		cmds = append(cmds, app.consumeMsg)
 
 	case plexer.Error:
