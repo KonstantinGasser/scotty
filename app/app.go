@@ -269,14 +269,14 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// propagate event to formatter and request to format
 		// previous log line
-		case key.Matches(msg, app.keys.Up) && !key.Matches(msg, app.keys.Filter) && app.state == formatView && app.hasInput:
-			cmds = append(cmds, formatter.RequestUp())
+		case key.Matches(msg, app.keys.Up) && !key.Matches(msg, app.keys.Filter) && app.hasInput:
+			cmds = append(cmds, event.RequestFormatPrevious())
 			app.ignoreKey = true
 
 		// propagate event to formatter and request to format
 		// next log line
-		case key.Matches(msg, app.keys.Down) && !key.Matches(msg, app.keys.Filter) && app.state == formatView && app.hasInput:
-			cmds = append(cmds, formatter.RequestDown())
+		case key.Matches(msg, app.keys.Down) && !key.Matches(msg, app.keys.Filter) && app.hasInput:
+			cmds = append(cmds, event.RequestFormatNext())
 			app.ignoreKey = true
 
 		// terminate formatting view and propagate event to formatter,
@@ -423,12 +423,12 @@ func (app *App) executeCommand() tea.Cmd {
 	case cmdFormat:
 		index, err := strconv.Atoi(value)
 		if err != nil {
-			debug.Print("unable to parse index: %q: %w", value, err)
+			debug.Print("unable to parse index: %q: %v", value, err)
 		}
 		app.hasInput = true
 
-		app.state = formatView
-		return formatter.RequestView(index)
+		// app.state = formatView
+		return event.RequestFormatInit(index)
 
 	case cmdFilter:
 

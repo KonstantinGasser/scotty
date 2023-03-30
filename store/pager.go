@@ -3,7 +3,12 @@ package store
 import (
 	"strings"
 
+	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/hokaccha/go-prettyjson"
+	"github.com/muesli/reflow/wrap"
 )
 
 type Pager struct {
@@ -23,10 +28,14 @@ type Pager struct {
 	// to freeze time and/or have multiple pagers with
 	// different positions
 	position uint32
+	// formatOffset if not negative refers to the an explicit
+	// index in the page buffer which should be formatted
+	formatOffset int
 	// buffer holds those items which are currently
 	// visisble within the page - and is tight to the
 	// provided size
-	buffer []ring.Item
+	// buffer []ring.Item
+	buffer []string
 	// written is used to intially see once the [size]buffer
 	// is full since until then we only need to append data not
 	// trim at the beginning
@@ -69,31 +78,17 @@ func (pager *Pager) MoveDown() {
 	// filling up the buffer before we can start
 	// windowing
 	if pager.written < pager.size {
-		pager.buffer[int(pager.written)] = next
-		pager.raw += "\n" + line
+		// next.Parsed = line
+		pager.buffer[int(pager.written)] = line
 
 		pager.written++
+		pager.raw = strings.Join(pager.buffer[:pager.written], "\n")
+
 		return
 	}
 
-	// move the window one to the right
-	// for both the buffer and the raw string
-	pager.buffer = pager.buffer[1:] // cutof first value of the buffer
-	pager.buffer[len(pager.buffer)-1] = next
-
-	pager.raw = shiftString(pager.raw, line, depth)
-}
-
-func shiftString(base string, line string, height int) string {
-	// for now we ignore that any line where the height is
-	// > 1 implies that the pager's raw string is higher then
-	// the pager's actual size
-
-	cut := strings.IndexByte(base, byte('\n'))
-	if cut < 0 {
-		return base + "\n" + line
-	}
-	return base[cut+1:] + "\n" + line
+	pager.buffer = append(pager.buffer[1:], line)
+	pager.raw = strings.Join(pager.buffer, "\n")
 }
 
 // linewrap breaks a line based on the given width.
@@ -105,7 +100,8 @@ func shiftString(base string, line string, height int) string {
 // Also escape seqences or ansi colors are counted as
 // char which they shouldn't thou.
 func linewrap(depth *int, line string, width int, padding int) string {
-	if len(line) <= width {
+
+	if width <= 0 || len(line) <= width {
 		if *depth > 1 {
 			return strings.Repeat(" ", padding) + line
 		}
@@ -117,11 +113,81 @@ func linewrap(depth *int, line string, width int, padding int) string {
 	return line[:width] + "\n" + linewrap(depth, line[width:], width, padding)
 }
 
+func (pager *Pager) EnableFormatting() {
+	pager.formatOffset = 0
+}
+
+func (pager *Pager) FormatNext() {
+	// page turns not taken in account
+	pager.formatOffset++
+	debug.Print("pager.Next => %d", pager.formatOffset)
+}
+
+func (pager *Pager) FormatPrevious() {
+	// page turns not taken in account
+	pager.formatOffset--
+}
+
+// deprecated as of now
+func shiftString(base string, line string, height int) string {
+	// for now we ignore that any line where the height is
+	// > 1 implies that the pager's raw string is higher then
+	// the pager's actual size
+
+	cut := strings.IndexByte(base, byte('\n'))
+	if cut < 0 {
+		return base + line + "\n"
+	}
+
+	return base[cut+1:] + line + "\n"
+}
+
 func (pager *Pager) String() string {
+	// debug.Print("Pager.String(): %d\n", pager.formatOffset)
+	// var depth int
+	// if pager.formatOffset >= 0 {
+	// 	var out string
+	// 	for i, line := range pager.buffer {
+	// 		if i == pager.formatOffset {
+	// 			out += "\n" + format(line, pager.ttyWidth)
+	// 			continue
+	// 		}
+	// 		out += "\n" + linewrap(&depth, line.Raw, pager.ttyWidth, len(line.Label))
+	// 	}
+	// 	return out
+	// }
 	return pager.raw
 }
 
 func (pager *Pager) Dimensions(width int, height int) {
 	pager.ttyWidth = width
 	pager.size = uint8(height)
+}
+
+var (
+	formattedItem = lipgloss.NewStyle().
+		Bold(true).
+		Border(lipgloss.DoubleBorder(), false, false, false, true).
+		BorderForeground(styles.DefaultColor.Border)
+)
+
+func format(item ring.Item, width int) string {
+
+	pretty, err := prettyjson.Format([]byte(item.Raw[item.DataPointer:]))
+	if err != nil {
+		formattedItem.
+			Render(
+				lipgloss.JoinVertical(lipgloss.Left,
+					string(item.Label),
+					string(wrap.String(item.Raw[item.DataPointer:], width-1)),
+				),
+			)
+	}
+	return formattedItem.
+		Render(
+			lipgloss.JoinVertical(lipgloss.Left,
+				string(item.Label),
+				string(wrap.Bytes(pretty, width-1)),
+			),
+		)
 }

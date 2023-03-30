@@ -1,8 +1,8 @@
 package tailing
 
 import (
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -60,11 +60,22 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 		model.pager.Dimensions(model.width, model.height)
 
+	case event.FormatInit:
+		model.pager.EnableFormatting()
+		model.view.SetContent(model.pager.String())
+
+	case event.FormatNext:
+		model.pager.FormatNext()
+		model.view.SetContent(model.pager.String())
+
+	case event.FormatPrevious:
+		model.pager.FormatPrevious()
+		model.view.SetContent(model.pager.String())
+
 	case multiplexer.Message:
 		model.pager.MoveDown()
 		model.view.SetContent(model.pager.String())
 		model.view.GotoBottom()
-		debug.Print("%s\n", model.pager.String())
 	}
 
 	model.view, cmd = model.view.Update(msg)

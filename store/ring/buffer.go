@@ -7,8 +7,13 @@ type Reader interface {
 type Item struct {
 	Label       string
 	Raw         string
+	Parsed      string
 	DataPointer int
 	Revision    uint8
+}
+
+func (i Item) String() string {
+	return i.Parsed
 }
 
 type Buffer struct {
@@ -34,5 +39,9 @@ func (buf *Buffer) Insert(i Item) {
 
 // At returns an item at a given index of the buffer
 func (buf *Buffer) At(i uint32) Item {
-	return buf.data[i]
+	return buf.data[buf.marshalIndex(i)]
+}
+
+func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
+	return (buf.capacity - 1) - ((((-absolute - 1) + buf.capacity) % buf.capacity) % buf.capacity)
 }

@@ -1,5 +1,10 @@
 package ring
 
+import (
+	"bytes"
+	"testing"
+)
+
 // import (
 // 	"bytes"
 // 	"fmt"
@@ -265,3 +270,21 @@ package ring
 // 		}
 // 	})
 // }
+
+func BenchmarkRead(b *testing.B) {
+
+	var w bytes.Buffer
+
+	buffer := New(2048)
+
+	for i := 0; i < 2048; i++ {
+		buffer.Write("dummy", []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		buffer.Read(&w, 44, WithLineWrap(150))
+	}
+}

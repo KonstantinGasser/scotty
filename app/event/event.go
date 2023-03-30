@@ -9,3 +9,27 @@ func RequestReload() tea.Cmd {
 		return ReloadBuffer{}
 	}
 }
+
+type FormatInit int
+
+func RequestFormatInit(index int) tea.Cmd {
+	return func() tea.Msg {
+		return FormatInit(index)
+	}
+}
+
+type FormatNext struct{}
+
+func RequestFormatNext() tea.Cmd {
+	return func() tea.Msg {
+		return FormatNext{}
+	}
+}
+
+type FormatPrevious struct{}
+
+func RequestFormatPrevious() tea.Cmd {
+	return func() tea.Msg {
+		return FormatPrevious{}
+	}
+}
