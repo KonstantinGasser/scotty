@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -54,9 +55,16 @@ func InverseColor(c lipgloss.Color) lipgloss.Color {
 func LoadConfig() (*Config, error) {
 	var cfg Config
 
-	yamlFile, err := os.Open("config.yaml")
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
+	}
+
+	configPath := filepath.Join(homeDir, ".scotty", "config.yaml")
+	yamlFile, err := os.Open(configPath)
+	if err != nil {
+		// fallback to default colors if config file not found
+		return &Config{Colors: DefaultColor}, nil
 	}
 	defer yamlFile.Close()
 
