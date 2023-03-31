@@ -2,6 +2,7 @@ package ring
 
 type Reader interface {
 	At(i uint32) Item
+	Range(start uint32, size uint8) []Item
 }
 
 type Item struct {
@@ -40,6 +41,13 @@ func (buf *Buffer) Insert(i Item) {
 // At returns an item at a given index of the buffer
 func (buf *Buffer) At(i uint32) Item {
 	return buf.data[buf.marshalIndex(i)]
+}
+
+func (buf *Buffer) Range(start uint32, size uint8) []Item {
+	lower := buf.marshalIndex(start)
+	upper := lower + uint32(size)
+
+	return buf.data[lower:upper]
 }
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
