@@ -46,7 +46,7 @@ func (buf *Buffer) At(i uint32) Item {
 func (buf *Buffer) Range(start uint32, size uint8) []Item {
 	lower := buf.marshalIndex(start)
 	upper := lower + uint32(size)
-
+	// this is wrong! buffer wraps are ignored!!!
 	return buf.data[lower:upper]
 }
 

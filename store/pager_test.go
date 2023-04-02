@@ -132,7 +132,7 @@ func TestMoveDownOverflow(t *testing.T) {
 
 func BenchmarkMoveDown(b *testing.B) {
 	store := New(2048)
-	pager := store.NewPager(44, 150)
+	pager := store.NewPager(44, 100)
 
 	// fill ring buffer until full so pager.position always is a hit
 	for i := 0; i < 2048; i++ {

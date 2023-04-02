@@ -61,8 +61,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.pager.Dimensions(model.width, model.height)
 
 	case event.FormatInit:
-		model.pager.EnableFormatting()
+		model.pager.EnableFormatting(uint32(msg))
 		model.view.SetContent(model.pager.String())
+		// by default the requested index to format
+		// is the zero index of the pager content
+		// as such to avoid unalignment due to multiple
+		// lines we set the viewport to its top position
+		model.view.GotoTop()
 
 	case event.FormatNext:
 		model.pager.FormatNext()

@@ -26,10 +26,10 @@ func (store Store) NewPager(size uint8, width int) Pager {
 		ttyWidth:     width,
 		reader:       &store.buffer,
 		position:     0,
-		formatOffset: -1,
-		// buffer:       make([]ring.Item, size),
-		buffer:  make([]string, size),
-		written: 0,
-		raw:     "",
+		mode:         tailing,
+		formatOffset: 0,
+		buffer:       make([]string, size),
+		written:      0,
+		raw:          "",
 	}
 }
