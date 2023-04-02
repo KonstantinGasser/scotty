@@ -5,11 +5,11 @@ import (
 	"testing"
 )
 
-func TestRange(t *testing.T) {
+func TestRangeNoOverflow(t *testing.T) {
 
 	buffer := New(12)
 
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 12; i++ { // overflow by 18-12 => 6 items
 		buffer.Insert(Item{
 			Raw: fmt.Sprintf("Line-%d", i+1),
 		})
@@ -17,8 +17,8 @@ func TestRange(t *testing.T) {
 
 	tt := []struct {
 		name  string
-		start uint32
-		size  uint8
+		start int
+		size  int
 		want  []Item
 	}{
 		{
@@ -50,6 +50,57 @@ func TestRange(t *testing.T) {
 				{Raw: "Line-7"},
 				{Raw: "Line-8"},
 				{Raw: "Line-9"},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		res := buffer.Range(tc.start, tc.size)
+
+		for i, item := range tc.want {
+			if item.Raw != res[i].Raw {
+				t.Fatalf("[%s] wanted item: %s; got item: %s", tc.name, item.Raw, res[i].Raw)
+			}
+		}
+	}
+}
+
+func TestRangeOverflow(t *testing.T) {
+
+	buffer := New(12)
+
+	for i := 0; i < 18; i++ { // overflow by 18-12 => 6 items
+		buffer.Insert(Item{
+			Raw: fmt.Sprintf("Line-%d", i+1),
+		})
+	}
+
+	tt := []struct {
+		name  string
+		start int
+		size  int
+		want  []Item
+	}{
+		{
+			name:  "range with no overflow part",
+			start: 6,
+			size:  10,
+			want: []Item{
+				{Raw: "Line-7"},
+				{Raw: "Line-8"},
+				{Raw: "Line-9"},
+				{Raw: "Line-10"},
+			},
+		},
+		{
+			name:  "range with overflow part",
+			start: 10,
+			size:  4,
+			want: []Item{
+				{Raw: "Line-11"},
+				{Raw: "Line-12"},
+				{Raw: "Line-13"},
+				{Raw: "Line-14"},
 			},
 		},
 	}

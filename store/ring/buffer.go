@@ -2,7 +2,7 @@ package ring
 
 type Reader interface {
 	At(i uint32) Item
-	Range(start uint32, size uint8) []Item
+	Range(start int, size int) []Item
 }
 
 type Item struct {
@@ -43,13 +43,32 @@ func (buf *Buffer) At(i uint32) Item {
 	return buf.data[buf.marshalIndex(i)]
 }
 
-func (buf *Buffer) Range(start uint32, size uint8) []Item {
-	lower := buf.marshalIndex(start)
-	upper := lower + uint32(size)
-	// this is wrong! buffer wraps are ignored!!!
-	return buf.data[lower:upper]
+// Range returns a slice starting somewhere in the buffer
+// with all items sequentally till the given size.
+//
+// Range does not care about dirty-reads (not the ACID dirty reads)
+// but rather Range does not check if the requested range is crossing
+// the end of the buffer resulting in the latest items of the buffer
+// at the beginning of the returned slice while the next items are the
+// oldest items in the buffer
+func (buf *Buffer) Range(start int, size int) []Item {
+
+	var out []Item = make([]Item, 0, size)
+	var cap, index = int(buf.capacity), 0
+
+	for i := start; i < start+size; i++ {
+		index = ((i % cap) + cap) % cap
+
+		if len(buf.data[index].Raw) <= 0 {
+			continue
+		}
+
+		out = append(out, buf.data[index])
+	}
+
+	return out
 }
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
-	return (buf.capacity - 1) - ((((-absolute - 1) + buf.capacity) % buf.capacity) % buf.capacity)
+	return ((absolute % buf.capacity) + buf.capacity) % buf.capacity // (buf.capacity - 1) - ((((-absolute - 1) + buf.capacity) % buf.capacity) % buf.capacity)
 }

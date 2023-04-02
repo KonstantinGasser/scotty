@@ -136,7 +136,7 @@ func linewrap(depth *int, line string, width int, padding int) string {
 func (pager *Pager) EnableFormatting(start uint32) {
 	pager.mode = formatting
 
-	pager.formatBuffer = pager.reader.Range(start, pager.size)
+	pager.formatBuffer = pager.reader.Range(int(start), int(pager.size))
 	pager.formatOffset = 0
 }
 
