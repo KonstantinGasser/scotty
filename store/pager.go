@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -62,7 +63,7 @@ type Pager struct {
 	//
 	// formatOffset if not negative refers to the an explicit
 	// index in the page buffer which should be formatted
-	formatOffset int
+	formatOffset uint8
 	// buffer filled once formatting mode is requested.
 	// This buffer might not be holind the same data as
 	// the tailing buffer but is filled based on the
@@ -90,7 +91,7 @@ func (pager *Pager) MoveDown() {
 
 	// actual height of the resulting string
 	var depth int = 1
-	line := next.Raw[:next.DataPointer] + linewrap(
+	line := fmt.Sprintf("[%d] ", next.Index()) + next.Raw[:next.DataPointer] + linewrap(
 		&depth, next.Raw[next.DataPointer:],
 		pager.ttyWidth-len(next.Label), len(next.Label)+3,
 	)
@@ -136,19 +137,27 @@ func linewrap(depth *int, line string, width int, padding int) string {
 func (pager *Pager) EnableFormatting(start uint32) {
 	pager.mode = formatting
 
-	pager.formatBuffer = pager.reader.Range(int(start), int(pager.size))
+	pager.formatBuffer = pager.reader.Range(int(start-1), int(pager.size)) // negativ one to counter balance the +1 on insert
 	pager.formatOffset = 0
 }
 
 func (pager *Pager) FormatNext() {
-	// page turns not taken in account
-	// slice out of bound not taken in account
+
+	if pager.formatOffset > pager.size {
+		// turn page forward
+		return
+	}
+
 	pager.formatOffset++
 }
 
 func (pager *Pager) FormatPrevious() {
-	// page turns not taken in account
-	// slice out of bound not taken in account
+
+	if pager.formatOffset < 0 {
+		// turn page back
+		return
+	}
+
 	pager.formatOffset--
 }
 
@@ -162,7 +171,8 @@ func (pager *Pager) String() string {
 			if height >= int(pager.size) {
 				return out
 			}
-			if pager.formatOffset == i {
+
+			if int(pager.formatOffset) == i {
 				h, f := format(item, pager.ttyWidth)
 				out += f + "\n"
 				height += h
@@ -202,7 +212,7 @@ func format(item ring.Item, width int) (int, string) {
 		out := formattedItem.
 			Render(
 				lipgloss.JoinVertical(lipgloss.Left,
-					string(item.Label),
+					fmt.Sprintf("[%d] %s", item.Index(), item.Label),
 					string(wrap.String(item.Raw[item.DataPointer:], width-1)),
 				),
 			)

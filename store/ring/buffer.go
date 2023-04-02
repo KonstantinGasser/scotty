@@ -6,6 +6,7 @@ type Reader interface {
 }
 
 type Item struct {
+	index       uint32
 	Label       string
 	Raw         string
 	Parsed      string
@@ -15,6 +16,10 @@ type Item struct {
 
 func (i Item) String() string {
 	return i.Parsed
+}
+
+func (i Item) Index() uint32 {
+	return i.index
 }
 
 type Buffer struct {
@@ -34,6 +39,7 @@ func New(size uint32) Buffer {
 // Insert sets the given item at the next writing position
 // of the buffer.
 func (buf *Buffer) Insert(i Item) {
+	i.index = buf.head + 1 // plus one since eventhough we start at zero the first log should show 1 not 0 as index
 	buf.data[buf.head] = i
 	buf.head = (buf.head + 1) % buf.capacity
 }
@@ -54,10 +60,10 @@ func (buf *Buffer) At(i uint32) Item {
 func (buf *Buffer) Range(start int, size int) []Item {
 
 	var out []Item = make([]Item, 0, size)
-	var cap, index = int(buf.capacity), 0
+	var index uint32
 
 	for i := start; i < start+size; i++ {
-		index = ((i % cap) + cap) % cap
+		index = buf.marshalIndex(uint32(i))
 
 		if len(buf.data[index].Raw) <= 0 {
 			continue
@@ -70,5 +76,5 @@ func (buf *Buffer) Range(start int, size int) []Item {
 }
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
-	return ((absolute % buf.capacity) + buf.capacity) % buf.capacity // (buf.capacity - 1) - ((((-absolute - 1) + buf.capacity) % buf.capacity) % buf.capacity)
+	return ((absolute % buf.capacity) + buf.capacity) % buf.capacity
 }

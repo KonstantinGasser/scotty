@@ -74,10 +74,10 @@ func TestMoveDownNoOverflow(t *testing.T) {
 	}()
 
 	sequence := []string{
-		"Line-1",
-		"Line-1\nLine-2",
-		"Line-1\nLine-2\nLine-3",
-		"Line-1\nLine-2\nLine-3\nLine-4",
+		"[1] Line-1",
+		"[1] Line-1\n[2] Line-2",
+		"[1] Line-1\n[2] Line-2\n[3] Line-3",
+		"[1] Line-1\n[2] Line-2\n[3] Line-3\n[4] Line-4",
 	}
 
 	seqID := 0
@@ -108,15 +108,15 @@ func TestMoveDownOverflow(t *testing.T) {
 	}()
 
 	sequence := []string{
-		"Line-1",
-		"Line-1\nLine-2",
-		"Line-1\nLine-2\nLine-3",
-		"Line-1\nLine-2\nLine-3\nLine-4",
-		"Line-2\nLine-3\nLine-4\nLine-5",
-		"Line-3\nLine-4\nLine-5\nLine-6",
-		"Line-4\nLine-5\nLine-6\nLine-7",
-		"Line-5\nLine-6\nLine-7\nLine-8",
-		"Line-6\nLine-7\nLine-8\nLine-9",
+		"[1] Line-1",
+		"[1] Line-1\n[2] Line-2",
+		"[1] Line-1\n[2] Line-2\n[3] Line-3",
+		"[1] Line-1\n[2] Line-2\n[3] Line-3\n[4] Line-4",
+		"[2] Line-2\n[3] Line-3\n[4] Line-4\n[5] Line-5",
+		"[3] Line-3\n[4] Line-4\n[5] Line-5\n[6] Line-6",
+		"[4] Line-4\n[5] Line-5\n[6] Line-6\n[7] Line-7",
+		"[5] Line-5\n[6] Line-6\n[7] Line-7\n[8] Line-8",
+		"[6] Line-6\n[7] Line-7\n[8] Line-8\n[9] Line-9",
 	}
 
 	seqID := 0
