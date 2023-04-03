@@ -2,7 +2,22 @@ package ring
 
 type Reader interface {
 	At(i uint32) Item
-	Range(start int, size int) []Item
+	Range(start int, size int) Slice
+}
+
+type Slice []Item
+
+// Strings transforms the slice of Items to a slice
+// of strings where the call determins which struct field
+// should be included in the resulting slice.
+func (s Slice) Strings(fn func(i Item) string) []string {
+	var out = make([]string, len(s))
+
+	for i, item := range s {
+		out[i] = fn(item)
+	}
+
+	return out
 }
 
 type Item struct {
@@ -57,7 +72,7 @@ func (buf *Buffer) At(i uint32) Item {
 // the end of the buffer resulting in the latest items of the buffer
 // at the beginning of the returned slice while the next items are the
 // oldest items in the buffer
-func (buf *Buffer) Range(start int, size int) []Item {
+func (buf *Buffer) Range(start int, size int) Slice {
 
 	var out []Item = make([]Item, 0, size)
 	var index uint32

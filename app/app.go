@@ -51,15 +51,6 @@ const (
 	// a query was execute w/o tailing
 	// show view with query results
 	formatView
-
-	// // space must be reserved for the status either at
-	// // the top or the bottom however must be taken in
-	// // account for the other views
-	// statusHeight = 2
-
-	// // positioned at the bottom of the application
-	// // height of the input model for commands
-	// inputHeight = 1
 )
 
 type App struct {

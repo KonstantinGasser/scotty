@@ -49,7 +49,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.view.Height = model.height
 			model.view.MouseWheelEnabled = true
 
-			model.pager.Dimensions(model.width, model.height)
+			model.pager.Rerender(model.width, model.height)
 			model.ready = true
 			break
 		}
@@ -58,7 +58,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Width,
 			msg.Height,
 		)
-		model.pager.Dimensions(model.width, model.height)
+		model.pager.Rerender(model.width, model.height)
 
 	case event.FormatInit:
 		model.pager.EnableFormatting(uint32(msg))
