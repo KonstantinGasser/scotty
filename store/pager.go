@@ -165,7 +165,7 @@ func (pager *Pager) FormatPrevious() {
 // the current state of the pager.
 func (pager *Pager) String() string {
 	if pager.mode == formatting {
-		var out, height = "", 0
+		var out, height, depth = "", 0, 0
 
 		for i, item := range pager.formatBuffer {
 			if height >= int(pager.size) {
@@ -178,7 +178,8 @@ func (pager *Pager) String() string {
 				height += h
 				continue
 			}
-			out += item.Raw + "\n"
+			prefix := fmt.Sprintf("[%d] %s", item.Index(), item.Label)
+			out += prefix + linewrap(&depth, item.Raw[item.DataPointer:], pager.ttyWidth, len(prefix)) + "\n"
 		}
 
 		return out
@@ -222,7 +223,7 @@ func format(item ring.Item, width int) (int, string) {
 	out := formattedItem.
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
-				string(item.Label),
+				fmt.Sprintf("[%d] %s", item.Index(), item.Label),
 				string(wrap.Bytes(pretty, width-1)),
 			),
 		)
