@@ -90,23 +90,21 @@ func (pager *Pager) MoveDown() {
 	// eventually we need to cut of more lines
 	// at the beginnin if the combined depth/height
 	// is > pager.size...yet to be implemented
-	var depth int = 1
-	line := buildLine(&depth, next, pager.ttyWidth)
 
-	// filling up the buffer before we can start
-	// windowing
+	_, line := buildLine(next, pager.ttyWidth)
+
 	if pager.written < pager.size {
-		// next.Parsed = line
+
 		pager.buffer[int(pager.written)] = line
 
 		pager.written++
 		pager.raw = strings.Join(pager.buffer[:pager.written], "\n")
-
 		return
 	}
 
 	pager.buffer = append(pager.buffer[1:], line)
 	pager.raw = strings.Join(pager.buffer, "\n")
+
 }
 
 // linewrap breaks a line based on the given width.
@@ -117,22 +115,11 @@ func (pager *Pager) MoveDown() {
 // and if so to remove it before adding the new line.
 // Also escape seqences or ansi colors are counted as
 // char which they shouldn't thou.
-func linewrap(depth *int, line string, width int, padding int) string {
-	// fmt.Printf("[linewrap] depth=%d width=%d line-width=%d line=%s\n", *depth, width, len(line), line)
+func linewrap(line string, width int, padding int) (int, string) {
 
-	// if len(line) <= width {
-	// 	if *depth > 1 {
-	// 		return strings.Repeat(" ", padding) + line
-	// 	}
-	// 	return line
-	// }
-
-	// *depth = (*depth) + 1
-
-	// return line[:width] + "\n" + linewrap(depth, line[width:], width, padding)
-
+	var height = 1
 	if len(line) <= width {
-		return line
+		return height, line
 	}
 
 	var out = ""
@@ -141,13 +128,13 @@ func linewrap(depth *int, line string, width int, padding int) string {
 		out += line[:width] + "\n"
 		line = line[width:]
 
-		*depth = (*depth) + 1
+		height += 1
 		if len(line) <= width {
-			return out + line
+			return height, out + line
 		}
 	}
 
-	return out
+	return height, out
 }
 
 // EnableFormatting sets the pager in formatting mode
@@ -195,23 +182,24 @@ func (pager *Pager) FormatPrevious() {
 func (pager *Pager) String() string {
 	if pager.mode == formatting {
 
-		var tmpHeight, tmpDepth = 1, 1
+		var tmpHeight, height = 1, 1
 		var tmpView, view = "", ""
 
 		for _, item := range pager.formatBuffer {
 
 			// normal log line which can be span multiple lines.
 			// depth tells how many lines tmpView has
-			tmpView = buildLine(&tmpDepth, item, pager.ttyWidth)
+			tmpHeight, tmpView = buildLine(item, pager.ttyWidth)
 
 			// adding the entire tmpView to view would overflow the
 			// available space - only take as much as possible and return
-			if tmpHeight+tmpDepth > int(pager.size) {
-				max := (tmpHeight + tmpDepth) - tmpHeight
+			if height+tmpHeight > int(pager.size) {
+				max := (height + tmpHeight) - height
 				fmt.Printf("[normal] height overflow: %d > %d - (%d+%d) - %d = %d - cut[:%d]\n",
-					(tmpDepth + tmpHeight), pager.size,
-					tmpHeight, tmpDepth, tmpHeight, max, max)
+					(height + tmpHeight), pager.size,
+					height, tmpHeight, height, max, max)
 				fmt.Printf("line:\n%s\n", tmpView)
+
 				cut := strings.Split(tmpView, "\n")[:max]
 
 				return view + strings.Join(cut, "\n")
@@ -234,11 +222,11 @@ func (pager *Pager) String() string {
 // formatted buffer to recompute the displayed log lines
 // based on the new provided available width and height.
 func (pager *Pager) Rerender(width int, height int) {
-	var depth int
-	tmp := pager.reader.Range(int(pager.position), height).Strings(func(i ring.Item) string {
-		return buildLine(&depth, i, width)
-	})
-	pager.raw = strings.Join(tmp, "\n")
+	// var depth int
+	// tmp := pager.reader.Range(int(pager.position), height).Strings(func(i ring.Item) string {
+	// 	return buildLine(&depth, i, width)
+	// })
+	// pager.raw = strings.Join(tmp, "\n")
 	pager.ttyWidth = width
 	pager.size = uint8(height)
 }
@@ -286,11 +274,12 @@ func format(item ring.Item, width int) (int, string) {
 // [index] prefix | {data}
 // [index] prefix | { data-1
 // 					data-2 }
-func buildLine(depth *int, item ring.Item, width int) string {
+func buildLine(item ring.Item, width int) (int, string) {
 	prefix := fmt.Sprintf("[%d] ", item.Index())
 
-	return prefix + item.Raw[:item.DataPointer] + linewrap(
-		depth, item.Raw[item.DataPointer:],
-		width-len(item.Label)-len(prefix), 0, //len(item.Label)+3,
+	height, line := linewrap(
+		item.Raw[item.DataPointer:],
+		width-len(item.Label)-len(prefix), 0,
 	)
+	return height, prefix + item.Raw[:item.DataPointer] + line
 }

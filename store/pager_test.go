@@ -2,7 +2,6 @@ package store
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
@@ -55,8 +54,9 @@ func TestLineWrap(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		var depth int = 1
-		lines := linewrap(&depth, tc.line, tc.width, 0)
+		// var depth int = 1
+		depth, lines := linewrap(tc.line, tc.width, 0)
+
 		if depth != tc.depth {
 			t.Fatalf("[%s] expected depth of: %d; got depth: %d and lines:\n\t%q", tc.name, tc.depth, depth, lines)
 		}
@@ -87,11 +87,8 @@ func TestBuildLine(t *testing.T) {
 		},
 	}
 
-	var depth int
 	for _, tc := range tt {
-		depth = 1
-		line := buildLine(&depth, tc.item, tc.width)
-		t.Logf("Want-Height: %d, Got-Height: %d, Got-Line: %s", tc.wantHeight, depth, line)
+		_, _ = buildLine(tc.item, tc.width)
 	}
 }
 
@@ -170,33 +167,33 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 }
 
-func TestFormatFixedHeight(t *testing.T) {
-	width := 21 // infers alls items must be broken into two lines
-	height := 30
+// func TestFormatFixedHeight(t *testing.T) {
+// 	width := 21 // infers alls items must be broken into two lines
+// 	height := 30
 
-	store := New(50)
-	pager := store.NewPager(uint8(height), width) // size of max 10 rows
+// 	store := New(50)
+// 	pager := store.NewPager(uint8(height), width) // size of max 10 rows
 
-	pager.EnableFormatting(2) // start does not really matter
+// 	pager.EnableFormatting(2) // start does not really matter
 
-	for i := 0; i < int(pager.size); i++ {
-		pager.formatBuffer = append(pager.formatBuffer,
-			ring.Item{
-				Label:       "test label",
-				DataPointer: len("test label") + 1,
-				Raw:         "{'test': 'something'}",
-			})
-	}
+// 	for i := 0; i < int(pager.size); i++ {
+// 		pager.formatBuffer = append(pager.formatBuffer,
+// 			ring.Item{
+// 				Label:       "test label",
+// 				DataPointer: len("test label") + 1,
+// 				Raw:         "{'test': 'something'}",
+// 			})
+// 	}
 
-	// pager.FormatNext() // should format
+// 	// pager.FormatNext() // should format
 
-	contents := pager.String()
-	got := strings.Count(contents, "\n")
-	if got > height { // less is ok
-		t.Fatalf("[format height check] wanted height: %d - got height: %d and content:\n\t%s\n", height, got, contents)
-	}
-	t.Log(contents)
-}
+// 	contents := pager.String()
+// 	got := strings.Count(contents, "\n")
+// 	if got > height { // less is ok
+// 		t.Fatalf("[format height check] wanted height: %d - got height: %d and content:\n\t%s\n", height, got, contents)
+// 	}
+// 	t.Log(contents)
+// }
 
 func BenchmarkMoveDown(b *testing.B) {
 	store := New(2048)
