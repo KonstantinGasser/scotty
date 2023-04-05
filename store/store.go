@@ -22,14 +22,14 @@ func (store *Store) Insert(label string, offset int, data []byte) {
 
 func (store Store) NewPager(size uint8, width int) Pager {
 	return Pager{
-		size:         size,
-		ttyWidth:     width,
-		reader:       &store.buffer,
-		position:     0,
-		mode:         tailing,
-		formatOffset: 0,
-		buffer:       make([]string, size),
-		written:      0,
-		raw:          "",
+		size:       size,
+		ttyWidth:   width,
+		reader:     &store.buffer,
+		position:   0,
+		mode:       tailing,
+		pageOffset: 0,
+		buffer:     make([]string, size),
+		written:    0,
+		raw:        "",
 	}
 }

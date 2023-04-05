@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
@@ -59,9 +60,12 @@ type Pager struct {
 	// is full since until then we only need to append data not
 	// trim at the beginning
 	written uint8
-	// formatOffset if not negative refers to the an explicit
-	// index in the page buffer which should be formatted
-	formatOffset uint8
+	// formatPosition refers to the absult (to the ring buffer) index of the item
+	// which is currently formatted
+	formatPosition int32
+	// pageOffset refers to the index with in the formatBuffer
+	// which is currently formatted
+	pageOffset int8
 }
 
 // MoveDown shifts the pagers content down by one item
@@ -114,17 +118,36 @@ func (pager *Pager) MoveDown() {
 // Also escape seqences or ansi colors are counted as
 // char which they shouldn't thou.
 func linewrap(depth *int, line string, width int, padding int) string {
+	// fmt.Printf("[linewrap] depth=%d width=%d line-width=%d line=%s\n", *depth, width, len(line), line)
 
-	if width <= 0 || len(line) <= width {
-		if *depth > 1 {
-			return strings.Repeat(" ", padding) + line
-		}
+	// if len(line) <= width {
+	// 	if *depth > 1 {
+	// 		return strings.Repeat(" ", padding) + line
+	// 	}
+	// 	return line
+	// }
+
+	// *depth = (*depth) + 1
+
+	// return line[:width] + "\n" + linewrap(depth, line[width:], width, padding)
+
+	if len(line) <= width {
 		return line
 	}
 
-	*depth = (*depth) + 1
+	var out = ""
+	for len(line) >= width {
 
-	return line[:width] + "\n" + linewrap(depth, line[width:], width, padding)
+		out += line[:width] + "\n"
+		line = line[width:]
+
+		*depth = (*depth) + 1
+		if len(line) <= width {
+			return out + line
+		}
+	}
+
+	return out
 }
 
 // EnableFormatting sets the pager in formatting mode
@@ -136,51 +159,69 @@ func (pager *Pager) EnableFormatting(start uint32) {
 	pager.mode = formatting
 
 	pager.formatBuffer = pager.reader.Range(int(start-1), int(pager.size)) // negativ one to counter balance the +1 on insert
-	pager.formatOffset = 0
+	pager.formatPosition = int32(start)
+	// formatting always formates the zero (first) item
+	// within the formatBuffer
+	pager.pageOffset = 0
 }
 
 func (pager *Pager) FormatNext() {
 
-	if pager.formatOffset > pager.size {
-		// turn page forward
-		return
+	pager.pageOffset++
+
+	if pager.pageOffset > int8(pager.size) {
+		// page has turned to the next page
+		debug.Print("Page turned forward I guess\n")
 	}
 
-	pager.formatOffset++
+	debug.Print("[++] Page-Size: %d Len(buff): %d - Page-Offset: %d - Format-Position: %d\n", pager.size, len(pager.formatBuffer), pager.pageOffset, pager.formatPosition)
 }
 
 func (pager *Pager) FormatPrevious() {
 
-	if pager.formatOffset < 0 {
-		// turn page back
-		return
+	pager.pageOffset--
+
+	if pager.pageOffset <= 0 {
+		// page has turned back one page
+		debug.Print("Page turned back I guess\n")
+		// pager.formatBuffer = pager.reader.Range(int(pager.))
 	}
 
-	pager.formatOffset--
+	debug.Print("[--] Page-Size: %d Len(buff): %d - Page-Offset: %d - Format-Position: %d\n", pager.size, len(pager.formatBuffer), pager.pageOffset, pager.formatPosition)
 }
 
 // String returns a finshed formatted string representing
 // the current state of the pager.
 func (pager *Pager) String() string {
 	if pager.mode == formatting {
-		var out, height, depth = "", 0, 0
 
-		for i, item := range pager.formatBuffer {
-			if height >= int(pager.size) {
-				return out
+		var tmpHeight, tmpDepth = 1, 1
+		var tmpView, view = "", ""
+
+		for _, item := range pager.formatBuffer {
+
+			// normal log line which can be span multiple lines.
+			// depth tells how many lines tmpView has
+			tmpView = buildLine(&tmpDepth, item, pager.ttyWidth)
+
+			// adding the entire tmpView to view would overflow the
+			// available space - only take as much as possible and return
+			if tmpHeight+tmpDepth > int(pager.size) {
+				max := (tmpHeight + tmpDepth) - tmpHeight
+				fmt.Printf("[normal] height overflow: %d > %d - (%d+%d) - %d = %d - cut[:%d]\n",
+					(tmpDepth + tmpHeight), pager.size,
+					tmpHeight, tmpDepth, tmpHeight, max, max)
+				fmt.Printf("line:\n%s\n", tmpView)
+				cut := strings.Split(tmpView, "\n")[:max]
+
+				return view + strings.Join(cut, "\n")
 			}
 
-			if int(pager.formatOffset) == i {
-				h, f := format(item, pager.ttyWidth)
-				out += f + "\n"
-				height += h
-				continue
-			}
-			prefix := fmt.Sprintf("[%d] %s", item.Index(), item.Label)
-			out += prefix + linewrap(&depth, item.Raw[item.DataPointer:], pager.ttyWidth, len(prefix)) + "\n"
+			// else we can add the entire tmpView to view
+			view += tmpView + "\n"
 		}
 
-		return out
+		return view
 	}
 
 	return pager.raw
@@ -193,23 +234,13 @@ func (pager *Pager) String() string {
 // formatted buffer to recompute the displayed log lines
 // based on the new provided available width and height.
 func (pager *Pager) Rerender(width int, height int) {
-	// pager.ttyWidth = width
-	// pager.size = uint8(height)
-
-	// both modes:
-	// if the height changes we need to do more
-
-	// implies that the current buffer and if set
-	// formatted buffer are invalid and either contain
-	// to little or to much items - we need to build the
-	// buffer starting from its position back to position-height
-	if int(pager.size) != height {
-		var depth int
-		tmp := pager.reader.Range(int(pager.position), height).Strings(func(i ring.Item) string {
-			return buildLine(&depth, i, width) // improtant to take the provided with if width != pager.ttyWidth
-		})
-		pager.raw = strings.Join(tmp, "\n")
-	}
+	var depth int
+	tmp := pager.reader.Range(int(pager.position), height).Strings(func(i ring.Item) string {
+		return buildLine(&depth, i, width)
+	})
+	pager.raw = strings.Join(tmp, "\n")
+	pager.ttyWidth = width
+	pager.size = uint8(height)
 }
 
 var (
@@ -253,23 +284,13 @@ func format(item ring.Item, width int) (int, string) {
 //
 // Example:
 // [index] prefix | {data}
+// [index] prefix | { data-1
+// 					data-2 }
 func buildLine(depth *int, item ring.Item, width int) string {
-	return fmt.Sprintf("[%d] ", item.Index()) + item.Raw[:item.DataPointer] + linewrap(
+	prefix := fmt.Sprintf("[%d] ", item.Index())
+
+	return prefix + item.Raw[:item.DataPointer] + linewrap(
 		depth, item.Raw[item.DataPointer:],
-		width-len(item.Label), len(item.Label)+3,
+		width-len(item.Label)-len(prefix), 0, //len(item.Label)+3,
 	)
-}
-
-// deprecated as of now
-func shiftString(base string, line string, height int) string {
-	// for now we ignore that any line where the height is
-	// > 1 implies that the pager's raw string is higher then
-	// the pager's actual size
-
-	cut := strings.IndexByte(base, byte('\n'))
-	if cut < 0 {
-		return base + line + "\n"
-	}
-
-	return base[cut+1:] + line + "\n"
 }

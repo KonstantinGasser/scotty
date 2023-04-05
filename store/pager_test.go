@@ -2,7 +2,10 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
 func TestLineWrap(t *testing.T) {
@@ -42,6 +45,13 @@ func TestLineWrap(t *testing.T) {
 			expected: "Line-1",
 			depth:    1,
 		},
+		{
+			name:     "width = len(line)",
+			line:     "{'test': 'something'}",
+			width:    21,
+			expected: "{'test': 'something'}",
+			depth:    1,
+		},
 	}
 
 	for _, tc := range tt {
@@ -57,27 +67,56 @@ func TestLineWrap(t *testing.T) {
 	}
 }
 
+func TestBuildLine(t *testing.T) {
+
+	tt := []struct {
+		name       string
+		item       ring.Item
+		width      int
+		wantHeight int
+	}{
+		{
+			name: "unkown",
+			item: ring.Item{
+				Label:       "test label",
+				DataPointer: len("test label") + 1,
+				Raw:         "{'test': 'something'}",
+			},
+			width:      21,
+			wantHeight: 2,
+		},
+	}
+
+	var depth int
+	for _, tc := range tt {
+		depth = 1
+		line := buildLine(&depth, tc.item, tc.width)
+		t.Logf("Want-Height: %d, Got-Height: %d, Got-Line: %s", tc.wantHeight, depth, line)
+	}
+}
+
 func TestMoveDownNoOverflow(t *testing.T) {
 
 	store := New(12)
-	pager := store.NewPager(4, 10)
+	pager := store.NewPager(4, 20)
 
 	sig := make(chan struct{})
 
 	go func() {
 		defer close(sig)
 
+		prefix := "test-label | "
 		for i := 0; i < 4; i++ {
-			store.Insert("test-label", 0, []byte(fmt.Sprintf("Line-%d", i+1)))
+			store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
 			sig <- struct{}{}
 		}
 	}()
 
 	sequence := []string{
-		"[1] Line-1",
-		"[1] Line-1\n[2] Line-2",
-		"[1] Line-1\n[2] Line-2\n[3] Line-3",
-		"[1] Line-1\n[2] Line-2\n[3] Line-3\n[4] Line-4",
+		"[1] test-label | Line-1",
+		"[1] test-label | Line-1\n[2] test-label | Line-2",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
 	}
 
 	seqID := 0
@@ -94,29 +133,30 @@ func TestMoveDownNoOverflow(t *testing.T) {
 func TestMoveDownOverflow(t *testing.T) {
 
 	store := New(12)
-	pager := store.NewPager(4, 10)
+	pager := store.NewPager(4, 20)
 
 	sig := make(chan struct{})
 
 	go func() {
 		defer close(sig)
 
-		for i := 0; i < 9; i++ {
-			store.Insert("test-label", 0, []byte(fmt.Sprintf("Line-%d", i+1)))
+		prefix := "test-label | "
+		for i := 0; i < 4; i++ {
+			store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
 			sig <- struct{}{}
 		}
 	}()
 
 	sequence := []string{
-		"[1] Line-1",
-		"[1] Line-1\n[2] Line-2",
-		"[1] Line-1\n[2] Line-2\n[3] Line-3",
-		"[1] Line-1\n[2] Line-2\n[3] Line-3\n[4] Line-4",
-		"[2] Line-2\n[3] Line-3\n[4] Line-4\n[5] Line-5",
-		"[3] Line-3\n[4] Line-4\n[5] Line-5\n[6] Line-6",
-		"[4] Line-4\n[5] Line-5\n[6] Line-6\n[7] Line-7",
-		"[5] Line-5\n[6] Line-6\n[7] Line-7\n[8] Line-8",
-		"[6] Line-6\n[7] Line-7\n[8] Line-8\n[9] Line-9",
+		"[1] test-label | Line-1",
+		"[1] test-label | Line-1\n[2] test-label | Line-2",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
+		"[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5",
+		"[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5\n[6] test-label | Line-6",
+		"[4] test-label | Line-4\n[5] test-label | Line-5\n[6] test-label | Line-6\n[7] test-label | Line-7",
+		"[5] test-label | Line-5\n[6] test-label | Line-6\n[7] test-label | Line-7\n[8] test-label | Line-8",
+		"[6] test-label | Line-6\n[7] test-label | Line-7\n[8] test-label | Line-8\n[9] test-label | Line-9",
 	}
 
 	seqID := 0
@@ -128,6 +168,34 @@ func TestMoveDownOverflow(t *testing.T) {
 		}
 		seqID++
 	}
+}
+
+func TestFormatFixedHeight(t *testing.T) {
+	width := 21 // infers alls items must be broken into two lines
+	height := 30
+
+	store := New(50)
+	pager := store.NewPager(uint8(height), width) // size of max 10 rows
+
+	pager.EnableFormatting(2) // start does not really matter
+
+	for i := 0; i < int(pager.size); i++ {
+		pager.formatBuffer = append(pager.formatBuffer,
+			ring.Item{
+				Label:       "test label",
+				DataPointer: len("test label") + 1,
+				Raw:         "{'test': 'something'}",
+			})
+	}
+
+	// pager.FormatNext() // should format
+
+	contents := pager.String()
+	got := strings.Count(contents, "\n")
+	if got > height { // less is ok
+		t.Fatalf("[format height check] wanted height: %d - got height: %d and content:\n\t%s\n", height, got, contents)
+	}
+	t.Log(contents)
 }
 
 func BenchmarkMoveDown(b *testing.B) {

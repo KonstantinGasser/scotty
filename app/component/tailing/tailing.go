@@ -3,6 +3,7 @@ package tailing
 import (
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -61,8 +62,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.pager.Rerender(model.width, model.height)
 
 	case event.FormatInit:
+		debug.Print("format start: %d\n", uint32(msg))
 		model.pager.EnableFormatting(uint32(msg))
 		model.view.SetContent(model.pager.String())
+
 		// by default the requested index to format
 		// is the zero index of the pager content
 		// as such to avoid unalignment due to multiple
