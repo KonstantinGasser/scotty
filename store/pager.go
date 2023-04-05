@@ -27,8 +27,9 @@ type Pager struct {
 	// concatinated by a newline.
 	// Note:
 	// if an Item.Raw is > then the current tty width
-	// the string is broken recursivly leading to possible less items
-	// represented by the `raw` string then present in the buffer
+	// the string is broken into multiple lines leading
+	// to possible less items represented by the `raw`
+	// string then present in the buffer
 	raw string
 	// buffer holds those items which are currently
 	// visisble within the page - and is tight to the
@@ -91,20 +92,32 @@ func (pager *Pager) MoveDown() {
 	// at the beginnin if the combined depth/height
 	// is > pager.size...yet to be implemented
 
-	_, line := buildLine(next, pager.ttyWidth)
+	height, line := buildLine(next, pager.ttyWidth)
 
 	if pager.written < pager.size {
-
-		pager.buffer[int(pager.written)] = line
-
-		pager.written++
+		pager.buffer[pager.written] = line
+		pager.written += 1
 		pager.raw = strings.Join(pager.buffer[:pager.written], "\n")
-		return
+
+	} else {
+		pager.buffer = append(pager.buffer[1:], line)
+		pager.raw = strings.Join(pager.buffer, "\n")
 	}
 
-	pager.buffer = append(pager.buffer[1:], line)
-	pager.raw = strings.Join(pager.buffer, "\n")
+	// we need to correct the string represetation of the buffer in case the final string
+	// exceed the screen height.
+	tmp := strings.Split(pager.raw, "\n")
+	if diff := overflowsBy(pager.size, tmp); diff+height > 0 {
+		pager.raw = strings.Join(tmp[diff:], "\n")
+		return
+	}
+}
 
+// overflowBy retuns the number of lines by which the
+// slice of lines exceed the max height. Really just
+// a function for readability...
+func overflowsBy(max uint8, lines []string) int {
+	return len(lines) - int(max)
 }
 
 // linewrap breaks a line based on the given width.

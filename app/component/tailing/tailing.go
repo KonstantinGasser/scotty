@@ -93,7 +93,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model *Model) View() string {
-	return model.view.View()
+	debug.Print("Height: %d - Content:\n%s\n", model.height, model.pager.String())
+	return model.pager.String() //model.view.View()
 }
 
 func (model *Model) setDimensions(width, height int) {
