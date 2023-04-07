@@ -30,7 +30,6 @@ func (store Store) NewPager(size uint8, width int) Pager {
 		ttyWidth:   width,
 		reader:     &store.buffer,
 		position:   0,
-		mode:       tailing,
 		pageOffset: 0,
 		buffer:     make([]string, size),
 		written:    0,

@@ -10,12 +10,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// modes
-const (
-	tailing = iota
-	formatting
-)
-
 type Pager struct {
 	// reader includes all required APIs
 	// to perform read operations on the ringbuffer
@@ -33,16 +27,6 @@ type Pager struct {
 	// visisble within the page - and is tight to the
 	// provided size
 	buffer []string
-	// buffer filled once formatting mode is requested.
-	// This buffer might not be holind the same data as
-	// the tailing buffer but is filled based on the
-	// requested start-index and the current page-size
-	formatBuffer []ring.Item
-	// mode can be either "tailing" or "formatting".
-	// Tailing refers to tailing the logs on MoveDown
-	// while fomratting formated the a given position
-	// width of the current tty window.
-	mode int
 	// Mainly used to determin string break-points
 	ttyWidth int
 	// position is it pagers pointer to an index in the
