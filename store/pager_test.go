@@ -167,6 +167,52 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 }
 
+func TestMoveDownAssertHeight(t *testing.T) {
+
+	width := 18
+	height := 4
+
+	var store *Store
+	var pager Pager
+	// store := New(12)
+	// pager := store.NewPager(uint8(height), width)
+
+	prefix := "test-label | "
+	tt := []struct {
+		name      string
+		sequence  []string
+		maxHeight int
+	}{
+		{
+			name:      "single item 1 lines < allowed height",
+			maxHeight: 1,
+			sequence: []string{
+				"test-label | Line-1",
+				// "test-label | Line-1\ntest-label | Line-2",
+				// "test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3",
+				// "test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
+				// "test-label | Line-2\ntest-label | Line-3\ntest-label | Line-4\ntest-label | Line-5",
+				// "test-label | Line-3\ntest-label | Line-4\ntest-label | Line-5\ntest-label | Line-6",
+				// "test-label | Line-4\ntest-label | Line-5\ntest-label | Line-6\ntest-label | Line-7",
+				// "test-label | Line-5\ntest-label | Line-6\ntest-label | Line-7\ntest-label | Line-8",
+				// "test-label | Line-6\ntest-label | Line-7\ntest-label | Line-8\ntest-label | Line-9",
+			},
+		},
+	}
+	for _, tc := range tt {
+		store = New(12)
+		pager = store.NewPager(uint8(height), width)
+
+		for _, seq := range tc.sequence {
+			store.Insert("test-label", len(prefix), []byte(seq))
+		}
+
+		pager.MoveDown()
+
+		t.Log(pager.String())
+	}
+}
+
 // func TestFormatFixedHeight(t *testing.T) {
 // 	width := 21 // infers alls items must be broken into two lines
 // 	height := 30

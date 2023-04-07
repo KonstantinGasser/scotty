@@ -86,12 +86,6 @@ func (pager *Pager) MoveDown() {
 	next := pager.reader.At(pager.position)
 	pager.position++
 
-	// actual height of the resulting string
-	// TODO @KonstantinGasser:
-	// eventually we need to cut of more lines
-	// at the beginnin if the combined depth/height
-	// is > pager.size...yet to be implemented
-
 	height, line := buildLine(next, pager.ttyWidth)
 
 	if pager.written < pager.size {
@@ -111,43 +105,6 @@ func (pager *Pager) MoveDown() {
 		pager.raw = strings.Join(tmp[diff:], "\n")
 		return
 	}
-}
-
-// overflowBy retuns the number of lines by which the
-// slice of lines exceed the max height. Really just
-// a function for readability...
-func overflowsBy(max uint8, lines []string) int {
-	return len(lines) - int(max)
-}
-
-// linewrap breaks a line based on the given width.
-// The function is not perfrect and not standard when it
-// comes to line breaking however for now it serves well
-// enough but is a canidate for replacement.
-// Improvment could be to check if the last char is a whitespace
-// and if so to remove it before adding the new line.
-// Also escape seqences or ansi colors are counted as
-// char which they shouldn't thou.
-func linewrap(line string, width int, padding int) (int, string) {
-
-	var height = 1
-	if len(line) <= width {
-		return height, line
-	}
-
-	var out = ""
-	for len(line) >= width {
-
-		out += line[:width] + "\n"
-		line = line[width:]
-
-		height += 1
-		if len(line) <= width {
-			return height, out + line
-		}
-	}
-
-	return height, out
 }
 
 // EnableFormatting sets the pager in formatting mode
@@ -244,6 +201,60 @@ func (pager *Pager) Rerender(width int, height int) {
 	pager.size = uint8(height)
 }
 
+// overflowBy retuns the number of lines by which the
+// slice of lines exceed the max height. Really just
+// a function for readability...
+func overflowsBy(max uint8, lines []string) int {
+	return len(lines) - int(max)
+}
+
+// linewrap breaks a line based on the given width.
+// The function is not perfrect and not standard when it
+// comes to line breaking however for now it serves well
+// enough but is a canidate for replacement.
+// Improvment could be to check if the last char is a whitespace
+// and if so to remove it before adding the new line.
+// Also escape seqences or ansi colors are counted as
+// char which they shouldn't thou.
+func linewrap(line string, width int, padding int) (int, string) {
+
+	var height = 1
+	if len(line) <= width {
+		return height, line
+	}
+
+	var out = ""
+	for len(line) >= width {
+
+		out += line[:width] + "\n"
+		line = line[width:]
+
+		height += 1
+		if len(line) <= width {
+			return height, out + line
+		}
+	}
+
+	return height, out
+}
+
+// buildLine constructs a single line with line-breaks prefix and prefix index
+//
+// Example:
+// [index] prefix | {data}
+// [index] prefix | { data-1
+// 					data-2 }
+func buildLine(item ring.Item, width int) (int, string) {
+	prefix := fmt.Sprintf("[%d] ", item.Index())
+
+	fmt.Println("Width: ", width-len(item.Label)-len(prefix))
+	height, line := linewrap(
+		item.Raw[item.DataPointer:],
+		width-len(item.Label)-len(prefix), 0,
+	)
+	return height, prefix + item.Raw[:item.DataPointer] + line
+}
+
 var (
 	formattedItem = lipgloss.NewStyle().
 		Bold(true).
@@ -279,20 +290,4 @@ func format(item ring.Item, width int) (int, string) {
 			),
 		)
 	return strings.Count(out, "\n"), out
-}
-
-// buildLine constructs a single line with line-breaks prefix and prefix index
-//
-// Example:
-// [index] prefix | {data}
-// [index] prefix | { data-1
-// 					data-2 }
-func buildLine(item ring.Item, width int) (int, string) {
-	prefix := fmt.Sprintf("[%d] ", item.Index())
-
-	height, line := linewrap(
-		item.Raw[item.DataPointer:],
-		width-len(item.Label)-len(prefix), 0,
-	)
-	return height, prefix + item.Raw[:item.DataPointer] + line
 }
