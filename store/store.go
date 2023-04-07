@@ -38,7 +38,7 @@ func (store Store) NewPager(size uint8, width int) Pager {
 		pageOffset: 0,
 		buffer:     buffer,
 		written:    0,
-		raw:        "",
+		bufferView: "",
 	}
 
 	debug.Print("pager.buffer => len: %d\n", len(pager.buffer))

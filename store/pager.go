@@ -22,15 +22,15 @@ type Pager struct {
 	// reader includes all required APIs
 	// to perform read operations on the ringbuffer
 	reader ring.Reader
-	// raw is the build string to display.
+	// bufferView is the build string to display.
 	// Its a representation of the buffered items
 	// concatinated by a newline.
 	// Note:
 	// if an Item.Raw is > then the current tty width
 	// the string is broken into multiple lines leading
-	// to possible less items represented by the `raw`
+	// to possible less items represented by the `bufferView`
 	// string then present in the buffer
-	raw string
+	bufferView string
 	// buffer holds those items which are currently
 	// visisble within the page - and is tight to the
 	// provided size
@@ -55,7 +55,7 @@ type Pager struct {
 	position uint32
 	// size refers to the page-size. The pager will hold
 	// at-most N where is equal to `size` ring.Item(s)
-	// in its buffer and serialized as raw format
+	// in its buffer and serialized as bufferView format
 	size uint8
 	// written is used to intially see once the [size]buffer
 	// is full since until then we only need to append data not
@@ -92,7 +92,7 @@ func (pager *Pager) MoveDown() {
 			pager.written += 1
 		}
 
-		pager.raw = strings.Join(pager.buffer, "\n")
+		pager.bufferView = strings.Join(pager.buffer, "\n")
 		return
 	}
 
@@ -100,7 +100,7 @@ func (pager *Pager) MoveDown() {
 	// size and we need to cut of the beginning of buffer
 
 	pager.buffer = append(pager.buffer[count:], lines...)
-	pager.raw = strings.Join(pager.buffer, "\n")
+	pager.bufferView = strings.Join(pager.buffer, "\n")
 
 }
 
@@ -117,6 +117,7 @@ func (pager *Pager) EnableFormatting(start uint32) {
 	// formatting always formates the zero (first) item
 	// within the formatBuffer
 	pager.pageOffset = 0
+
 }
 
 func (pager *Pager) FormatNext() {
@@ -149,32 +150,32 @@ func (pager *Pager) FormatPrevious() {
 func (pager *Pager) String() string {
 	if pager.mode == formatting {
 
-		var tmpHeight, height = 1, 1
-		var tmpView, view = "", ""
+		// var view = ""
+		// for _, item := range pager.formatBuffer {
 
-		for _, item := range pager.formatBuffer {
+		// 	if int(pager.formatPosition)-1 == int(item.Index()) {
+		// 		_,  f := format(item, pager.ttyWidth)
+		// 	}
+		// // normal log line which can be span multiple lines.
+		// // depth tells how many lines tmpView has
+		// tmpHeight, tmpView = buildLine(item, pager.ttyWidth)
 
-			// normal log line which can be span multiple lines.
-			// depth tells how many lines tmpView has
-			tmpHeight, tmpView = buildLine(item, pager.ttyWidth)
+		// // adding the entire tmpView to view would overflow the
+		// // available space - only take as much as possible and return
+		// if height+tmpHeight > int(pager.size) {
+		// 	max := (height + tmpHeight) - height
+		// 	cut := strings.Split(tmpView, "\n")[:max]
 
-			// adding the entire tmpView to view would overflow the
-			// available space - only take as much as possible and return
-			if height+tmpHeight > int(pager.size) {
-				max := (height + tmpHeight) - height
-				cut := strings.Split(tmpView, "\n")[:max]
+		// 	return view + strings.Join(cut, "\n")
+		// }
 
-				return view + strings.Join(cut, "\n")
-			}
+		// // else we can add the entire tmpView to view
+		// view += tmpView + "\n"
+		// }
 
-			// else we can add the entire tmpView to view
-			view += tmpView + "\n"
-		}
-
-		return view
 	}
 
-	return pager.raw
+	return pager.bufferView
 }
 
 // Rerender updates the pagers internal view which depends on
@@ -199,9 +200,9 @@ func (pager *Pager) Rerender(width int, height int) {
 			pager.buffer = append(pager.buffer, "")
 		}
 	}
-	pager.raw = strings.Join(pager.buffer, "\n")
+	pager.bufferView = strings.Join(pager.buffer, "\n")
 
-	debug.Print("Buffer: %d Raw: %d\n", len(pager.buffer), strings.Count(pager.raw, "\n"))
+	debug.Print("Buffer: %d Raw: %d\n", len(pager.buffer), strings.Count(pager.bufferView, "\n"))
 
 }
 
@@ -259,8 +260,8 @@ var (
 		BorderForeground(styles.DefaultColor.Border)
 )
 
-// formates the given item's raw string (only the JSON part).
-// if it fails (not JSON) the raw is returns as is but only
+// formates the given item's bufferView string (only the JSON part).
+// if it fails (not JSON) the bufferView is returns as is but only
 // its data part. Alon the (formatted)string format retuns
 // th approximated height of the string. Note this number is
 // never less then the correct number but might be higher
