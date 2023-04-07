@@ -62,16 +62,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.pager.Rerender(model.width, model.height)
 
 	case event.FormatInit:
-		debug.Print("format start: %d\n", uint32(msg))
-		model.pager.EnableFormatting(uint32(msg))
+		debug.Print("not implemented yet!")
 
 	case event.FormatNext:
-		model.pager.FormatNext()
-		model.view.SetContent(model.pager.String())
+		debug.Print("not implemented yet!")
 
 	case event.FormatPrevious:
-		model.pager.FormatPrevious()
-		model.view.SetContent(model.pager.String())
+		debug.Print("not implemented yet!")
 
 	case multiplexer.Message:
 		model.pager.MoveDown()

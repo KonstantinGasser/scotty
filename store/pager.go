@@ -8,8 +8,6 @@ import (
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/hokaccha/go-prettyjson"
-	"github.com/muesli/reflow/wrap"
 )
 
 // modes
@@ -104,77 +102,9 @@ func (pager *Pager) MoveDown() {
 
 }
 
-// EnableFormatting sets the pager in formatting mode
-//
-// Based on the requested start index up to the pager size
-// a buffer is allocated which is independent from the
-// tailing buffer.
-func (pager *Pager) EnableFormatting(start uint32) {
-	pager.mode = formatting
-
-	pager.formatBuffer = pager.reader.Range(int(start-1), int(pager.size)) // negativ one to counter balance the +1 on insert
-	pager.formatPosition = int32(start)
-	// formatting always formates the zero (first) item
-	// within the formatBuffer
-	pager.pageOffset = 0
-
-}
-
-func (pager *Pager) FormatNext() {
-
-	pager.pageOffset++
-
-	if pager.pageOffset > int8(pager.size) {
-		// page has turned to the next page
-		debug.Print("Page turned forward I guess\n")
-	}
-
-	debug.Print("[++] Page-Size: %d Len(buff): %d - Page-Offset: %d - Format-Position: %d\n", pager.size, len(pager.formatBuffer), pager.pageOffset, pager.formatPosition)
-}
-
-func (pager *Pager) FormatPrevious() {
-
-	pager.pageOffset--
-
-	if pager.pageOffset <= 0 {
-		// page has turned back one page
-		debug.Print("Page turned back I guess\n")
-		// pager.formatBuffer = pager.reader.Range(int(pager.))
-	}
-
-	debug.Print("[--] Page-Size: %d Len(buff): %d - Page-Offset: %d - Format-Position: %d\n", pager.size, len(pager.formatBuffer), pager.pageOffset, pager.formatPosition)
-}
-
 // String returns a finshed formatted string representing
 // the current state of the pager.
 func (pager *Pager) String() string {
-	if pager.mode == formatting {
-
-		// var view = ""
-		// for _, item := range pager.formatBuffer {
-
-		// 	if int(pager.formatPosition)-1 == int(item.Index()) {
-		// 		_,  f := format(item, pager.ttyWidth)
-		// 	}
-		// // normal log line which can be span multiple lines.
-		// // depth tells how many lines tmpView has
-		// tmpHeight, tmpView = buildLine(item, pager.ttyWidth)
-
-		// // adding the entire tmpView to view would overflow the
-		// // available space - only take as much as possible and return
-		// if height+tmpHeight > int(pager.size) {
-		// 	max := (height + tmpHeight) - height
-		// 	cut := strings.Split(tmpView, "\n")[:max]
-
-		// 	return view + strings.Join(cut, "\n")
-		// }
-
-		// // else we can add the entire tmpView to view
-		// view += tmpView + "\n"
-		// }
-
-	}
-
 	return pager.bufferView
 }
 
@@ -259,36 +189,6 @@ var (
 		Border(lipgloss.DoubleBorder(), false, false, false, true).
 		BorderForeground(styles.DefaultColor.Border)
 )
-
-// formates the given item's bufferView string (only the JSON part).
-// if it fails (not JSON) the bufferView is returns as is but only
-// its data part. Alon the (formatted)string format retuns
-// th approximated height of the string. Note this number is
-// never less then the correct number but might be higher
-// if there are escaped new line chars
-func format(item ring.Item, width int) (int, string) {
-
-	pretty, err := prettyjson.Format([]byte(item.Raw[item.DataPointer:]))
-	if err != nil {
-		out := formattedItem.
-			Render(
-				lipgloss.JoinVertical(lipgloss.Left,
-					fmt.Sprintf("[%d] %s", item.Index(), item.Label),
-					string(wrap.String(item.Raw[item.DataPointer:], width-1)),
-				),
-			)
-		return strings.Count(out, "\n"), out
-	}
-
-	out := formattedItem.
-		Render(
-			lipgloss.JoinVertical(lipgloss.Left,
-				fmt.Sprintf("[%d] %s", item.Index(), item.Label),
-				string(wrap.Bytes(pretty, width-1)),
-			),
-		)
-	return strings.Count(out, "\n"), out
-}
 
 // buildLine constructs a single line with line-breaks prefix and prefix index
 //
