@@ -53,17 +53,19 @@ type Pager struct {
 
 // MoveDown shifts the pagers content down by one item
 //
-// Since a pager keeps its own offset in the underlying
-// ring buffer MoveDown can be called not in sequence with
-// a write to the buffer. However, one must be aware that at
-// a certain point the pager's offset gets invalid once the buffer
-// overflows and overflows the offset pointer of the the pager.
+// The beginning of the pager's content is spliced at least
+// by one (if the page is filled; if not lines are append until
+// page is full). However, if the ring.Item.Raw is to wide for
+// the current tty width the line is broken down in as many
+// lines required. Subsequentially N lines are removed from the
+// beginning of the page where N = number of broken-lines.
+// The pager.bufferView is updated with the shifted content.
+// MoveDown will ensure that the number of \n (lines) in the
+// pager.bufferView is not exceeding the current pager.size.
 func (pager *Pager) MoveDown() {
 
 	next := pager.reader.At(pager.position)
 	pager.position++
-
-	// _, line := buildLine(next, pager.ttyWidth)
 
 	count, lines := buildLines(next, pager.ttyWidth)
 
@@ -80,7 +82,6 @@ func (pager *Pager) MoveDown() {
 
 	// newly created lines will exceed the current page
 	// size and we need to cut of the beginning of buffer
-
 	pager.buffer = append(pager.buffer[count:], lines...)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 
@@ -95,9 +96,8 @@ func (pager *Pager) String() string {
 // Rerender updates the pagers internal view which depends on
 // the current tty width and height.
 //
-// Rerender flushes the current buffer and if filled the
-// formatted buffer to recompute the displayed log lines
-// based on the new provided available width and height.
+// Rerender flushes the current buffer and recomputes the lines
+// visible within the new dimensions (width, height).
 func (pager *Pager) Rerender(width int, height int) {
 
 	pager.ttyWidth = width
@@ -156,8 +156,13 @@ func breaklines(prefix string, line string, width int, padding int) (int, []stri
 	return len(out), out
 }
 
-// in : label | {data: value, some: value}
-// out: 2, ["label | {data: value,", " some: value"] for width = 21
+// buildLines takes an ring.Item as an input and based on the
+// ring.Item.Raw value and the current width of the tty returns
+// a slice of string containing the broken down ring.Item.Raw line
+// along with the line count.
+// Example:
+// 		in : label | {data: value, some: value}
+// 		out: 2, ["label | {data: value,", " some: value"] for width = 21
 func buildLines(item ring.Item, width int) (int, []string) {
 	prefix := fmt.Sprintf("[%d] ", item.Index())
 	return breaklines(
@@ -165,57 +170,4 @@ func buildLines(item ring.Item, width int) (int, []string) {
 		item.Raw[item.DataPointer:],
 		width-(len(item.Label)+len(prefix)), 0,
 	)
-}
-
-var (
-	formattedItem = lipgloss.NewStyle().
-		Bold(true).
-		Border(lipgloss.DoubleBorder(), false, false, false, true).
-		BorderForeground(styles.DefaultColor.Border)
-)
-
-// buildLine constructs a single line with line-breaks prefix and prefix index
-//
-// Example:
-// [index] prefix | {data}
-// [index] prefix | { data-1
-// 					data-2 }
-func buildLine(item ring.Item, width int) (int, string) {
-	prefix := fmt.Sprintf("[%d] ", item.Index())
-
-	height, line := linewrap(
-		item.Raw[item.DataPointer:],
-		width-len(item.Label)-len(prefix), 0,
-	)
-	return height, prefix + item.Raw[:item.DataPointer] + line
-}
-
-// linewrap breaks a line based on the given width.
-// The function is not perfrect and not standard when it
-// comes to line breaking however for now it serves well
-// enough but is a canidate for replacement.
-// Improvment could be to check if the last char is a whitespace
-// and if so to remove it before adding the new line.
-// Also escape seqences or ansi colors are counted as
-// char which they shouldn't thou.
-func linewrap(line string, width int, padding int) (int, string) {
-
-	var height = 1
-	if len(line) <= width {
-		return height, line
-	}
-
-	var out = ""
-	for len(line) >= width {
-
-		out += line[:width] + "\n"
-		line = line[width:]
-
-		height += 1
-		if len(line) <= width {
-			return height, out + line
-		}
-	}
-
-	return height, out
 }
