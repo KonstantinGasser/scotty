@@ -2,17 +2,25 @@ package styles
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"gopkg.in/yaml.v2"
 )
 
 type Color struct {
-	Border    lipgloss.Color
-	Error     lipgloss.Color
-	Highlight lipgloss.Color
-	Light     lipgloss.Color
+	Border    lipgloss.Color `yaml:"border"`
+	Error     lipgloss.Color `yaml:"error"`
+	Highlight lipgloss.Color `yaml:"highlight"`
+	Light     lipgloss.Color `yaml:"light"`
+}
+
+type Config struct {
+	Colors Color `yaml:"colors"`
 }
 
 var DefaultColor = Color{
@@ -44,6 +52,42 @@ func InverseColor(c lipgloss.Color) lipgloss.Color {
 	return inverse
 }
 
+func LoadConfig() (*Config, error) {
+	var cfg Config
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	configPath := filepath.Join(homeDir, ".scotty", "config.yaml")
+	yamlFile, err := os.Open(configPath)
+	if err != nil {
+		// fallback to default colors if config file not found
+		return &Config{Colors: DefaultColor}, nil
+	}
+	defer yamlFile.Close()
+
+	yamlBytes, err := ioutil.ReadAll(yamlFile)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = yaml.Unmarshal(yamlBytes, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
 func init() {
 	rand.Seed(time.Now().Unix())
+
+	config, err := LoadConfig()
+	if err != nil {
+		fmt.Printf("error loading config file: %v\n", err)
+		return
+	}
+
+	DefaultColor = config.Colors
 }
