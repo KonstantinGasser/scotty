@@ -84,7 +84,7 @@ func (pager *Pager) MoveDown() {
 	count, lines := buildLines(next, pager.ttyWidth)
 
 	// no issue of overflowing by adding the new lines to buffer
-	if int(pager.written)+len(lines) < int(pager.size) {
+	if int(pager.written)+len(lines) <= int(pager.size) {
 		for _, line := range lines {
 			pager.buffer[pager.written] = line
 			pager.written += 1

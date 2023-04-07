@@ -25,10 +25,6 @@ func (store *Store) Insert(label string, offset int, data []byte) {
 
 func (store Store) NewPager(size uint8, width int) Pager {
 
-	var buffer = make([]string, size)
-	for i := range buffer {
-		buffer[i] = " "
-	}
 	pager := Pager{
 		size:       size,
 		ttyWidth:   width,
@@ -36,7 +32,7 @@ func (store Store) NewPager(size uint8, width int) Pager {
 		position:   0,
 		mode:       tailing,
 		pageOffset: 0,
-		buffer:     buffer,
+		buffer:     make([]string, size),
 		written:    0,
 		bufferView: "",
 	}
