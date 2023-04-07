@@ -194,8 +194,6 @@ func TestMoveDownNoOverflow(t *testing.T) {
 	// seqID := 0
 	for _, seq := range sequence {
 		pager.MoveDown()
-		fmt.Println(pager.String())
-		fmt.Println("====")
 		if seq != pager.String() {
 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
 		}
@@ -207,22 +205,15 @@ func TestMoveDownOverflow(t *testing.T) {
 	store := New(12)
 	pager := store.NewPager(4, 20)
 
-	sig := make(chan struct{})
-
-	go func() {
-		defer close(sig)
-
-		prefix := "test-label | "
-		for i := 0; i < 4; i++ {
-			store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
-			sig <- struct{}{}
-		}
-	}()
+	prefix := "test-label | "
+	for i := 0; i < 9; i++ {
+		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
+	}
 
 	sequence := []string{
-		"[1] test-label | Line-1\n\n\n\n\n\n\n",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n\n\n\n\n\n",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3n\n\n\n\n",
+		"[1] test-label | Line-1\n\n\n",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n\n",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n",
 		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
 		"[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5",
 		"[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5\n[6] test-label | Line-6",
@@ -231,14 +222,11 @@ func TestMoveDownOverflow(t *testing.T) {
 		"[6] test-label | Line-6\n[7] test-label | Line-7\n[8] test-label | Line-8\n[9] test-label | Line-9",
 	}
 
-	seqID := 0
-	for range sig {
+	for _, seq := range sequence {
 		pager.MoveDown()
-
-		if sequence[seqID] != pager.String() {
-			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", sequence[seqID], pager.String())
+		if seq != pager.String() {
+			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
 		}
-		seqID++
 	}
 }
 

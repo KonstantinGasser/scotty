@@ -40,6 +40,7 @@ func (i Item) Index() uint32 {
 type Buffer struct {
 	capacity uint32
 	head     uint32
+	written  uint32
 	data     []Item
 }
 
@@ -47,6 +48,7 @@ func New(size uint32) Buffer {
 	return Buffer{
 		capacity: size,
 		head:     0,
+		written:  0,
 		data:     make([]Item, size),
 	}
 }
@@ -54,7 +56,9 @@ func New(size uint32) Buffer {
 // Insert sets the given item at the next writing position
 // of the buffer.
 func (buf *Buffer) Insert(i Item) {
-	i.index = buf.head + 1 // plus one since eventhough we start at zero the first log should show 1 not 0 as index
+	buf.written += 1
+	i.index = buf.written
+
 	buf.data[buf.head] = i
 	buf.head = (buf.head + 1) % buf.capacity
 }
