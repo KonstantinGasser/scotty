@@ -76,35 +76,32 @@ type Pager struct {
 // a write to the buffer. However, one must be aware that at
 // a certain point the pager's offset gets invalid once the buffer
 // overflows and overflows the offset pointer of the the pager.
-//
-// Dreamworld...not yet implemented:
-// This cannot be detected by the MoveDown function but can be
-// checked calling pager.IsBadRead() bool. If true a call to
-// pager.Latest() sets the pager to the latest item in the buffer.
 func (pager *Pager) MoveDown() {
 
 	next := pager.reader.At(pager.position)
 	pager.position++
 
-	height, line := buildLine(next, pager.ttyWidth)
+	// _, line := buildLine(next, pager.ttyWidth)
 
-	if pager.written < pager.size {
-		pager.buffer[pager.written] = line
-		pager.written += 1
-		pager.raw = strings.Join(pager.buffer[:pager.written], "\n")
+	count, lines := buildLines(next, pager.ttyWidth)
 
-	} else {
-		pager.buffer = append(pager.buffer[1:], line)
+	// no issue of overflowing by adding the new lines to buffer
+	if int(pager.written)+len(lines) < int(pager.size) {
+		for _, line := range lines {
+			pager.buffer[pager.written] = line
+			pager.written += 1
+		}
+
 		pager.raw = strings.Join(pager.buffer, "\n")
-	}
-
-	// we need to correct the string represetation of the buffer in case the final string
-	// exceed the screen height.
-	tmp := strings.Split(pager.raw, "\n")
-	if diff := overflowsBy(pager.size, tmp); diff+height > 0 {
-		pager.raw = strings.Join(tmp[diff:], "\n")
 		return
 	}
+
+	// newly created lines will exceed the current page
+	// size and we need to cut of the beginning of buffer
+
+	pager.buffer = append(pager.buffer[count:], lines...)
+	pager.raw = strings.Join(pager.buffer, "\n")
+
 }
 
 // EnableFormatting sets the pager in formatting mode
@@ -165,11 +162,6 @@ func (pager *Pager) String() string {
 			// available space - only take as much as possible and return
 			if height+tmpHeight > int(pager.size) {
 				max := (height + tmpHeight) - height
-				fmt.Printf("[normal] height overflow: %d > %d - (%d+%d) - %d = %d - cut[:%d]\n",
-					(height + tmpHeight), pager.size,
-					height, tmpHeight, height, max, max)
-				fmt.Printf("line:\n%s\n", tmpView)
-
 				cut := strings.Split(tmpView, "\n")[:max]
 
 				return view + strings.Join(cut, "\n")
@@ -192,67 +184,72 @@ func (pager *Pager) String() string {
 // formatted buffer to recompute the displayed log lines
 // based on the new provided available width and height.
 func (pager *Pager) Rerender(width int, height int) {
-	// var depth int
-	// tmp := pager.reader.Range(int(pager.position), height).Strings(func(i ring.Item) string {
-	// 	return buildLine(&depth, i, width)
-	// })
-	// pager.raw = strings.Join(tmp, "\n")
+
 	pager.ttyWidth = width
 	pager.size = uint8(height)
+
+	pager.buffer = pager.reader.Range(int(pager.position), int(pager.ttyWidth)).Strings(func(item ring.Item) string {
+		_, line := buildLine(item, pager.ttyWidth)
+		return line
+	})
+
+	if len(pager.buffer) < height {
+
+		for i := len(pager.buffer); i < height; i++ {
+			pager.buffer = append(pager.buffer, "")
+		}
+	}
+	pager.raw = strings.Join(pager.buffer, "\n")
+
+	debug.Print("Buffer: %d Raw: %d\n", len(pager.buffer), strings.Count(pager.raw, "\n"))
+
 }
 
 // overflowBy retuns the number of lines by which the
 // slice of lines exceed the max height. Really just
 // a function for readability...
-func overflowsBy(max uint8, lines []string) int {
-	return len(lines) - int(max)
+// Is the returned number postitive, +N numbers are left
+// for assignment.
+// Is the returned number negative -N numbers would be to much
+func overflowsBy(max uint8, lines int) int {
+	return lines - int(max)
 }
 
-// linewrap breaks a line based on the given width.
-// The function is not perfrect and not standard when it
-// comes to line breaking however for now it serves well
-// enough but is a canidate for replacement.
-// Improvment could be to check if the last char is a whitespace
-// and if so to remove it before adding the new line.
-// Also escape seqences or ansi colors are counted as
-// char which they shouldn't thou.
-func linewrap(line string, width int, padding int) (int, string) {
+func breaklines(prefix string, line string, width int, padding int) (int, []string) {
 
-	var height = 1
 	if len(line) <= width {
-		return height, line
+		return 1, []string{prefix + line}
 	}
 
-	var out = ""
-	for len(line) >= width {
+	var out []string = []string{prefix + line[:width]}
+	line = line[width:]
 
-		out += line[:width] + "\n"
+	if len(line) <= width {
+		return len(out) + 1, append(out, line)
+	}
+
+	for len(line) >= width {
+		out = append(out, line[:width])
+
 		line = line[width:]
 
-		height += 1
 		if len(line) <= width {
-			return height, out + line
+			return len(out) + 1, append(out, line)
 		}
 	}
 
-	return height, out
+	return len(out), out
 }
 
-// buildLine constructs a single line with line-breaks prefix and prefix index
-//
-// Example:
-// [index] prefix | {data}
-// [index] prefix | { data-1
-// 					data-2 }
-func buildLine(item ring.Item, width int) (int, string) {
+// in : label | {data: value, some: value}
+// out: 2, ["label | {data: value,", " some: value"] for width = 21
+func buildLines(item ring.Item, width int) (int, []string) {
 	prefix := fmt.Sprintf("[%d] ", item.Index())
-
-	fmt.Println("Width: ", width-len(item.Label)-len(prefix))
-	height, line := linewrap(
+	return breaklines(
+		prefix+item.Raw[:item.DataPointer],
 		item.Raw[item.DataPointer:],
-		width-len(item.Label)-len(prefix), 0,
+		width-(len(item.Label)+len(prefix)), 0,
 	)
-	return height, prefix + item.Raw[:item.DataPointer] + line
 }
 
 var (
@@ -290,4 +287,50 @@ func format(item ring.Item, width int) (int, string) {
 			),
 		)
 	return strings.Count(out, "\n"), out
+}
+
+// buildLine constructs a single line with line-breaks prefix and prefix index
+//
+// Example:
+// [index] prefix | {data}
+// [index] prefix | { data-1
+// 					data-2 }
+func buildLine(item ring.Item, width int) (int, string) {
+	prefix := fmt.Sprintf("[%d] ", item.Index())
+
+	height, line := linewrap(
+		item.Raw[item.DataPointer:],
+		width-len(item.Label)-len(prefix), 0,
+	)
+	return height, prefix + item.Raw[:item.DataPointer] + line
+}
+
+// linewrap breaks a line based on the given width.
+// The function is not perfrect and not standard when it
+// comes to line breaking however for now it serves well
+// enough but is a canidate for replacement.
+// Improvment could be to check if the last char is a whitespace
+// and if so to remove it before adding the new line.
+// Also escape seqences or ansi colors are counted as
+// char which they shouldn't thou.
+func linewrap(line string, width int, padding int) (int, string) {
+
+	var height = 1
+	if len(line) <= width {
+		return height, line
+	}
+
+	var out = ""
+	for len(line) >= width {
+
+		out += line[:width] + "\n"
+		line = line[width:]
+
+		height += 1
+		if len(line) <= width {
+			return height, out + line
+		}
+	}
+
+	return height, out
 }

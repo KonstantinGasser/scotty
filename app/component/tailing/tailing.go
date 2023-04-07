@@ -64,13 +64,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case event.FormatInit:
 		debug.Print("format start: %d\n", uint32(msg))
 		model.pager.EnableFormatting(uint32(msg))
-		// model.view.SetContent(model.pager.String())
-
-		// by default the requested index to format
-		// is the zero index of the pager content
-		// as such to avoid unalignment due to multiple
-		// lines we set the viewport to its top position
-		// model.view.GotoTop()
 
 	case event.FormatNext:
 		model.pager.FormatNext()
@@ -82,8 +75,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case multiplexer.Message:
 		model.pager.MoveDown()
-		// model.view.SetContent(model.pager.String())
-		// model.view.GotoBottom()
 	}
 
 	model.view, cmd = model.view.Update(msg)
@@ -93,8 +84,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model *Model) View() string {
-	debug.Print("Height: %d - Content:\n%s\n", model.height, model.pager.String())
-	return model.pager.String() //model.view.View()
+	return model.pager.String()
 }
 
 func (model *Model) setDimensions(width, height int) {
