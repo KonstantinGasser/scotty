@@ -94,15 +94,3 @@ func (buf *Buffer) Range(start int, size int) Slice {
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
 	return ((absolute % buf.capacity) + buf.capacity) % buf.capacity
 }
-
-func clamp(x int, max int) int {
-	if x > max {
-		return max
-	}
-
-	if x < 0 {
-		return 0
-	}
-
-	return x
-}

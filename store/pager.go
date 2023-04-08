@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
@@ -98,10 +97,6 @@ func (pager *Pager) Rerender(width int, height int) {
 	start := clamp(int(pager.position) - int(pager.size))
 	items := pager.reader.Range(start, int(pager.size))
 
-	debug.Print("[re-render] start: %d items: %v\n", start, items.Strings(func(i ring.Item) string {
-		return i.Raw
-	}))
-
 	pager.buffer = make([]string, height)
 	pager.bufferView = "Rebulding view..."
 
@@ -112,7 +107,6 @@ func (pager *Pager) Rerender(width int, height int) {
 		}
 		height, lines := buildLines(item, pager.ttyWidth)
 
-		debug.Print("Written: %d New Height: %d Size: %d\n", written, height, pager.size)
 		if int(written)+height <= int(pager.size) {
 			for _, line := range lines {
 				pager.buffer[written] = line
@@ -121,13 +115,10 @@ func (pager *Pager) Rerender(width int, height int) {
 			continue
 		}
 
-		debug.Print("[append] buffer: %d %+v\n", len(pager.buffer), pager.buffer)
 		pager.buffer = append(pager.buffer[height:], lines...)
 	}
 
 	pager.bufferView = strings.Join(pager.buffer, "\n")
-
-	// debug.Print("[re-render] buffer: %v\ncontent:\n%s\n", pager.buffer, pager.bufferView)
 }
 
 func breaklines(prefix string, line string, width int, padding int) (int, []string) {
