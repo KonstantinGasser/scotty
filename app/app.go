@@ -1,15 +1,17 @@
 package app
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/ring"
+	"github.com/KonstantinGasser/scotty/store"
 
 	"github.com/KonstantinGasser/scotty/app/component/formatter"
-	"github.com/KonstantinGasser/scotty/app/component/pager"
 	"github.com/KonstantinGasser/scotty/app/component/status"
+	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -49,15 +51,6 @@ const (
 	// a query was execute w/o tailing
 	// show view with query results
 	formatView
-
-	// // space must be reserved for the status either at
-	// // the top or the bottom however must be taken in
-	// // account for the other views
-	// statusHeight = 2
-
-	// // positioned at the bottom of the application
-	// // height of the input model for commands
-	// inputHeight = 1
 )
 
 type App struct {
@@ -73,7 +66,8 @@ type App struct {
 	// is written to the buffer. However the
 	// does not need to read from the buffer, thus
 	// only an io.Writer
-	buffer *ring.Buffer
+	buffer   *ring.Buffer
+	logstore *store.Store
 
 	// streams keeps track of all streams which connected
 	// to scotty within the same session and store a unique
@@ -143,6 +137,8 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 
 	buffer := ring.New(uint32(bufferSize))
 
+	logstore := store.New(uint32(bufferSize))
+
 	input := textinput.New()
 	input.Placeholder = placeholderDefault
 	input.Prompt = promptDefault
@@ -154,13 +150,14 @@ func New(bufferSize int, q chan<- struct{}, errs <-chan plexer.Error, msgs <-cha
 		width:  0,
 		height: 0,
 
-		buffer:  &buffer,
-		streams: make(map[string]lipgloss.Color),
+		buffer:   &buffer,
+		logstore: logstore,
+		streams:  make(map[string]lipgloss.Color),
 
 		state: initializing,
 		views: map[int]tea.Model{
 			welcomeView: welcome.New(),
-			tailView:    pager.New(&buffer),
+			tailView:    tailing.New(logstore.NewPager(55, 100)), //pager.New(&buffer),
 			formatView:  formatter.New(&buffer),
 		},
 		status: status.New(),
@@ -263,14 +260,14 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// propagate event to formatter and request to format
 		// previous log line
-		case key.Matches(msg, app.keys.Up) && !key.Matches(msg, app.keys.Filter) && app.state == formatView && app.hasInput:
-			cmds = append(cmds, formatter.RequestUp())
+		case key.Matches(msg, app.keys.Up) && !key.Matches(msg, app.keys.Filter) && app.hasInput:
+			cmds = append(cmds, event.RequestFormatPrevious())
 			app.ignoreKey = true
 
 		// propagate event to formatter and request to format
 		// next log line
-		case key.Matches(msg, app.keys.Down) && !key.Matches(msg, app.keys.Filter) && app.state == formatView && app.hasInput:
-			cmds = append(cmds, formatter.RequestDown())
+		case key.Matches(msg, app.keys.Down) && !key.Matches(msg, app.keys.Filter) && app.hasInput:
+			cmds = append(cmds, event.RequestFormatNext())
 			app.ignoreKey = true
 
 		// terminate formatting view and propagate event to formatter,
@@ -371,7 +368,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Label+strings.Repeat(" ", space),
 			) + " | "
 
-		app.buffer.Write(msg.Label, append([]byte(prefix), msg.Data...))
+		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), bytes.TrimSpace(msg.Data)...))
 		cmds = append(cmds, app.consumeMsg)
 
 	case plexer.Error:
@@ -417,12 +414,12 @@ func (app *App) executeCommand() tea.Cmd {
 	case cmdFormat:
 		index, err := strconv.Atoi(value)
 		if err != nil {
-			debug.Print("unable to parse index: %q: %w", value, err)
+			debug.Print("unable to parse index: %q: %v", value, err)
 		}
 		app.hasInput = true
 
-		app.state = formatView
-		return formatter.RequestView(index)
+		// app.state = formatView
+		return event.RequestFormatInit(index)
 
 	case cmdFilter:
 

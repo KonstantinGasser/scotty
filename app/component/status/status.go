@@ -270,7 +270,7 @@ func (model *Model) View() string {
 			}
 
 			if stream.disconnected {
-				info += labelDisconnected
+				info += ":" + fmt.Sprint(info) + labelDisconnected
 			}
 
 			if !stream.focused {
