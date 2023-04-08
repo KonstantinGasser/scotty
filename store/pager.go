@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type Pager struct {
@@ -43,12 +41,6 @@ type Pager struct {
 	// is full since until then we only need to append data not
 	// trim at the beginning
 	written uint8
-	// formatPosition refers to the absult (to the ring buffer) index of the item
-	// which is currently formatted
-	formatPosition int32
-	// pageOffset refers to the index with in the formatBuffer
-	// which is currently formatted
-	pageOffset int8
 }
 
 // MoveDown shifts the pagers content down by one item
@@ -103,21 +95,31 @@ func (pager *Pager) Rerender(width int, height int) {
 	pager.ttyWidth = width
 	pager.size = uint8(height)
 
-	pager.buffer = pager.reader.Range(int(pager.position), int(pager.ttyWidth)).Strings(func(item ring.Item) string {
-		_, line := buildLine(item, pager.ttyWidth)
-		return line
-	})
+	start := clamp(int(pager.position) - int(pager.size))
+	items := pager.reader.Range(start, int(pager.size))
 
-	if len(pager.buffer) < height {
+	debug.Print("[re-render] start: %d items: %v\n", start, items)
+	pager.buffer = make([]string, height)
+	pager.bufferView = "Rebulding view..."
 
-		for i := len(pager.buffer); i < height; i++ {
-			pager.buffer = append(pager.buffer, "")
+	var written uint8
+	for _, item := range items {
+		_, lines := buildLines(item, pager.ttyWidth)
+
+		for _, line := range lines {
+			// slice of the beginning by "count lines"
+			if written >= pager.size {
+				pager.buffer = append(pager.buffer[1:], line)
+				pager.buffer[written] = line
+				continue
+			}
+			pager.buffer[written] = line
 		}
 	}
+
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 
-	debug.Print("Buffer: %d Raw: %d\n", len(pager.buffer), strings.Count(pager.bufferView, "\n"))
-
+	debug.Print("[re-render] buffer: %v\ncontent:\n%s\n", pager.buffer, pager.bufferView)
 }
 
 // overflowBy retuns the number of lines by which the
@@ -170,4 +172,11 @@ func buildLines(item ring.Item, width int) (int, []string) {
 		item.Raw[item.DataPointer:],
 		width-(len(item.Label)+len(prefix)), 0,
 	)
+}
+
+func clamp(a int) int {
+	if a < 0 {
+		return 0
+	}
+	return a
 }

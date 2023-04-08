@@ -73,9 +73,10 @@ func (buf *Buffer) At(i uint32) Item {
 //
 // Range does not care about dirty-reads (not the ACID dirty reads)
 // but rather Range does not check if the requested range is crossing
-// the end of the buffer resulting in the latest items of the buffer
+// the end of the buffer.head resulting in the latest items of the buffer
 // at the beginning of the returned slice while the next items are the
-// oldest items in the buffer
+// oldest items in the buffer.
+// Range add items regardless of there zero value.
 func (buf *Buffer) Range(start int, size int) Slice {
 
 	var out []Item = make([]Item, 0, size)
@@ -83,10 +84,6 @@ func (buf *Buffer) Range(start int, size int) Slice {
 
 	for i := start; i < start+size; i++ {
 		index = buf.marshalIndex(uint32(i))
-
-		if len(buf.data[index].Raw) <= 0 {
-			continue
-		}
 
 		out = append(out, buf.data[index])
 	}
@@ -96,4 +93,16 @@ func (buf *Buffer) Range(start int, size int) Slice {
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
 	return ((absolute % buf.capacity) + buf.capacity) % buf.capacity
+}
+
+func clamp(x int, max int) int {
+	if x > max {
+		return max
+	}
+
+	if x < 0 {
+		return 0
+	}
+
+	return x
 }

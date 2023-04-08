@@ -8,66 +8,6 @@ import (
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
-func TestLineWrap(t *testing.T) {
-
-	tt := []struct {
-		name     string
-		line     string
-		expected string
-		width    int
-		depth    int
-	}{
-		{
-			name:     "wrap 3 times",
-			line:     "foo bar baz",
-			expected: "foo\n ba\nr b\naz",
-			depth:    4,
-			width:    3,
-		},
-		{
-			name:     "line shorter than width",
-			line:     "Hello, World!",
-			width:    15,
-			expected: "Hello, World!",
-			depth:    1,
-		},
-		{
-			name:     "line multiple times linger then width",
-			line:     "Lorem ipsum dolor sit amet, consectetur adipiscing elit!",
-			width:    10,
-			expected: "Lorem ipsu\nm dolor si\nt amet, co\nnsectetur \nadipiscing\n elit!",
-			depth:    6,
-		},
-		{
-			name:     "line shorter than width",
-			line:     "Line-1",
-			width:    10,
-			expected: "Line-1",
-			depth:    1,
-		},
-		{
-			name:     "width = len(line)",
-			line:     "{'test': 'something'}",
-			width:    21,
-			expected: "{'test': 'something'}",
-			depth:    1,
-		},
-	}
-
-	for _, tc := range tt {
-		// var depth int = 1
-		depth, lines := linewrap(tc.line, tc.width, 0)
-
-		if depth != tc.depth {
-			t.Fatalf("[%s] expected depth of: %d; got depth: %d and lines:\n\t%q", tc.name, tc.depth, depth, lines)
-		}
-
-		if lines != tc.expected {
-			t.Fatalf("[%s] expected result of: %q; got result: %q", tc.name, tc.expected, lines)
-		}
-	}
-}
-
 func TestBreakLines(t *testing.T) {
 
 	tt := []struct {
@@ -146,31 +86,6 @@ func TestBuildLines(t *testing.T) {
 				t.Fatalf("[%s] wanted line: %s - got line: %s", tc.name, tc.wantLines[i], line)
 			}
 		}
-	}
-}
-
-func TestBuildLine(t *testing.T) {
-
-	tt := []struct {
-		name       string
-		item       ring.Item
-		width      int
-		wantHeight int
-	}{
-		{
-			name: "unkown",
-			item: ring.Item{
-				Label:       "test label",
-				DataPointer: len("test label") + 1,
-				Raw:         "{'test': 'something'}",
-			},
-			width:      21,
-			wantHeight: 2,
-		},
-	}
-
-	for _, tc := range tt {
-		_, _ = buildLine(tc.item, tc.width)
 	}
 }
 
@@ -273,68 +188,68 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"[9] test-label | Line-9",
 			},
 		},
-		// {
-		// 	name:      "overflow buffer; index prefix change",
-		// 	maxHeight: 9,
-		// 	maxWidth:  22,
-		// 	sequence: []string{
-		// 		"test-label | Line-1",
-		// 		"test-label | Line-2",
-		// 		"test-label | Line-3",
-		// 		"test-label | Line-4",
-		// 		"test-label | Line-5",
-		// 		"test-label | Line-6",
-		// 		"test-label | Line-7",
-		// 		"test-label | Line-8",
-		// 		"test-label | Line-9",
-		// 		"test-label | Line-10",
-		// 		"test-label | Line-11",
-		// 		"test-label | Line-12",
-		// 		"test-label | Line-13",
-		// 		"test-label | Line-14",
-		// 		"test-label | Line-15",
-		// 		"test-label | Line-16",
-		// 		"test-label | Line-17",
-		// 	},
-		// 	checksum: []string{
-		// 		"[9] test-label | Line-9",
-		// 		"[10] test-label | Line-10",
-		// 		"[11] test-label | Line-11",
-		// 		"[12] test-label | Line-12",
-		// 		"[1] test-label | Line-13",
-		// 		"[2] test-label | Line-14",
-		// 		"[3] test-label | Line-15",
-		// 		"[4] test-label | Line-16",
-		// 		"[5] test-label | Line-17",
-		// 	},
-		// },
-		// {
-		// 	name:      "each item requires 2 lines",
-		// 	maxHeight: 9,
-		// 	maxWidth:  18,
-		// 	sequence: []string{
-		// 		"test-label | Line-1",
-		// 		"test-label | Line-2",
-		// 		"test-label | Line-3",
-		// 		"test-label | Line-4",
-		// 		"test-label | Line-5",
-		// 		"test-label | Line-6",
-		// 		"test-label | Line-7",
-		// 		"test-label | Line-8",
-		// 		"test-label | Line-9",
-		// 	},
-		// 	checksum: []string{
-		// 		"-5",
-		// 		"[6] test-label | Line",
-		// 		"-6",
-		// 		"[7] test-label | Line",
-		// 		"-7",
-		// 		"[8] test-label | Line",
-		// 		"-8",
-		// 		"[9] test-label | Line",
-		// 		"-9",
-		// 	},
-		// },
+		{
+			name:      "overflow buffer; index prefix change",
+			maxHeight: 9,
+			maxWidth:  22,
+			sequence: []string{
+				"test-label | Line-1",
+				"test-label | Line-2",
+				"test-label | Line-3",
+				"test-label | Line-4",
+				"test-label | Line-5",
+				"test-label | Line-6",
+				"test-label | Line-7",
+				"test-label | Line-8",
+				"test-label | Line-9",
+				"test-label | Line-10",
+				"test-label | Line-11",
+				"test-label | Line-12",
+				"test-label | Line-13",
+				"test-label | Line-14",
+				"test-label | Line-15",
+				"test-label | Line-16",
+				"test-label | Line-17",
+			},
+			checksum: []string{
+				"[9] test-label | Line-9",
+				"[10] test-label | Line-10",
+				"[11] test-label | Line-11",
+				"[12] test-label | Line-12",
+				"[13] test-label | Line-13",
+				"[14] test-label | Line-14",
+				"[15] test-label | Line-15",
+				"[16] test-label | Line-16",
+				"[17] test-label | Line-17",
+			},
+		},
+		{
+			name:      "each item requires 2 lines",
+			maxHeight: 9,
+			maxWidth:  18,
+			sequence: []string{
+				"test-label | Line-1",
+				"test-label | Line-2",
+				"test-label | Line-3",
+				"test-label | Line-4",
+				"test-label | Line-5",
+				"test-label | Line-6",
+				"test-label | Line-7",
+				"test-label | Line-8",
+				"test-label | Line-9",
+			},
+			checksum: []string{
+				"-5",
+				"[6] test-label | Line",
+				"-6",
+				"[7] test-label | Line",
+				"-7",
+				"[8] test-label | Line",
+				"-8",
+				"[9] test-label | Line",
+				"-9",
+			},
+		},
 	}
 	for _, tc := range tt {
 		store = New(12)

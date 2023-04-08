@@ -115,3 +115,63 @@ func TestRangeOverflow(t *testing.T) {
 		}
 	}
 }
+
+func TestRangeWithEmptyValues(t *testing.T) {
+
+	buffer := New(12)
+
+	for i := 0; i < 6; i++ { // overflow by 18-12 => 6 items
+		buffer.Insert(Item{
+			Raw: fmt.Sprintf("Line-%d", i+1),
+		})
+	}
+
+	tt := []struct {
+		name  string
+		start int
+		size  int
+		want  []Item
+	}{
+		{
+			name:  "range all",
+			start: 0,
+			size:  12,
+			want: []Item{
+				{Raw: "Line-1"},
+				{Raw: "Line-2"},
+				{Raw: "Line-3"},
+				{Raw: "Line-4"},
+				{Raw: "Line-5"},
+				{Raw: "Line-6"},
+				{Raw: ""},
+				{Raw: ""},
+				{Raw: ""},
+				{Raw: ""},
+				{Raw: ""},
+				{Raw: ""},
+			},
+		},
+		{
+			name:  "range middel part",
+			start: 4,
+			size:  8,
+			want: []Item{
+				{Raw: "Line-5"},
+				{Raw: "Line-6"},
+				{Raw: ""},
+				{Raw: ""},
+				{Raw: ""},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		res := buffer.Range(tc.start, tc.size)
+
+		for i, item := range tc.want {
+			if item.Raw != res[i].Raw {
+				t.Fatalf("[%s] wanted item: %s; got item: %s", tc.name, item.Raw, res[i].Raw)
+			}
+		}
+	}
+}
