@@ -59,10 +59,10 @@ func (pager *Pager) MoveDown() {
 	next := pager.reader.At(pager.position)
 	pager.position++
 
-	count, lines := buildLines(next, pager.ttyWidth)
+	height, lines := buildLines(next, pager.ttyWidth)
 
 	// no issue of overflowing by adding the new lines to buffer
-	if int(pager.written)+len(lines) <= int(pager.size) {
+	if int(pager.written)+height <= int(pager.size) {
 		for _, line := range lines {
 			pager.buffer[pager.written] = line
 			pager.written += 1
@@ -74,7 +74,7 @@ func (pager *Pager) MoveDown() {
 
 	// newly created lines will exceed the current page
 	// size and we need to cut of the beginning of buffer
-	pager.buffer = append(pager.buffer[count:], lines...)
+	pager.buffer = append(pager.buffer[height:], lines...)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 
 }
@@ -98,38 +98,36 @@ func (pager *Pager) Rerender(width int, height int) {
 	start := clamp(int(pager.position) - int(pager.size))
 	items := pager.reader.Range(start, int(pager.size))
 
-	debug.Print("[re-render] start: %d items: %v\n", start, items)
+	debug.Print("[re-render] start: %d items: %v\n", start, items.Strings(func(i ring.Item) string {
+		return i.Raw
+	}))
+
 	pager.buffer = make([]string, height)
 	pager.bufferView = "Rebulding view..."
 
 	var written uint8
 	for _, item := range items {
-		_, lines := buildLines(item, pager.ttyWidth)
-
-		for _, line := range lines {
-			// slice of the beginning by "count lines"
-			if written >= pager.size {
-				pager.buffer = append(pager.buffer[1:], line)
-				pager.buffer[written] = line
-				continue
-			}
-			pager.buffer[written] = line
+		if len(item.Raw) <= 0 {
+			continue
 		}
+		height, lines := buildLines(item, pager.ttyWidth)
+
+		debug.Print("Written: %d New Height: %d Size: %d\n", written, height, pager.size)
+		if int(written)+height <= int(pager.size) {
+			for _, line := range lines {
+				pager.buffer[written] = line
+				written += 1
+			}
+			continue
+		}
+
+		debug.Print("[append] buffer: %d %+v\n", len(pager.buffer), pager.buffer)
+		pager.buffer = append(pager.buffer[height:], lines...)
 	}
 
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 
-	debug.Print("[re-render] buffer: %v\ncontent:\n%s\n", pager.buffer, pager.bufferView)
-}
-
-// overflowBy retuns the number of lines by which the
-// slice of lines exceed the max height. Really just
-// a function for readability...
-// Is the returned number postitive, +N numbers are left
-// for assignment.
-// Is the returned number negative -N numbers would be to much
-func overflowsBy(max uint8, lines int) int {
-	return lines - int(max)
+	// debug.Print("[re-render] buffer: %v\ncontent:\n%s\n", pager.buffer, pager.bufferView)
 }
 
 func breaklines(prefix string, line string, width int, padding int) (int, []string) {
