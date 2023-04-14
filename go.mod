@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	golang.org/x/exp v0.0.0-20230111222715-75897c7a292a
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
