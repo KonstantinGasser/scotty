@@ -12,7 +12,6 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
@@ -216,6 +215,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// in a different tab
 		app.compontens[tabFollow], _ = app.compontens[tabFollow].Update(msg)
 		cmds = append(cmds, app.consumeMsg)
+
+		app.infoComponent, _ = app.infoComponent.Update(event.Increment(msg.Label))
 	}
 
 	// follow component is updates asap after a message is received

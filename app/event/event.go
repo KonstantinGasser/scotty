@@ -11,3 +11,11 @@ func BlockKeysRequest(keys ...string) tea.Cmd {
 		return BlockKeys(keys)
 	}
 }
+
+type Increment string
+
+func IncrementRequest(label string) tea.Cmd {
+	return func() tea.Msg {
+		return Increment(label)
+	}
+}

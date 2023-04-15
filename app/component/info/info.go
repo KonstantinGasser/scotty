@@ -3,7 +3,9 @@ package info
 import (
 	"fmt"
 
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -23,22 +25,28 @@ const (
 )
 
 type beam struct {
-	label string
-	count int
-	state int
+	label   string
+	colored string
+	count   int
+	state   int
 }
+
+func (b *beam) increment() { b.count++ }
 
 type Model struct {
 	ready         bool
 	width, height int
-	beams         []beam
+	beams         map[string]*beam
+	ordered       []string
 }
 
 func New() *Model {
 	return &Model{
-		ready:  false,
-		width:  0,
-		height: 0,
+		ready:   false,
+		width:   0,
+		height:  0,
+		beams:   map[string]*beam{},
+		ordered: []string{},
 	}
 }
 
@@ -61,7 +69,17 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.width = styles.InfoWidth(msg.Width)
 		model.height = styles.InfoHeight(msg.Height)
 	case beam:
-		model.beams = append(model.beams, msg)
+		if _, ok := model.beams[msg.label]; ok {
+			break
+		}
+		model.beams[msg.label] = &msg
+		model.ordered = append(model.ordered, msg.label)
+	case event.Increment:
+		debug.Print("[info] lookup: %s -> %v\n", string(msg), model.beams[string(msg)])
+		if beam, ok := model.beams[string(msg)]; ok {
+			debug.Print("[info] increment: %q\n", string(msg))
+			beam.increment()
+		}
 	}
 	return model, tea.Batch(cmds...)
 }
@@ -69,12 +87,17 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (model Model) View() string {
 
 	var beams = []string{}
-	for i, beam := range model.beams {
-		if i < len(model.beams)-1 {
-			beams = append(beams, beam.label+": "+fmt.Sprint(beam.count), " - ")
+	var status = "●"
+	for i, label := range model.ordered {
+		if model.beams[label].state == disconnected {
+			status = "◌"
+		}
+
+		if i < len(model.ordered)-1 {
+			beams = append(beams, status+" "+model.beams[label].colored+": "+fmt.Sprint(model.beams[label].count), " - ")
 			continue
 		}
-		beams = append(beams, beam.label+": "+fmt.Sprint(beam.count))
+		beams = append(beams, status+" "+model.beams[label].colored+": "+fmt.Sprint(model.beams[label].count))
 	}
 
 	return style.
@@ -93,8 +116,9 @@ func max(upper int, compare int) int {
 
 func NewBeam(label string, color lipgloss.Color) tea.Msg {
 	return beam{
-		label: lipgloss.NewStyle().Foreground(color).Render(label),
-		count: 0,
-		state: connected,
+		label:   label,
+		colored: lipgloss.NewStyle().Foreground(color).Render(label),
+		count:   0,
+		state:   connected,
 	}
 }

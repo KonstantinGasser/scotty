@@ -49,7 +49,7 @@ func Tab(label string) string {
 func ActiveTab(label string) string {
 	return tab.Copy().
 		Bold(true).
-		Background(lipgloss.Color("#FF4C94")).
+		Background(lipgloss.Color("#9F2DEB")).
 		Render(label)
 }
 
