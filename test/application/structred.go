@@ -30,7 +30,6 @@ func main() {
 	sl.Info("Hello Scotty", zap.String("state", "ready to beam"))
 	var i int = 1
 	for {
-
 		level := rand.Intn(info + 1)
 		switch level {
 		case erro:

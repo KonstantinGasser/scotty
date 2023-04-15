@@ -5,7 +5,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -70,14 +69,19 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.height = styles.InfoHeight(msg.Height)
 	case beam:
 		if _, ok := model.beams[msg.label]; ok {
+			model.beams[msg.label].state = connected
 			break
 		}
 		model.beams[msg.label] = &msg
 		model.ordered = append(model.ordered, msg.label)
+	case DisconnectBeam:
+		if _, ok := model.beams[string(msg)]; !ok {
+			break
+		}
+		model.beams[string(msg)].state = disconnected
+
 	case event.Increment:
-		debug.Print("[info] lookup: %s -> %v\n", string(msg), model.beams[string(msg)])
 		if beam, ok := model.beams[string(msg)]; ok {
-			debug.Print("[info] increment: %q\n", string(msg))
 			beam.increment()
 		}
 	}
@@ -101,6 +105,7 @@ func (model Model) View() string {
 	}
 
 	return style.
+		Padding(0, 1).
 		Width(model.width).Height(model.height).
 		Render(
 			lipgloss.JoinHorizontal(lipgloss.Top, beams...),
@@ -122,3 +127,5 @@ func NewBeam(label string, color lipgloss.Color) tea.Msg {
 		state:   connected,
 	}
 }
+
+type DisconnectBeam string

@@ -181,16 +181,19 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// (identified by its label). An update about the new stream is propagated to the info
 	// component.
 	case multiplexer.Subscriber:
-		if _, ok := app.streamConfigs[string(msg)]; ok {
-			break
+		if _, ok := app.streamConfigs[string(msg)]; !ok {
+			fg, _ := styles.RandColor()
+			app.streamConfigs[string(msg)] = streamConfig{color: fg}
 		}
 
-		fg, _ := styles.RandColor()
-		app.streamConfigs[string(msg)] = streamConfig{color: fg}
-		app.infoComponent.Update(info.NewBeam(string(msg), fg))
+		app.infoComponent, _ = app.infoComponent.Update(
+			info.NewBeam(string(msg), app.streamConfigs[string(msg)].color),
+		)
 
 		cmds = append(cmds, app.consumeSubscriber)
 
+	case multiplexer.Unsubscribe:
+		app.infoComponent, _ = app.infoComponent.Update(info.DisconnectBeam(msg))
 	// triggered each time a new message is pushed from the multiplexer to
 	// the consumer.
 	// Requires to identify the stream the message is from, build the prefix
