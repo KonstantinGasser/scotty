@@ -10,6 +10,7 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/querying"
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
@@ -58,8 +59,8 @@ type App struct {
 	// and App is initialized
 	ready bool
 	// key bindings
-	bindings bindings
-
+	bindings       bindings
+	ignoreBindings []key.Binding
 	/* multiplexer / i/o properties */
 	// channels to consume multiplexer events
 	consumer      multiplexer.Consumer
@@ -125,17 +126,21 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 		cmd  tea.Cmd
 	)
-
+	debug.Print("[app] Msg: %T\n", msg)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		debug.Print("[app] ignore-keys: %v\n", app.ignoreBindings)
 		switch {
+		// some compontens requested to ignore these keys as they are relevent to be
+		// processed within the component itself
+		case key.Matches(msg, app.ignoreBindings...):
+			break
 		case key.Matches(msg, app.bindings.Quit):
 			app.quite <- struct{}{}
 			return app, tea.Quit
 		case key.Matches(msg, app.bindings.SwitchTab):
 			tabIndex, _ := strconv.ParseInt(msg.String(), 10, 64)
 			tabIndex = tabIndex - 1 // -1 as it is displayed as 1 2 3 4 but index at 0
-			debug.Print("[app] switch to tab (%d)\n", tabIndex)
 
 			if app.activeTab == int(tabIndex) {
 				return app, tea.Batch(cmds...)
@@ -145,9 +150,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.updateActiveTab()
 
 		}
-		// update active componten to handle key store individually
-		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
-		return app, tea.Batch(cmds...)
+
+	case event.BlockKeys:
+		app.ignoreBindings = append(app.ignoreBindings, key.NewBinding(key.WithKeys(msg...)))
 	case tea.WindowSizeMsg:
 		app.ttyWidth, app.ttyHeight = msg.Width, msg.Height
 

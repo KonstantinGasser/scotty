@@ -1,9 +1,7 @@
 package tailing
 
 import (
-	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
@@ -66,15 +64,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		model.pager.Rerender(model.width, model.height)
-
-	case event.FormatInit:
-		debug.Print("not implemented yet!")
-
-	case event.FormatNext:
-		debug.Print("not implemented yet!")
-
-	case event.FormatPrevious:
-		debug.Print("not implemented yet!")
 
 	case multiplexer.Message:
 		if model.state == paused {
