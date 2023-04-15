@@ -97,7 +97,13 @@ func (pager *Pager) Rerender(width int, height int) {
 	start := clamp(int(pager.position) - int(pager.size))
 	items := pager.reader.Range(start, int(pager.size))
 
-	pager.buffer = make([]string, height)
+	pager.reload(items)
+	pager.bufferView = strings.Join(pager.buffer, "\n")
+}
+
+func (pager *Pager) reload(items ring.Slice) {
+
+	pager.buffer = make([]string, pager.size)
 	pager.bufferView = "Rebulding view..."
 
 	var written uint8
@@ -117,7 +123,15 @@ func (pager *Pager) Rerender(width int, height int) {
 
 		pager.buffer = append(pager.buffer[height:], lines...)
 	}
+}
 
+func (pager *Pager) GoToBottom() {
+	pager.position = pager.reader.Head()
+
+	start := clamp(int(pager.position) - int(pager.size))
+	items := pager.reader.Range(start, int(pager.size))
+
+	pager.reload(items)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 }
 

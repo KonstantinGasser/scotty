@@ -3,6 +3,7 @@ package ring
 type Reader interface {
 	At(i uint32) Item
 	Range(start int, size int) Slice
+	Head() uint32
 }
 
 type Slice []Item
@@ -66,6 +67,11 @@ func (buf *Buffer) Insert(i Item) {
 // At returns an item at a given index of the buffer
 func (buf *Buffer) At(i uint32) Item {
 	return buf.data[buf.marshalIndex(i)]
+}
+
+// Head returns the latest index written to
+func (buf Buffer) Head() uint32 {
+	return buf.head
 }
 
 // Range returns a slice starting somewhere in the buffer

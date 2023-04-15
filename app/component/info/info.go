@@ -20,7 +20,12 @@ var (
 
 const (
 	connected = iota
+	paused
 	disconnected
+
+	symbolConnected    = "●"
+	symbolPaused       = "◍"
+	symbolDisconnected = "◌"
 )
 
 type beam struct {
@@ -79,7 +84,14 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 		model.beams[string(msg)].state = disconnected
-
+	case event.TaillingPaused:
+		for label := range model.beams {
+			model.beams[label].state = paused
+		}
+	case event.TaillingResumed:
+		for label := range model.beams {
+			model.beams[label].state = connected
+		}
 	case event.Increment:
 		if beam, ok := model.beams[string(msg)]; ok {
 			beam.increment()
@@ -91,10 +103,14 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (model Model) View() string {
 
 	var beams = []string{}
-	var status = "●"
+	var status = symbolConnected
 	for i, label := range model.ordered {
 		if model.beams[label].state == disconnected {
-			status = "◌"
+			status = symbolDisconnected
+		}
+
+		if model.beams[label].state == paused {
+			status = symbolPaused
 		}
 
 		if i < len(model.ordered)-1 {

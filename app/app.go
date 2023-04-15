@@ -175,7 +175,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
 		cmds = append(cmds, cmd)
-
+		return app, tea.Batch(cmds...)
 	// triggered each time a new stream connects successfully to scotty and is procssed
 	// by the multiplexer. A random color is assigned to the stream if not yet pressent
 	// (identified by its label). An update about the new stream is propagated to the info
@@ -191,9 +191,12 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 		cmds = append(cmds, app.consumeSubscriber)
+		return app, tea.Batch(cmds...)
 
 	case multiplexer.Unsubscribe:
 		app.infoComponent, _ = app.infoComponent.Update(info.DisconnectBeam(msg))
+		return app, tea.Batch(cmds...)
+
 	// triggered each time a new message is pushed from the multiplexer to
 	// the consumer.
 	// Requires to identify the stream the message is from, build the prefix
@@ -220,6 +223,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, app.consumeMsg)
 
 		app.infoComponent, _ = app.infoComponent.Update(event.Increment(msg.Label))
+		return app, tea.Batch(cmds...)
 	}
 
 	// follow component is updates asap after a message is received
@@ -227,6 +231,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
 		cmds = append(cmds, cmd)
 	}
+
+	app.infoComponent, cmd = app.infoComponent.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return app, tea.Batch(cmds...)
 }
