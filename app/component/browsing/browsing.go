@@ -5,7 +5,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -97,7 +96,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.height = styles.ContentHeght(msg.Height) - promptHeight
 		model.prompt.Width = promptWidth
 
-		debug.Print("[browsing] Full-Width: %d Full-Height: %d Width: %d - Height: %d\n", msg.Width, msg.Height, model.width, model.height)
 	}
 
 	model.prompt, cmd = model.prompt.Update(msg)

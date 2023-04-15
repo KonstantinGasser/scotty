@@ -126,18 +126,17 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 		cmd  tea.Cmd
 	)
-	debug.Print("[app] Msg: %T\n", msg)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		debug.Print("[app] ignore-keys: %v\n", app.ignoreBindings)
 		switch {
-		// some compontens requested to ignore these keys as they are relevent to be
-		// processed within the component itself
-		case key.Matches(msg, app.ignoreBindings...):
-			break
 		case key.Matches(msg, app.bindings.Quit):
 			app.quite <- struct{}{}
 			return app, tea.Quit
+		// some compontens requested to ignore these keys as they are relevent to be
+		// processed within the component itself
+		case key.Matches(msg, app.ignoreBindings...):
+			return app, tea.Batch(cmds...)
 		case key.Matches(msg, app.bindings.SwitchTab):
 			tabIndex, _ := strconv.ParseInt(msg.String(), 10, 64)
 			tabIndex = tabIndex - 1 // -1 as it is displayed as 1 2 3 4 but index at 0
@@ -150,7 +149,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.updateActiveTab()
 
 		}
+		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+		cmds = append(cmds, cmd)
 
+		return app, tea.Batch(cmds...)
 	case event.BlockKeys:
 		app.ignoreBindings = append(app.ignoreBindings, key.NewBinding(key.WithKeys(msg...)))
 	case tea.WindowSizeMsg:

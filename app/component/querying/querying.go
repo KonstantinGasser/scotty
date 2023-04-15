@@ -2,7 +2,6 @@ package querying
 
 import (
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,7 +45,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		model.width = styles.ContentWidth(msg.Width)
 		model.height = styles.ContentHeght(msg.Height)
-		debug.Print("[browsing] Full-Width: %d Full-Height: %d Width: %d - Height: %d\n", msg.Width, msg.Height, model.width, model.height)
 	}
 	return model, tea.Batch(cmds...)
 }

@@ -2,6 +2,7 @@ package tailing
 
 import (
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
