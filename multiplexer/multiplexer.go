@@ -7,6 +7,13 @@ import (
 	"sync"
 )
 
+type Consumer interface {
+	Errors() <-chan Error
+	Messages() <-chan Message
+	Subscribers() <-chan Subscriber
+	Unsubscribers() <-chan Unsubscribe
+}
+
 type Socket struct {
 	quite <-chan struct{}
 	// any error while accepting connections, creating the stream
@@ -112,7 +119,7 @@ func (sock *Socket) Run() {
 	}
 }
 
-func (sock *Socket) Errors() <-chan Error            { return sock.errors }
-func (sock *Socket) Messages() <-chan Message        { return sock.messages }
-func (sock *Socket) Subscribe() <-chan Subscriber    { return sock.subscribe }
-func (sock *Socket) Unsubscribe() <-chan Unsubscribe { return sock.unsubscribe }
+func (sock *Socket) Errors() <-chan Error              { return sock.errors }
+func (sock *Socket) Messages() <-chan Message          { return sock.messages }
+func (sock *Socket) Subscribers() <-chan Subscriber    { return sock.subscribe }
+func (sock *Socket) Unsubscribers() <-chan Unsubscribe { return sock.unsubscribe }

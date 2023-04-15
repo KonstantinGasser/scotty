@@ -6,7 +6,6 @@ import (
 	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -18,14 +17,12 @@ type Model struct {
 	ready         bool
 	width, height int
 	pager         store.Pager
-	view          viewport.Model
 }
 
 func New(pager store.Pager) *Model {
 	return &Model{
 		ready: false,
 		pager: pager,
-		view:  viewport.Model{},
 	}
 }
 
@@ -36,29 +33,29 @@ func (model *Model) Init() tea.Cmd {
 func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
-		cmd  tea.Cmd
 	)
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
+	case event.DimensionMsg:
+		model.setDimensions(
+			msg.AvailableWidth,
+			msg.AvailableHeight,
+		)
+
 		if !model.ready {
-			model.width = msg.Width - borderMargin
-			model.height = styles.AvailableHeight(msg.Height)
+			model.pager.Reset(model.width, uint8(model.height))
+			model.ready = true
+		}
 
-			model.view = viewport.New(model.width, model.height)
-			model.view.Width = model.width - borderMargin
-			model.view.Height = model.height
-			model.view.MouseWheelEnabled = true
+	case tea.WindowSizeMsg:
+		model.setDimensions(msg.Width, msg.Height)
 
-			model.pager.Rerender(model.width, model.height)
+		if !model.ready {
+			model.pager.Reset(model.width, uint8(model.height))
 			model.ready = true
 			break
 		}
 
-		model.setDimensions(
-			msg.Width,
-			msg.Height,
-		)
 		model.pager.Rerender(model.width, model.height)
 
 	case event.FormatInit:
@@ -74,9 +71,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.pager.MoveDown()
 	}
 
-	model.view, cmd = model.view.Update(msg)
-	cmds = append(cmds, cmd)
-
 	return model, tea.Batch(cmds...)
 }
 
@@ -85,6 +79,6 @@ func (model *Model) View() string {
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width, model.height = width-borderMargin, styles.AvailableHeight(height)
-	model.view.Width, model.view.Height = model.width, model.height
+	model.width = styles.ContentWidth(width)
+	model.height = styles.ContentHeght(height)
 }

@@ -5,13 +5,15 @@ import (
 )
 
 type bindings struct {
+	Quit      key.Binding
+	SwitchTab key.Binding
+
 	Up     key.Binding
 	Down   key.Binding
 	Input  key.Binding
 	Filter key.Binding
 	Exit   key.Binding
 	Enter  key.Binding
-	Quit   key.Binding
 }
 
 func (b bindings) ShortHelp() []key.Binding {
@@ -26,6 +28,14 @@ func (b bindings) FullHelp() [][]key.Binding {
 }
 
 var defaultBindings = bindings{
+	Quit: key.NewBinding(
+		key.WithKeys("ctrl+c"),
+		key.WithHelp("ctrl+c", "exit scotty"),
+	),
+	SwitchTab: key.NewBinding(
+		key.WithKeys("1", "2", "3"),
+	),
+
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
 	),
@@ -44,9 +54,5 @@ var defaultBindings = bindings{
 	Exit: key.NewBinding(
 		// key.WithKeys("esc"),
 		key.WithKeys("q"),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("ctrl+c"),
-		key.WithHelp("ctrl+c", "exit scotty"),
 	),
 }

@@ -121,6 +121,12 @@ func (pager *Pager) Rerender(width int, height int) {
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 }
 
+func (pager *Pager) Reset(width int, height uint8) {
+	pager.ttyWidth = width
+	pager.size = height
+	pager.buffer = make([]string, pager.size)
+}
+
 func breaklines(prefix string, line string, width int, padding int) (int, []string) {
 
 	if len(line) <= width {
@@ -152,8 +158,9 @@ func breaklines(prefix string, line string, width int, padding int) (int, []stri
 // a slice of string containing the broken down ring.Item.Raw line
 // along with the line count.
 // Example:
-// 		in : label | {data: value, some: value}
-// 		out: 2, ["label | {data: value,", " some: value"] for width = 21
+//
+//	in : label | {data: value, some: value}
+//	out: 2, ["label | {data: value,", " some: value"] for width = 21
 func buildLines(item ring.Item, width int) (int, []string) {
 	prefix := fmt.Sprintf("[%d] ", item.Index())
 	return breaklines(

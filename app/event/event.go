@@ -33,3 +33,8 @@ func RequestFormatPrevious() tea.Cmd {
 		return FormatPrevious{}
 	}
 }
+
+type DimensionMsg struct {
+	AvailableWidth  int
+	AvailableHeight int
+}

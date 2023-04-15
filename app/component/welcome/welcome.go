@@ -4,6 +4,8 @@ import (
 	"math"
 	"strings"
 
+	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -39,21 +41,22 @@ var (
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Underline(true).Render("beam logs:\n"),
-				"\tfrom stderr: " + lipgloss.NewStyle().Bold(false).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
-				"\tfrom stdout: " + lipgloss.NewStyle().Bold(false).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
+				"\tfrom stderr:" + lipgloss.NewStyle().Bold(false).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
+				"\tfrom stdout:" + lipgloss.NewStyle().Bold(false).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
 			}, "\n"),
 		)
 
-	howToText = lipgloss.NewStyle().
-			Render(
-			strings.Join([]string{
-				lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
-				lipgloss.NewStyle().Bold(false).Render("\t- hit \":\" and type an index to format a specific line. Use k/j to format the previous or next log"),
-				lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with q)"),
-				lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" and type a comma separated list of beams to highlight them (ctrl+f: beam-one,beam-two)"),
-				lipgloss.NewStyle().Bold(false).Render("\t  while in the filter mode you can add/remove individual beams by user the prefix +/- followed by the beam"),
-			}, "\n"),
-		)
+	howToText = ""
+	// lipgloss.NewStyle().
+	// 		Render(
+	// 		strings.Join([]string{
+	// 			lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
+	// 			lipgloss.NewStyle().Bold(false).Render("\t- hit \":\" and type an index to format a specific line.\n\t  Use k/j to format the previous or next log"),
+	// 			lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with q)"),
+	// 			lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" and type a comma separated list of beams\n\t  to highlight them (ctrl+f: beam-one,beam-two)"),
+	// 			lipgloss.NewStyle().Bold(false).Render("\t  while in the filter mode you can add/remove individual\n\t  beams by user the prefix +/- followed by the beam"),
+	// 		}, "\n"),
+	// 	)
 )
 
 type Model struct {
@@ -80,8 +83,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.ready {
 			m.ready = true
 		}
-		m.width = msg.Width
-		m.height = msg.Height
+		m.width = styles.ContentWidth(msg.Width)
+		m.height = styles.ContentHeght(msg.Height)
+		debug.Print("[welcome] Full-Width: %d Full-Height: %d Width: %d - Height: %d\n", msg.Width, msg.Height, m.width, m.height)
 	}
 
 	return m, nil
