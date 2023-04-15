@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"strconv"
+	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/component/browsing"
 	"github.com/KonstantinGasser/scotty/app/component/info"
@@ -20,17 +21,22 @@ import (
 
 var (
 	tabItems       = []string{"(1) follow logs", "(2) browse logs", "(3) query logs", "(4) docs"}
-	defaultTabLine = lipgloss.JoinHorizontal(lipgloss.Left,
-		styles.ActiveTab("welcome"),
-		styles.Tab(tabItems[tabFollow]),
-		styles.Tab(tabItems[tabBrowse]),
-		styles.Tab(tabItems[tabQuery]),
-		styles.Tab(tabItems[tabDocs]),
-	)
+	defaultTabLine = lipgloss.NewStyle().
+			Border(lipgloss.DoubleBorder()).
+			BorderTop(false).BorderLeft(false).BorderRight(false).
+			BorderBottom(true).
+			Render(
+			lipgloss.JoinHorizontal(lipgloss.Left,
+				styles.ActiveTab(tabItems[tabFollow]),
+				styles.Tab(tabItems[tabBrowse]),
+				styles.Tab(tabItems[tabQuery]),
+				styles.Tab(tabItems[tabDocs]),
+			),
+		)
 )
 
 const (
-	tabWelcome = iota - 1
+	tabUnset = iota - 1
 	tabFollow
 	tabBrowse
 	tabQuery
@@ -93,14 +99,13 @@ func New(q chan<- struct{}, lStore *store.Store, consumer multiplexer.Consumer) 
 		logstore:      lStore,
 
 		tabLine:   defaultTabLine,
-		activeTab: tabWelcome,
+		activeTab: tabUnset,
 
 		infoComponent: info.New(),
 		compontens: map[int]tea.Model{
-			tabWelcome: welcome.New(),
-			tabFollow:  tailing.New(lStore.NewPager(0, 0)),
-			tabBrowse:  browsing.New(),
-			tabQuery:   querying.New(),
+			tabFollow: tailing.New(lStore.NewPager(0, 0)),
+			tabBrowse: browsing.New(),
+			tabQuery:  querying.New(),
 		},
 	}
 }
@@ -140,6 +145,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.updateActiveTab()
 
 		}
+		// update active componten to handle key store individually
+		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+		return app, tea.Batch(cmds...)
 	case tea.WindowSizeMsg:
 		app.ttyWidth, app.ttyHeight = msg.Width, msg.Height
 
@@ -162,6 +170,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
 		cmds = append(cmds, cmd)
 
+	// triggered each time a new stream connects successfully to scotty and is procssed
+	// by the multiplexer. A random color is assigned to the stream if not yet pressent
+	// (identified by its label). An update about the new stream is propagated to the info
+	// component.
 	case multiplexer.Subscriber:
 		if _, ok := app.streamConfigs[string(msg)]; ok {
 			break
@@ -169,9 +181,18 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		fg, _ := styles.RandColor()
 		app.streamConfigs[string(msg)] = streamConfig{color: fg}
+		app.infoComponent.Update(info.NewBeam(string(msg), fg))
 
+		cmds = append(cmds, app.consumeSubscriber)
+
+	// triggered each time a new message is pushed from the multiplexer to
+	// the consumer.
+	// Requires to identify the stream the message is from, build the prefix
+	// and to store the message in the log-store. Furthermore, inserts into
+	// the log-store will happend dispite the active tab. This allows background
+	// updates of the follow-components between tab switches.
 	case multiplexer.Message:
-		if app.activeTab == tabWelcome {
+		if app.activeTab == tabUnset {
 			app.activeTab = tabFollow
 			app.updateActiveTab()
 		}
@@ -184,27 +205,36 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		prefix := lipgloss.NewStyle().Foreground(config.color).Render(msg.Label) + " | "
 
 		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), bytes.TrimSpace(msg.Data)...))
+		// update follow component asap in order to allow background updates while
+		// in a different tab
+		app.compontens[tabFollow], _ = app.compontens[tabFollow].Update(msg)
 		cmds = append(cmds, app.consumeMsg)
 	}
 
-	app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
-	cmds = append(cmds, cmd)
+	// follow component is updates asap after a message is received
+	if app.activeTab != tabUnset && app.activeTab != tabFollow {
+		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	return app, tea.Batch(cmds...)
 }
 
 func (app App) View() string {
-	return lipgloss.JoinHorizontal(lipgloss.Top,
-		app.infoComponent.View(),
-		lipgloss.NewStyle().
-			Padding(styles.ContentPaddingVertical, 0).
-			Render(
-				lipgloss.JoinVertical(lipgloss.Left,
-					app.tabLine,
-					app.compontens[app.activeTab].View(),
-				),
+
+	if app.activeTab == tabUnset {
+		return welcome.New(app.ttyWidth, app.ttyHeight).View()
+	}
+
+	return lipgloss.NewStyle().
+		Padding(styles.ContentPaddingVertical, 0).
+		Render(
+			lipgloss.JoinVertical(lipgloss.Left,
+				app.tabLine,
+				app.compontens[app.activeTab].View(),
+				app.infoComponent.View(),
 			),
-	)
+		)
 }
 
 func (app *App) updateActiveTab() {
@@ -216,7 +246,14 @@ func (app *App) updateActiveTab() {
 		}
 		items[i] = styles.Tab(label)
 	}
-	app.tabLine = lipgloss.JoinHorizontal(lipgloss.Left, items...)
+	tabs := lipgloss.JoinHorizontal(lipgloss.Left, items...)
+	app.tabLine = lipgloss.NewStyle().
+		Border(lipgloss.DoubleBorder()).
+		BorderTop(false).BorderLeft(false).BorderRight(false).
+		BorderBottom(true).
+		Render(
+			tabs + strings.Repeat(" ", app.ttyWidth-lipgloss.Width(tabs)),
+		)
 }
 
 /* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */

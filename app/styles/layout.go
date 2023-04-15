@@ -7,8 +7,9 @@ import (
 /* SCOTTY GRID LAYOUT AND STYLE */
 const (
 	columnOneRatio         = 0.333
-	maxColumnOnWidth       = 25
-	tabLineHeight          = 3
+	maxColumnOnWidth       = 35
+	maxInfoHeight          = 2
+	tabLineHeight          = 5
 	ContentPaddingVertical = 1
 )
 
@@ -16,12 +17,16 @@ func InfoWidth(width int) int {
 	return max(maxColumnOnWidth, int(columnOneRatio*float64(width)))
 }
 
+func InfoHeight(height int) int {
+	return maxInfoHeight - 2 // -2 because of borders
+}
+
 func ContentWidth(width int) int {
-	return width - InfoWidth(width)
+	return width
 }
 
 func ContentHeght(height int) int {
-	return height - (TabLineHeight() + (2 * ContentPaddingVertical))
+	return height - (TabLineHeight() + (2 * ContentPaddingVertical) + InfoHeight(height))
 }
 
 func TabLineHeight() int {
