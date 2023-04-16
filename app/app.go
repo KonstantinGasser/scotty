@@ -135,6 +135,9 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// some compontens requested to ignore these keys as they are relevent to be
 		// processed within the component itself
 		case key.Matches(msg, app.ignoreBindings...):
+			// propagate ignored keys to the active componten
+			app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+			cmds = append(cmds, cmd)
 			return app, tea.Batch(cmds...)
 		case key.Matches(msg, app.bindings.SwitchTab):
 			tabIndex, _ := strconv.ParseInt(msg.String(), 10, 64)

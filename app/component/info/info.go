@@ -86,10 +86,16 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.beams[string(msg)].state = disconnected
 	case event.TaillingPaused:
 		for label := range model.beams {
+			if model.beams[label].state == disconnected {
+				continue
+			}
 			model.beams[label].state = paused
 		}
 	case event.TaillingResumed:
 		for label := range model.beams {
+			if model.beams[label].state == disconnected {
+				continue
+			}
 			model.beams[label].state = connected
 		}
 	case event.Increment:
