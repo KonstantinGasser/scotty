@@ -1,11 +1,10 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/muesli/reflow/wrap"
 )
@@ -22,18 +21,15 @@ type Formatter struct {
 	view   string
 	// selected refers to the ring.Item.index which
 	// is currently selected and should be formatted
-	selected uint32
+	selected uint8
 	// mainly used for worwrapping
 	ttyWidth int
 }
 
-func (formatter *Formatter) Init(start int) {
+func (formatter *Formatter) Load(start int) {
 	formatter.buffer = formatter.reader.Range(start-1, int(formatter.size))
-	for _, i := range formatter.buffer {
-		debug.Print("| %d | ", i.Index())
-	}
-	debug.Print("\n")
-	formatter.selected = uint32(start)
+
+	formatter.selected = 0 // make the first item of the buffer be the selected item
 	formatter.buildView()
 }
 
@@ -53,17 +49,19 @@ func (formatter *Formatter) buildView() {
 	var height, lines, tmp = 0, []string{}, make([]string, formatter.size)
 	var written uint8
 
-	for _, item := range formatter.buffer {
+	for i, item := range formatter.buffer {
 		if len(item.Raw) <= 0 {
 			continue
 		}
-		debug.Print("[formatter] Index: %d Selected: %d\n", item.Index(), formatter.selected)
-		if item.Index() == formatter.selected {
+
+		if uint8(i) == formatter.selected {
 			pretty, _ := prettyjson.Format([]byte(item.Raw[item.DataPointer:]))
+
 			wrapped := wrap.Bytes(pretty, formatter.ttyWidth)
 
-			lines = append(lines, item.Raw[:item.DataPointer])
-			height, lines = lipgloss.Height(string(wrapped)), append(lines, strings.Split(string(wrapped), "\n")...)
+			lines = append(lines, fmt.Sprintf("[%d] ", item.Index())+item.Raw[:item.DataPointer])
+			lines = append(lines, strings.Split(string(wrapped), "\n")...)
+			height = len(lines)
 
 		} else {
 			height, lines = buildLines(item, formatter.ttyWidth)
@@ -76,7 +74,22 @@ func (formatter *Formatter) buildView() {
 			}
 			continue
 		}
-		tmp = append(tmp[height:], lines...)
+
+		// don't remove the beginning of the page if we potential
+		// are formatting in the upper half of the page but rather
+		// don't add any further lines besides what is possible
+		if formatter.selected < formatter.size/2 {
+			for _, line := range lines {
+				if int(written) >= len(tmp) {
+					break
+				}
+
+				tmp[written] = line
+				written += 1
+			}
+		} else {
+			tmp = append(tmp[height:], lines...)
+		}
 	}
 
 	formatter.view = strings.Join(tmp, "\n")

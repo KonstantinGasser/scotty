@@ -5,7 +5,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -90,7 +89,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// error canm be ignored as we have validation on the input prompt
 			index, _ := strconv.ParseInt(model.prompt.Value(), 10, 64)
-			model.formatter.Init(int(index))
+			model.formatter.Load(int(index))
 
 		case key.Matches(msg, model.bindings.Down):
 			model.formatter.Next()
@@ -119,11 +118,14 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model Model) View() string {
-	debug.Print("[browsing] \n%s\n", model.formatter.String())
 	return lipgloss.JoinVertical(lipgloss.Left,
 		defaultPromptStyle.Render(
 			model.prompt.View(),
 		),
-		model.formatter.String(),
+		lipgloss.NewStyle().
+			Height(model.height).
+			Render(
+				model.formatter.String(),
+			),
 	)
 }

@@ -33,7 +33,7 @@ go install github.com/KonstantinGasser/beam@v0.0.1
 
 Somehow your logs need to be send or say beamed to `scotty`. This is why scotty comes with a helper command called `beam`.
 Beam pushes everything it reads from stdin to scotty. Just be aware that things printed to stderr won't work..but we can
-redirect `stderr` to `stdout` using `2>&1`. 
+redirect `stderr` to `stdout` using `2>&1`.
 
 # How to use it?
 
@@ -65,6 +65,22 @@ Especially when logs are structured we humans have it hard to read the unformatt
 When you need to only look at certain logs form a subset of streams your can apply a filter. Hit `ctrl+f` followed by a comma separated list of the streams you want to focus on.
 While the filter is applied you can browse through the subset of logs as usual with `: <index>`.
 To remove set filters hit the `q` key
+
+## Beam information:
+
+Once you pipe logs to scotty a `beam` is registered and displayed in the info componenten. In there right to the beam you see the number of logs processed by this beam and left of the beam name its state.
+
+```
+┌───────────────────────────────────┐
+│ ● ping-svc: 2 - ◌ pong-svc: 4   │
+└───────────────────────────────────┘
+  _|_ ___|___ _|_  _______|_______
+   1     2     3      next beam
+
+// 1) status: ● -> connected, ◍ -> following paused, ◌ -> disconnected
+// 2) beam name as provided by the beam command
+// 3) processed log count
+```
 
 # Options with beam
 
