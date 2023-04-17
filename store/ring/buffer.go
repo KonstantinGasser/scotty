@@ -21,6 +21,25 @@ func (s Slice) Strings(fn func(i Item) string) []string {
 	return out
 }
 
+// Item represents one element in the Buffer.
+// While fields such as the index or the label
+// seem clear the field Raw needs some explaining.
+// The fiel Raw includes the entire row/line finished
+// formatted/colored/build stored at a given index.
+// In order to retrieve only the application log
+// Item has a DataPointer which must be provided and
+// indicated at which index of Raw the application log
+// start. To get only the application log one can do
+// the following:
+//
+//	item = Item {
+//			index: 0,
+//			Label: "test"
+//			Raw: "test | level=debug, msg=I am the application log",
+//			DataPointer: 7, // -> len("test | ") where "test | " is the formatted/build line prefix
+//	}
+//
+// log := item.Raw[item.DataPointer:] // == log := "level=debug, msg=I am the application log"
 type Item struct {
 	index       uint32
 	Label       string

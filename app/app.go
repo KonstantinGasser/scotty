@@ -104,7 +104,7 @@ func New(q chan<- struct{}, lStore *store.Store, consumer multiplexer.Consumer) 
 		infoComponent: info.New(),
 		compontens: map[int]tea.Model{
 			tabFollow: tailing.New(lStore.NewPager(0, 0)),
-			tabBrowse: browsing.New(),
+			tabBrowse: browsing.New(lStore.NewFormatter(0, 0)),
 			tabQuery:  querying.New(),
 		},
 	}
@@ -157,6 +157,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return app, tea.Batch(cmds...)
 	case event.BlockKeys:
 		app.ignoreBindings = append(app.ignoreBindings, key.NewBinding(key.WithKeys(msg...)))
+	case event.ReleaseKeys:
+		app.ignoreBindings = nil
 	case tea.WindowSizeMsg:
 		app.ttyWidth, app.ttyHeight = msg.Width, msg.Height
 

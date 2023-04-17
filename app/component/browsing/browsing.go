@@ -5,6 +5,8 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
+	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,9 +36,10 @@ type Model struct {
 	width, height int
 	bindings      bindings
 	prompt        textinput.Model
+	formatter     store.Formatter
 }
 
-func New() *Model {
+func New(formatter store.Formatter) *Model {
 
 	prompt := textinput.New()
 	prompt.Placeholder = defaultPromptTxt
@@ -47,11 +50,12 @@ func New() *Model {
 	}
 
 	return &Model{
-		ready:    false,
-		width:    0,
-		height:   0,
-		bindings: defaultBindings,
-		prompt:   prompt,
+		ready:     false,
+		width:     0,
+		height:    0,
+		bindings:  defaultBindings,
+		prompt:    prompt,
+		formatter: formatter,
 	}
 }
 
@@ -84,18 +88,29 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !model.prompt.Focused() {
 				break
 			}
+			// error canm be ignored as we have validation on the input prompt
+			index, _ := strconv.ParseInt(model.prompt.Value(), 10, 64)
+			model.formatter.Init(int(index))
 
+		case key.Matches(msg, model.bindings.Down):
+			model.formatter.Next()
+		case key.Matches(msg, model.bindings.Up):
+			model.formatter.Privous()
+		case key.Matches(msg, model.bindings.Exit):
+			model.prompt.Blur()
+			model.prompt.Reset()
+			cmds = append(cmds, event.ReleaseKeysRequest())
 		}
 
 	case tea.WindowSizeMsg:
-		if !model.ready {
-			model.ready = true
-		}
-
 		model.width = styles.ContentWidth(msg.Width)
 		model.height = styles.ContentHeght(msg.Height) - promptHeight
 		model.prompt.Width = promptWidth
 
+		if !model.ready {
+			model.formatter.Reset(model.width, uint8(model.height))
+			model.ready = true
+		}
 	}
 
 	model.prompt, cmd = model.prompt.Update(msg)
@@ -104,16 +119,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (model Model) View() string {
+	debug.Print("[browsing] \n%s\n", model.formatter.String())
 	return lipgloss.JoinVertical(lipgloss.Left,
 		defaultPromptStyle.Render(
 			model.prompt.View(),
 		),
-		lipgloss.NewStyle().Render(
-			lipgloss.Place(
-				model.width, model.height,
-				lipgloss.Center, lipgloss.Center,
-				notImplemeted,
-			),
-		),
+		model.formatter.String(),
 	)
 }

@@ -12,6 +12,14 @@ func BlockKeysRequest(keys ...string) tea.Cmd {
 	}
 }
 
+type ReleaseKeys struct{}
+
+func ReleaseKeysRequest() tea.Cmd {
+	return func() tea.Msg {
+		return ReleaseKeys{}
+	}
+}
+
 type Increment string
 
 func IncrementRequest(label string) tea.Cmd {

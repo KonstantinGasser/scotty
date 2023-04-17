@@ -33,3 +33,12 @@ func (store Store) NewPager(size uint8, width int) Pager {
 		bufferView: "",
 	}
 }
+
+func (store Store) NewFormatter(size uint8, width int) Formatter {
+	return Formatter{
+		size:     size,
+		ttyWidth: width,
+		reader:   &store.buffer,
+		selected: 0,
+	}
+}
