@@ -151,8 +151,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.updateActiveTab()
 
 		}
-		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
-		cmds = append(cmds, cmd)
+		if app.activeTab > tabUnset {
+			app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+			cmds = append(cmds, cmd)
+		}
 
 		return app, tea.Batch(cmds...)
 	case event.BlockKeys:

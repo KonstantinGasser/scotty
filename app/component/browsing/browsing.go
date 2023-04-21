@@ -112,12 +112,16 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	model.prompt, cmd = model.prompt.Update(msg)
-	cmds = append(cmds, cmd)
+	if model.ready {
+		model.prompt, cmd = model.prompt.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
 	return model, tea.Batch(cmds...)
 }
 
 func (model Model) View() string {
+
 	return lipgloss.JoinVertical(lipgloss.Left,
 		defaultPromptStyle.Render(
 			model.prompt.View(),

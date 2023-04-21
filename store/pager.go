@@ -175,8 +175,12 @@ func breaklines(prefix string, line string, width int, padding int) (int, []stri
 //
 //	in : label | {data: value, some: value}
 //	out: 2, ["label | {data: value,", " some: value"] for width = 21
-func buildLines(item ring.Item, width int) (int, []string) {
+func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (int, []string) {
 	prefix := fmt.Sprintf("[%d] ", item.Index())
+	for _, opt := range prefixOpts {
+		prefix = opt(prefix)
+	}
+
 	return breaklines(
 		prefix+item.Raw[:item.DataPointer],
 		item.Raw[item.DataPointer:],

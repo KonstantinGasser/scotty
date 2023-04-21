@@ -14,7 +14,7 @@ const (
 )
 
 func InfoWidth(width int) int {
-	return max(maxColumnOnWidth, int(columnOneRatio*float64(width)))
+	return int(columnOneRatio * float64(width))
 }
 
 func InfoHeight(height int) int {
