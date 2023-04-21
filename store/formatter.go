@@ -97,14 +97,20 @@ func (formatter *Formatter) buildBackground() {
 	var written uint8
 
 	debug.Print("[formatter] Selected=%d\n", formatter.selected)
-	for _, item := range formatter.buffer {
+	for i, item := range formatter.buffer {
+
+		if written >= formatter.size {
+			break
+		}
+
 		lines = nil
 		if len(item.Raw) <= 0 {
 			continue
 		}
 
+		debug.Print("[building] index: %d\n", item.Index())
 		var prefixOptions []func(string) string
-		if item.Index() == uint32(formatter.selected) {
+		if i == int(formatter.selected) {
 			prefixOptions = append(prefixOptions, func(s string) string {
 				return fmt.Sprintf(">>%s", s)
 			})
@@ -154,7 +160,7 @@ func (formatter *Formatter) buildForeground() {
 	broken := wrap.Bytes(pretty, modalWidth(formatter.ttyWidth))
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
-		item.Label,
+		item.Raw[:item.DataPointer],
 		string(broken),
 	)
 
