@@ -1,5 +1,7 @@
 package ring
 
+import "github.com/KonstantinGasser/scotty/debug"
+
 type Reader interface {
 	At(i uint32) Item
 	Range(start int, size int) Slice

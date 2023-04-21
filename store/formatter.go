@@ -33,7 +33,16 @@ type Formatter struct {
 	topIndex uint32
 	// selected refers to the ring.Item.index which
 	// is currently selected and should be formatted
-	selected uint8
+	selected uint32
+	// offset refers to the index offeset relativ to
+	// the current buffer/page and gives indications
+	// about page turns (froward and backend)
+	offset uint8
+	// visibleItemCount is the actual number of items
+	// which can currently be displayed under the current
+	// tty dimensions. It is given that visibleItemCount
+	// will never be > the size/len(buffer)
+	visibleItemCount uint8
 	// mainly used for worwrapping
 	ttyWidth int
 }
@@ -48,40 +57,30 @@ func (formatter *Formatter) Load(start int) {
 func (formatter *Formatter) Next() {
 
 	formatter.selected += 1
-	debug.Print("[formatter:Next] PageSize: %d Selected: %d\n", formatter.size, formatter.selected)
-	if formatter.selected > formatter.size {
-		formatter.selected = 0
-		// reload buffer with items from +formatter.size
-		//		=> next page
-		debug.Print("[formatter] next page!\n")
-		debug.Print("[formatter] current buffer:\n")
+
+	if formatter.offset+1 > formatter.visibleItemCount-1 {
+		formatter.buffer = formatter.reader.Range(int(formatter.selected), int(formatter.size))
+		tmp := []uint32{}
 		for _, item := range formatter.buffer {
-			debug.Print("[formatter:current] Item: %d\n", item.Index())
+			tmp = append(tmp, item.Index())
 		}
-		nextPageStart := int(formatter.buffer[0].Index()) + int(formatter.size)
-		formatter.buffer = formatter.reader.Range(nextPageStart, int(formatter.size))
 
-		debug.Print("[formatter] updated buffer:\n")
-		for _, item := range formatter.buffer {
-			debug.Print("[formatter:updated] Item: %d\n", item.Index())
-		}
-	}
-
-	formatter.buildView()
-}
-
-func (formatter *Formatter) Privous() {
-	if formatter.selected-1 < 0 {
-		formatter.selected = formatter.size
-		// reload buffer with items from -formatter.size
-		//		=> privous page
-		previousPageStart := int(formatter.buffer[0].Index()) - int(formatter.size)
-		formatter.buffer = formatter.reader.Range(previousPageStart, int(formatter.size))
+		formatter.offset = 0
 		formatter.buildView()
 		return
 	}
 
+	formatter.offset += 1
+	formatter.buildView()
+}
+
+func (formatter *Formatter) Privous() {
+
+	debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
+	defer debug.Print("-------------------------------------\n")
 	formatter.selected -= 1
+	formatter.offset -= 1
+	debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
 	formatter.buildView()
 }
 
@@ -96,23 +95,25 @@ func (formatter *Formatter) buildBackground() {
 	var height, lines, tmp = 0, []string{}, make([]string, formatter.size)
 	var written uint8
 
-	debug.Print("[formatter] Selected=%d\n", formatter.selected)
+	formatter.visibleItemCount = 0
+
 	for i, item := range formatter.buffer {
 
 		if written >= formatter.size {
 			break
 		}
 
+		formatter.visibleItemCount += 1
+
 		lines = nil
 		if len(item.Raw) <= 0 {
 			continue
 		}
 
-		debug.Print("[building] index: %d\n", item.Index())
 		var prefixOptions []func(string) string
 		if i == int(formatter.selected) {
 			prefixOptions = append(prefixOptions, func(s string) string {
-				return fmt.Sprintf(">>%s", s)
+				return fmt.Sprintf("%s%s", lipgloss.NewStyle().Bold(true).Render(">>"), s)
 			})
 		}
 
