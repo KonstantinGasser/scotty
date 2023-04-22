@@ -7,12 +7,17 @@
 
 # Idea behin scotty
 
-`scotty` is an result after being frustrated stiching togther application logs from multiple terminal windows - Instead I wanted on merged view of all application logs. Furthermore, terminals do not support formatting and parsing structred logs as such nice to have structred logs but quite usless for local development..so `scotty` also enables developers to brows the logs.
-`scotty` is a result of me being frusted stichting togther multiple application logs printed to std-err of a terminal window. Tring to find a bug in feature which includes multiple services, thus multiple application logs in multiple terminal windows, simply does not feel right.
-With `scotty` all application logs you want will be merged ito a consolidated view! Furthermore, logs often times are structured which however, is again quite usless because terminals don't care about that. So `scotty` also solves this issue and allows you to brows and format your logs on the fly.
+`scotty` is an result after being frustrated stiching togther application logs from multiple terminal windows...Instead I wanted on merged view of all application logs.
+Furthermore, terminals do not support formatting and parsing sof tructred logs as such nice to have structred logs but quite usless for local development..so `scotty` also enables developers to browes their logs.
 
-Lasty, why not do something with the logs, if we already gathered them into one?
-Why not perform queries on set logs? Eventhough not yet implemented `scotty` will be able execute **search** and **aggregation** queries. And  all that from just **one** termianl window :)
+`scotty` is a result of me being frusted stichting togther multiple application logs from multiple terminal window...
+Tring to find a bug in a feature which spans multiple services, thus multiple application logs in multiple terminal windows, simply does not feel right.
+
+With `scotty` all application logs will be merged ito one consolidated view! Furthermore, logs often times are structured which however, is again quite usless because terminals don't care about that.
+So `scotty` also solves this issue and allows you to browes and format your logs on the fly.
+
+Lasty, why not do something with the logs, if we already gathered them?
+Why not perform queries on set logs? Even though, not yet implemented `scotty` will be able execute **search** and **aggregation** queries. And all that from just **one** termianl window :)
 
 # Installation
 
