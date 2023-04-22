@@ -89,7 +89,7 @@ Once at least one beam is connected to soctty and started beaming logs you see m
 After the first beam connects to scotty by default the `follow logs` tab is opened. In here you see all logs from all connected beams.
 This tab essentaully behaves like the `tail -f` command where each new recorded log is pushed to the end of the screen.
 
-[example_tab_follow.png](resources/example_tab_follow.png)
+![example_tab_follow.png](resources/example_tab_follow.png)
 
 ### TAB: Browse
 
@@ -97,7 +97,7 @@ The inital tab content will not show much but rather ask you to provide a starti
 After you hit enter you will see the requested log is formatted and next logs are shown in the background.
 With the keys `j` and `k` you can format the next or previous log.
 
-[example_tab_browsing.png](resources/example_tab_browsing.png)
+![example_tab_browsing.png](resources/example_tab_browsing.png)
 
 ### TAB: Query
 
@@ -116,7 +116,7 @@ In the following graphic you can see the states a beam can be in:
 
 ```
 ┌───────────────────────────────────────────────────┐
-│ ● ping-svc: 2 - ◍ pong-svc: 4 - ◌ ding-svc: X  │
+│ ● ping-svc: 2 - ◍ pong-svc: 4 - ◌ ding-svc: X     │
 └───────────────────────────────────────────────────┘
   _|_ ___|___ _|_  _______|_______
    1     2     3      next beam
