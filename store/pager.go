@@ -97,7 +97,13 @@ func (pager *Pager) Rerender(width int, height int) {
 	start := clamp(int(pager.position) - int(pager.size))
 	items := pager.reader.Range(start, int(pager.size))
 
-	pager.buffer = make([]string, height)
+	pager.reload(items)
+	pager.bufferView = strings.Join(pager.buffer, "\n")
+}
+
+func (pager *Pager) reload(items ring.Slice) {
+
+	pager.buffer = make([]string, pager.size)
 	pager.bufferView = "Rebulding view..."
 
 	var written uint8
@@ -117,8 +123,22 @@ func (pager *Pager) Rerender(width int, height int) {
 
 		pager.buffer = append(pager.buffer[height:], lines...)
 	}
+}
 
+func (pager *Pager) GoToBottom() {
+	pager.position = pager.reader.Head()
+
+	start := clamp(int(pager.position) - int(pager.size))
+	items := pager.reader.Range(start, int(pager.size))
+
+	pager.reload(items)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
+}
+
+func (pager *Pager) Reset(width int, height uint8) {
+	pager.ttyWidth = width
+	pager.size = height
+	pager.buffer = make([]string, pager.size)
 }
 
 func breaklines(prefix string, line string, width int, padding int) (int, []string) {
@@ -152,10 +172,15 @@ func breaklines(prefix string, line string, width int, padding int) (int, []stri
 // a slice of string containing the broken down ring.Item.Raw line
 // along with the line count.
 // Example:
-// 		in : label | {data: value, some: value}
-// 		out: 2, ["label | {data: value,", " some: value"] for width = 21
-func buildLines(item ring.Item, width int) (int, []string) {
+//
+//	in : label | {data: value, some: value}
+//	out: 2, ["label | {data: value,", " some: value"] for width = 21
+func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (int, []string) {
 	prefix := fmt.Sprintf("[%d] ", item.Index())
+	for _, opt := range prefixOpts {
+		prefix = opt(prefix)
+	}
+
 	return breaklines(
 		prefix+item.Raw[:item.DataPointer],
 		item.Raw[item.DataPointer:],

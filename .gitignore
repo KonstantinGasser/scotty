@@ -6,5 +6,5 @@ beam
 **/*.log
 **/*.test
 profile*.svg
-
+*.pptx
 dist/

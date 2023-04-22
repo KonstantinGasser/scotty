@@ -3,29 +3,34 @@ package tailing
 import (
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
-	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 const (
 	borderMargin = 1
+
+	unset = iota
+	running
+	paused
 )
 
 type Model struct {
 	ready         bool
 	width, height int
 	pager         store.Pager
-	view          viewport.Model
+	state         int
+	bindings      bindings
 }
 
 func New(pager store.Pager) *Model {
 	return &Model{
-		ready: false,
-		pager: pager,
-		view:  viewport.Model{},
+		ready:    false,
+		pager:    pager,
+		state:    unset,
+		bindings: defaultBindings,
 	}
 }
 
@@ -36,46 +41,42 @@ func (model *Model) Init() tea.Cmd {
 func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmds []tea.Cmd
-		cmd  tea.Cmd
 	)
 
 	switch msg := msg.(type) {
+
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, model.bindings.Pause):
+			if model.state == paused {
+				model.state = running
+				cmds = append(cmds, event.TaillingResumedRequest())
+				break
+			}
+			model.state = paused
+			cmds = append(cmds, event.TaillingPausedRequest())
+		// reset/reload pager with latest page
+		case key.Matches(msg, model.bindings.FastForward):
+			model.pager.GoToBottom()
+		}
 	case tea.WindowSizeMsg:
+		model.setDimensions(msg.Width, msg.Height)
+
 		if !model.ready {
-			model.width = msg.Width - borderMargin
-			model.height = styles.AvailableHeight(msg.Height)
-
-			model.view = viewport.New(model.width, model.height)
-			model.view.Width = model.width - borderMargin
-			model.view.Height = model.height
-			model.view.MouseWheelEnabled = true
-
-			model.pager.Rerender(model.width, model.height)
+			model.pager.Reset(model.width, uint8(model.height))
 			model.ready = true
+			model.state = running
 			break
 		}
 
-		model.setDimensions(
-			msg.Width,
-			msg.Height,
-		)
 		model.pager.Rerender(model.width, model.height)
 
-	case event.FormatInit:
-		debug.Print("not implemented yet!")
-
-	case event.FormatNext:
-		debug.Print("not implemented yet!")
-
-	case event.FormatPrevious:
-		debug.Print("not implemented yet!")
-
 	case multiplexer.Message:
+		if model.state == paused {
+			break
+		}
 		model.pager.MoveDown()
 	}
-
-	model.view, cmd = model.view.Update(msg)
-	cmds = append(cmds, cmd)
 
 	return model, tea.Batch(cmds...)
 }
@@ -85,6 +86,6 @@ func (model *Model) View() string {
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width, model.height = width-borderMargin, styles.AvailableHeight(height)
-	model.view.Width, model.view.Height = model.width, model.height
+	model.width = styles.ContentWidth(width)
+	model.height = styles.ContentHeght(height)
 }

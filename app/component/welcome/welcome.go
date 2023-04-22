@@ -4,7 +4,6 @@ import (
 	"math"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -39,8 +38,8 @@ var (
 			Render(
 			strings.Join([]string{
 				lipgloss.NewStyle().Bold(true).Underline(true).Render("beam logs:\n"),
-				"\tfrom stderr: " + lipgloss.NewStyle().Bold(false).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
-				"\tfrom stdout: " + lipgloss.NewStyle().Bold(false).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
+				"\tfrom stderr:" + lipgloss.NewStyle().Bold(false).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
+				"\tfrom stdout:" + lipgloss.NewStyle().Bold(false).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
 			}, "\n"),
 		)
 
@@ -61,30 +60,12 @@ type Model struct {
 	width, height int
 }
 
-func New() *Model {
+func New(width int, height int) *Model {
 	return &Model{
 		ready:  false,
-		width:  0,
-		height: 0,
+		width:  width,
+		height: height,
 	}
-}
-
-func (m *Model) Init() tea.Cmd {
-	return nil
-}
-
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		if !m.ready {
-			m.ready = true
-		}
-		m.width = msg.Width
-		m.height = msg.Height
-	}
-
-	return m, nil
 }
 
 func (m *Model) View() string {

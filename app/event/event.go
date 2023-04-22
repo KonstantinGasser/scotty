@@ -1,35 +1,45 @@
 package event
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+)
 
-type ReloadBuffer struct{}
+type BlockKeys []string
 
-func RequestReload() tea.Cmd {
+func BlockKeysRequest(keys ...string) tea.Cmd {
 	return func() tea.Msg {
-		return ReloadBuffer{}
+		return BlockKeys(keys)
 	}
 }
 
-type FormatInit int
+type ReleaseKeys struct{}
 
-func RequestFormatInit(index int) tea.Cmd {
+func ReleaseKeysRequest() tea.Cmd {
 	return func() tea.Msg {
-		return FormatInit(index)
+		return ReleaseKeys{}
 	}
 }
 
-type FormatNext struct{}
+type Increment string
 
-func RequestFormatNext() tea.Cmd {
+func IncrementRequest(label string) tea.Cmd {
 	return func() tea.Msg {
-		return FormatNext{}
+		return Increment(label)
 	}
 }
 
-type FormatPrevious struct{}
+type TaillingPaused struct{}
 
-func RequestFormatPrevious() tea.Cmd {
+func TaillingPausedRequest() tea.Cmd {
 	return func() tea.Msg {
-		return FormatPrevious{}
+		return TaillingPaused{}
+	}
+}
+
+type TaillingResumed struct{}
+
+func TaillingResumedRequest() tea.Cmd {
+	return func() tea.Msg {
+		return TaillingResumed{}
 	}
 }

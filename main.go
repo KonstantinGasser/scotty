@@ -7,6 +7,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app"
 	"github.com/KonstantinGasser/scotty/multiplexer"
+	"github.com/KonstantinGasser/scotty/store"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -34,18 +35,8 @@ func main() {
 
 	go multiplex.Run()
 
-	ui, err := app.New(
-		*buffer,
-		quite,
-		multiplex.Errors(),
-		multiplex.Messages(),
-		multiplex.Subscribe(),
-		multiplex.Unsubscribe(),
-	)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	lStore := store.New(uint32(*buffer))
+	ui := app.New(quite, lStore, multiplex)
 
 	bubble := tea.NewProgram(ui,
 		tea.WithAltScreen(),
