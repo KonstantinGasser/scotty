@@ -19,6 +19,6 @@ var defaultBindings = bindings{
 		key.WithHelp("ctrl+c", "exit scotty"),
 	),
 	SwitchTab: key.NewBinding(
-		key.WithKeys("1", "2", "3"),
+		key.WithKeys("1", "2", "3", "4"),
 	),
 }

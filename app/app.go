@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/component/browsing"
+	"github.com/KonstantinGasser/scotty/app/component/docs"
 	"github.com/KonstantinGasser/scotty/app/component/info"
 	"github.com/KonstantinGasser/scotty/app/component/querying"
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
@@ -106,6 +107,7 @@ func New(q chan<- struct{}, lStore *store.Store, consumer multiplexer.Consumer) 
 			tabFollow: tailing.New(lStore.NewPager(0, 0)),
 			tabBrowse: browsing.New(lStore.NewFormatter(0, 0)),
 			tabQuery:  querying.New(),
+			tabDocs:   docs.New(),
 		},
 	}
 }
