@@ -50,7 +50,9 @@ type Formatter struct {
 func (formatter *Formatter) Load(start int) {
 	formatter.buffer = formatter.reader.Range(start-1, int(formatter.size))
 
-	formatter.selected = 0 // make the first item of the buffer be the selected item
+	formatter.offset = 0 // make the first item of the buffer be the selected item
+	formatter.selected = uint32(start - 1)
+
 	formatter.buildView()
 }
 
@@ -58,12 +60,9 @@ func (formatter *Formatter) Next() {
 
 	formatter.selected += 1
 
+	// turn page forward by formatter.size
 	if formatter.offset+1 > formatter.visibleItemCount-1 {
 		formatter.buffer = formatter.reader.Range(int(formatter.selected), int(formatter.size))
-		tmp := []uint32{}
-		for _, item := range formatter.buffer {
-			tmp = append(tmp, item.Index())
-		}
 
 		formatter.offset = 0
 		formatter.buildView()
@@ -76,11 +75,24 @@ func (formatter *Formatter) Next() {
 
 func (formatter *Formatter) Privous() {
 
-	debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
-	defer debug.Print("-------------------------------------\n")
+	// debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
+
 	formatter.selected -= 1
+	if formatter.offset == 0 {
+		prevPageStart := int(formatter.selected) - int(formatter.size)
+		formatter.buffer = formatter.reader.Range(prevPageStart, int(formatter.size))
+		// tmp := []uint32{}
+		// for _, item := range formatter.buffer {
+		// 	tmp = append(tmp, item.Index())
+		// }
+		// debug.Print("[formatter.PreviousPage] %v\n", tmp)
+		formatter.buildView()
+		formatter.offset = formatter.visibleItemCount - 1
+		return
+	}
+
 	formatter.offset -= 1
-	debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
+	// debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
 	formatter.buildView()
 }
 
@@ -111,7 +123,7 @@ func (formatter *Formatter) buildBackground() {
 		}
 
 		var prefixOptions []func(string) string
-		if i == int(formatter.selected) {
+		if i == int(formatter.offset) {
 			prefixOptions = append(prefixOptions, func(s string) string {
 				return fmt.Sprintf("%s%s", lipgloss.NewStyle().Bold(true).Render(">>"), s)
 			})
