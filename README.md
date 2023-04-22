@@ -74,8 +74,6 @@ $ go run -race engine.go 2>&1 | beam -d engine-svc
                                                                in soctty
 ```
 
-
-
 `beam` is a humble tool which integrates well in unix pip chains and as such having `beam` just be the last command in a such a chain of pipes there are many more thinks you can do!
 
 You can imagine any other command prior to `beam` which productes logs say a command to `tail -f` a server logs file or an command which tails logs
@@ -91,11 +89,15 @@ Once at least one beam is connected to soctty and started beaming logs you see m
 After the first beam connects to scotty by default the `follow logs` tab is opened. In here you see all logs from all connected beams.
 This tab essentaully behaves like the `tail -f` command where each new recorded log is pushed to the end of the screen.
 
+[example_tab_follow.png](resources/example_tab_follow.png)
+
 ### TAB: Browse
 
 The inital tab content will not show much but rather ask you to provide a starting index of the log item which you want to format (in the `Follow logs` tab each log as a index as prefix which you can use and refer to it in this tab).
 After you hit enter you will see the requested log is formatted and next logs are shown in the background.
 With the keys `j` and `k` you can format the next or previous log.
+
+[example_tab_browsing.png](resources/example_tab_browsing.png)
 
 ### TAB: Query
 
