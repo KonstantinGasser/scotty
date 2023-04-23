@@ -16,6 +16,14 @@ import (
 	"github.com/muesli/termenv"
 )
 
+var (
+	jsonF = prettyjson.NewFormatter()
+)
+
+func init() {
+	jsonF.StringColor = nil
+}
+
 type Formatter struct {
 	reader ring.Reader
 	// page size - max number of items
@@ -179,7 +187,7 @@ func (formatter *Formatter) buildForeground() {
 
 	item := formatter.reader.At(uint32(formatter.selected))
 
-	pretty, _ := prettyjson.Format(
+	pretty, _ := jsonF.Format(
 		[]byte(item.Raw[item.DataPointer:]),
 	)
 
