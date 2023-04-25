@@ -5,6 +5,7 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -70,7 +71,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.ready = true
 		}
 
-		model.width = styles.InfoWidth(msg.Width)
+		model.width = msg.Width // styles.InfoWidth(msg.Width)
 		model.height = styles.InfoHeight(msg.Height)
 	case beam:
 		if _, ok := model.beams[msg.label]; ok {
@@ -126,17 +127,29 @@ func (model Model) View() string {
 		beams = append(beams, status+" "+model.beams[label].colored+": "+fmt.Sprint(model.beams[label].count))
 	}
 
+	list := lipgloss.JoinHorizontal(lipgloss.Top, beams...)
+	listWidth := lipgloss.Width(list)
+	width := max(model.width, min(25, listWidth))
+
+	debug.Print("[info] list-width: %d final-width: %d\n", listWidth, width)
 	return style.
 		Padding(0, 1).
-		Width(model.width).Height(model.height).
+		Width(width + 2).Height(model.height). // +2 due to padding
 		Render(
-			lipgloss.JoinHorizontal(lipgloss.Top, beams...),
+			list,
 		)
 }
 
 func max(upper int, compare int) int {
 	if compare > upper {
 		return upper
+	}
+	return compare
+}
+
+func min(lower int, compare int) int {
+	if compare < lower {
+		return lower
 	}
 	return compare
 }

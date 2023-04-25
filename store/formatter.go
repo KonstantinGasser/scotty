@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
@@ -56,6 +55,7 @@ type Formatter struct {
 }
 
 func (formatter *Formatter) Load(start int) {
+
 	formatter.buffer = formatter.reader.Range(start-1, int(formatter.size))
 
 	formatter.offset = 0 // make the first item of the buffer be the selected item
@@ -66,20 +66,13 @@ func (formatter *Formatter) Load(start int) {
 
 func (formatter *Formatter) Next() {
 
-	debug.Print("[formatter.Next::before] index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
-	defer debug.Print("[formatter.Next::after] index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
 	formatter.selected += 1
 
 	// turn page forward by formatter.size
 	if formatter.offset+1 > formatter.visibleItemCount-1 {
 		formatter.buffer = formatter.reader.Range(int(formatter.selected), int(formatter.size))
-
 		formatter.offset = 0
-		tmp := []uint32{}
-		for _, item := range formatter.buffer {
-			tmp = append(tmp, item.Index())
-		}
-		debug.Print("[formatter.NextPage] buffer: %v\n", tmp)
+
 		formatter.buildView()
 		return
 	}
@@ -94,23 +87,15 @@ func (formatter *Formatter) Privous() {
 		return
 	}
 
-	debug.Print("[formatter.Previous::before] index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
-	defer debug.Print("[formatter.Previous::after] index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
 	formatter.selected -= 1
 	if formatter.offset == 0 {
 		formatter.buffer = formatter.reader.Range(int(formatter.selected), int(formatter.size))
-		tmp := []uint32{}
-		for _, item := range formatter.buffer {
-			tmp = append(tmp, item.Index())
-		}
-		debug.Print("[formatter.PreviousPage] buffer: %v\n", tmp)
 
 		formatter.buildView()
 		return
 	}
 
 	formatter.offset -= 1
-	// debug.Print("[formatter] Previous: index=%d offset: %d visible: %d\n", formatter.selected, formatter.offset, formatter.visibleItemCount)
 	formatter.buildView()
 }
 
@@ -127,7 +112,6 @@ func (formatter *Formatter) buildBackground() {
 
 	formatter.visibleItemCount = 0
 
-	indexs := []uint32{}
 	for i, item := range formatter.buffer {
 
 		if written >= formatter.size {
@@ -140,7 +124,6 @@ func (formatter *Formatter) buildBackground() {
 		if len(item.Raw) <= 0 {
 			continue
 		}
-		indexs = append(indexs, item.Index())
 
 		var prefixOptions []func(string) string
 		if i == int(formatter.offset) {
@@ -162,7 +145,6 @@ func (formatter *Formatter) buildBackground() {
 		tmp = append(tmp[height:], lines...)
 	}
 
-	debug.Print("[formatter.buildBackground] buffer: %v\n", indexs)
 	formatter.background = strings.Join(tmp, "\n")
 }
 
@@ -176,7 +158,7 @@ var (
 )
 
 const (
-	modalWidthRatio = 0.5
+	modalWidthRatio = 0.8
 )
 
 func modalWidth(full int) int {
