@@ -4,95 +4,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/KonstantinGasser/scotty/store/ring"
 )
-
-func TestBreakLines(t *testing.T) {
-
-	tt := []struct {
-		name     string
-		prefix   string
-		line     string
-		expected []string
-		width    int
-		depth    int
-	}{
-		{
-			name:   "break 3 times",
-			prefix: "",
-			line:   "foo bar baz",
-			expected: []string{
-				"foo",
-				" ba",
-				"r b",
-				"az",
-			},
-			depth: 4,
-			width: 3,
-		},
-	}
-
-	for _, tc := range tt {
-		// var depth int = 1
-		depth, lines := breaklines(tc.prefix, tc.line, tc.width, 0)
-
-		if depth != tc.depth {
-			t.Fatalf("[%s] expected depth of: %d; got depth: %d and lines:\n\t%q", tc.name, tc.depth, depth, lines)
-		}
-
-		for i, got := range lines {
-			if got != tc.expected[i] {
-				t.Fatalf("[%s] wanted: %s - got: %s", tc.name, strings.Join(tc.expected, ","), strings.Join(lines, ","))
-			}
-		}
-	}
-}
-
-func TestBuildLines(t *testing.T) {
-
-	tt := []struct {
-		name       string
-		item       ring.Item
-		width      int
-		wantHeight int
-		wantLines  []string
-	}{
-		{
-			name: "break line in two lines",
-			item: ring.Item{
-				Label:       "test label",
-				DataPointer: len("test label") + 1,
-				Raw:         "test label | {'test': 'something'}",
-			},
-			width:      15,
-			wantHeight: 2,
-			wantLines: []string{
-				"[0] test label | {'test': 'som",
-				"ething'}",
-			},
-		},
-	}
-
-	for _, tc := range tt {
-		count, lines := buildLines(tc.item, tc.width+len(tc.item.Label)+4) // 4 -> preifx: "[x] " len=4
-
-		if count != tc.wantHeight {
-			t.Fatalf("[%s] wanted height: %d - got height: %d", tc.name, tc.wantHeight, count)
-		}
-
-		for i, line := range lines {
-			if line != tc.wantLines[i] {
-				t.Fatalf("[%s] wanted line: %s - got line: %s", tc.name, tc.wantLines[i], line)
-			}
-		}
-	}
-}
 
 func TestMoveDownNoOverflow(t *testing.T) {
 
 	store := New(12)
-	pager := store.NewPager(4, 20)
+	pager := store.NewPager(4, 23)
 
 	prefix := "test-label | "
 	for i := 0; i < 4; i++ {
@@ -118,7 +35,7 @@ func TestMoveDownNoOverflow(t *testing.T) {
 func TestMoveDownOverflow(t *testing.T) {
 
 	store := New(12)
-	pager := store.NewPager(4, 20)
+	pager := store.NewPager(4, 23)
 
 	prefix := "test-label | "
 	for i := 0; i < 9; i++ {
@@ -145,6 +62,40 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 }
 
+// func TestMoveDownExeedPagerBufferSize(t *testing.T) {
+
+// 	store := New(12)
+// 	pager := store.NewPager(4, 20)
+
+// 	prefix := "test-label | "
+// 	for i := 0; i < 2; i++ {
+// 		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
+// 	}
+
+// 	// insert log line which if broken into multiple lines
+// 	// will have more lines then the pagers height allows
+// 	// this item if put set into view by the MoveDown call
+// 	// require 8 lines of space - the pagegr however is only
+// 	// 4 lines heigh
+// 	store.Insert("test-lable", len(prefix), []byte("test-labe2 | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+
+// 	sequence := []string{
+// 		"[1] test-label | Line-1\n\n\n",
+// 		"[1] test-label | Line-1\n[2] test-label | Line-2\n\n",
+// 		"[1] test-label | Line-1\n[2] test-label | Line-2\n",
+// 		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
+// 	}
+
+// 	for range sequence {
+// 		pager.MoveDown()
+// 		t.Log("===========")
+// 		t.Log(pager.String())
+// 		// if seq != pager.String() {
+// 		// 	t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
+// 		// }
+// 	}
+// }
+
 func TestMoveDownAssertHeight(t *testing.T) {
 
 	// width := 20
@@ -164,7 +115,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 		{
 			name:      "each item fits in row ",
 			maxHeight: 9,
-			maxWidth:  20,
+			maxWidth:  30,
 			sequence: []string{
 				"test-label | Line-1",
 				"test-label | Line-2",
@@ -191,7 +142,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 		{
 			name:      "overflow buffer; index prefix change",
 			maxHeight: 9,
-			maxWidth:  22,
+			maxWidth:  30,
 			sequence: []string{
 				"test-label | Line-1",
 				"test-label | Line-2",
@@ -239,15 +190,15 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"test-label | Line-9",
 			},
 			checksum: []string{
-				"-5",
-				"[6] test-label | Line",
-				"-6",
-				"[7] test-label | Line",
-				"-7",
-				"[8] test-label | Line",
-				"-8",
-				"[9] test-label | Line",
-				"-9",
+				"ine-5",
+				"[6] test-label | L",
+				"ine-6",
+				"[7] test-label | L",
+				"ine-7",
+				"[8] test-label | L",
+				"ine-8",
+				"[9] test-label | L",
+				"ine-9",
 			},
 		},
 	}

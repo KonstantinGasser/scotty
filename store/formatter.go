@@ -36,8 +36,7 @@ type Formatter struct {
 
 	background string
 	foreground string
-	// item index of the first element in the buffer
-	topIndex uint32
+
 	// selected refers to the ring.Item.index which
 	// is currently selected and should be formatted
 	selected uint32

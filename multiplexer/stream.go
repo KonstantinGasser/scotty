@@ -33,13 +33,13 @@ var (
 )
 
 func (s *stream) handle() error {
-
 	defer s.reader.Close()
 
 	var buf = bufio.NewReader(s.reader)
 	for {
 
 		msg, err := buf.ReadBytes('\n')
+
 		if err != nil {
 			if err == io.EOF {
 				break

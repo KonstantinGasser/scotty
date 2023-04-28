@@ -5,7 +5,6 @@ import (
 
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -131,7 +130,6 @@ func (model Model) View() string {
 	listWidth := lipgloss.Width(list)
 	width := max(model.width, min(25, listWidth))
 
-	debug.Print("[info] list-width: %d final-width: %d\n", listWidth, width)
 	return style.
 		Padding(0, 1).
 		Width(width + 2).Height(model.height). // +2 due to padding

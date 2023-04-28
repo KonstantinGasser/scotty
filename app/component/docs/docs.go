@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -51,7 +50,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.view = vp
 
 			out, err := glamour.Render(readme, "dark")
-			debug.Print("[docs] readme:\n%s\n", out)
 			if err != nil {
 				model.view.SetContent(fmt.Errorf("unable to render documents...\n[ERROR]: %s", err).Error())
 			} else {

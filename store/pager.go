@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
@@ -60,6 +59,7 @@ func (pager *Pager) MoveDown() {
 
 	height, lines := buildLines(next, pager.ttyWidth)
 
+	// fmt.Printf("line: %s\nheight: %d\n", next.Raw, height)
 	// no issue of overflowing by adding the new lines to buffer
 	if int(pager.written)+height <= int(pager.size) {
 		for _, line := range lines {
@@ -71,11 +71,22 @@ func (pager *Pager) MoveDown() {
 		return
 	}
 
+	// height: 10
+	// size: 7
+	// -> last 7 rows of lines can only be used
+	// 	  the rest is out of view as it does not fit
+	//    the page size
+	if height > int(pager.size) {
+		overflow := height - int(pager.size)
+		pager.buffer = append(pager.buffer[:], lines[overflow:]...)
+		pager.bufferView = strings.Join(pager.buffer, "\n")
+		return
+	}
+
 	// newly created lines will exceed the current page
 	// size and we need to cut of the beginning of buffer
 	pager.buffer = append(pager.buffer[height:], lines...)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
-
 }
 
 // String returns a finshed formatted string representing
@@ -139,58 +150,4 @@ func (pager *Pager) Reset(width int, height uint8) {
 	pager.ttyWidth = width
 	pager.size = height
 	pager.buffer = make([]string, pager.size)
-}
-
-func breaklines(prefix string, line string, width int, padding int) (int, []string) {
-
-	if len(line) <= width {
-		return 1, []string{prefix + line}
-	}
-
-	var out []string = []string{prefix + line[:width]}
-	line = line[width:]
-
-	if len(line) <= width {
-		return len(out) + 1, append(out, line)
-	}
-
-	for len(line) >= width {
-		out = append(out, line[:width])
-
-		line = line[width:]
-
-		if len(line) <= width {
-			return len(out) + 1, append(out, line)
-		}
-	}
-
-	return len(out), out
-}
-
-// buildLines takes an ring.Item as an input and based on the
-// ring.Item.Raw value and the current width of the tty returns
-// a slice of string containing the broken down ring.Item.Raw line
-// along with the line count.
-// Example:
-//
-//	in : label | {data: value, some: value}
-//	out: 2, ["label | {data: value,", " some: value"] for width = 21
-func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (int, []string) {
-	prefix := fmt.Sprintf("[%d] ", item.Index())
-	for _, opt := range prefixOpts {
-		prefix = opt(prefix)
-	}
-
-	return breaklines(
-		prefix+item.Raw[:item.DataPointer],
-		item.Raw[item.DataPointer:],
-		width-(len(item.Label)+len(prefix)), 0,
-	)
-}
-
-func clamp(a int) int {
-	if a < 0 {
-		return 0
-	}
-	return a
 }
