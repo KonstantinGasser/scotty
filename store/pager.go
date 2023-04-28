@@ -59,7 +59,6 @@ func (pager *Pager) MoveDown() {
 
 	height, lines := buildLines(next, pager.ttyWidth)
 
-	// fmt.Printf("line: %s\nheight: %d\n", next.Raw, height)
 	// no issue of overflowing by adding the new lines to buffer
 	if int(pager.written)+height <= int(pager.size) {
 		for _, line := range lines {

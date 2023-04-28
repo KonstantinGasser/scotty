@@ -139,6 +139,18 @@ not being able to clean up the unix-socket resources..unless changed by the `-ad
 
 Happy about any issue reports or feature requests! If you want to work on a feature or issue please read through the [contribution guidelines](CONTRIBUTING.md).
 
+*Tip for running and testing locally:*
+
+Within the repository there is a dummy application in `test/application/strcutred.go`. This file produces structred logs of a random log level. After starting scotty with `go run -race main.go -buffer=1024` you can use this dummy application to produce random logs like so:
+
+```
+go run -race test/application/structured.go -delay=250 | beam -d test-svc
+```
+
+The dummy application takes a **delay** flag which describes the frequency to the logs are produced. By default the delay is set to 100ms. Which means after a log is send the next log is send at most 100ms after the previous.
+
+This can be quite usefull in case you want to benchmark a change you did (sure benchmarks are also good thing but sometimes its good to just see how the entire application behavious under presure). Or increase the delay if you want to think while events a created :D
+
 ## Acknowledgements
 
 - UI framework: [bubbletee](https://github.com/charmbracelet/bubbletea) go check it out!
