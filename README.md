@@ -17,7 +17,9 @@ So `scotty` also solves this issue and allows you to browes and format your log
 Lasty, why not do something with the logs, if we already gather them?
 Why not perform queries on set logs? Even though, not yet implemented `scotty` will be able execute **search** and **aggregation** queries. And all that from just **one** terminal window :)
 
+
 # Installation
+
 
 ## Homebrew
 ```
