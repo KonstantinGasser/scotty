@@ -93,6 +93,7 @@ Once at least one beam is connected to soctty and started beaming logs you see m
 
 After the first beam connects to scotty by default the `follow logs` tab is opened. In here you see all logs from all connected beams.
 This tab essentaully behaves like the `tail -f` command where each new recorded log is pushed to the end of the screen.
+Use the `p` key to pause the tailing and resume by pressing `p` again.
 
 ![example_tab_follow.png](resources/example_tab_follow.png)
 
