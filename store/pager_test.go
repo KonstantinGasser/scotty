@@ -62,40 +62,6 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 }
 
-// func TestMoveDownExeedPagerBufferSize(t *testing.T) {
-
-// 	store := New(12)
-// 	pager := store.NewPager(4, 20)
-
-// 	prefix := "test-label | "
-// 	for i := 0; i < 2; i++ {
-// 		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
-// 	}
-
-// 	// insert log line which if broken into multiple lines
-// 	// will have more lines then the pagers height allows
-// 	// this item if put set into view by the MoveDown call
-// 	// require 8 lines of space - the pagegr however is only
-// 	// 4 lines heigh
-// 	store.Insert("test-lable", len(prefix), []byte("test-labe2 | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
-
-// 	sequence := []string{
-// 		"[1] test-label | Line-1\n\n\n",
-// 		"[1] test-label | Line-1\n[2] test-label | Line-2\n\n",
-// 		"[1] test-label | Line-1\n[2] test-label | Line-2\n",
-// 		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
-// 	}
-
-// 	for range sequence {
-// 		pager.MoveDown()
-// 		t.Log("===========")
-// 		t.Log(pager.String())
-// 		// if seq != pager.String() {
-// 		// 	t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
-// 		// }
-// 	}
-// }
-
 func TestMoveDownAssertHeight(t *testing.T) {
 
 	// width := 20
@@ -190,7 +156,6 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"test-label | Line-9",
 			},
 			checksum: []string{
-				"ine-5",
 				"[6] test-label | L",
 				"ine-6",
 				"[7] test-label | L",

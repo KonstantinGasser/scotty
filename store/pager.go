@@ -58,7 +58,6 @@ func (pager *Pager) MoveDown() {
 	pager.position++
 
 	height, lines := buildLines(next, pager.ttyWidth)
-
 	// no issue of overflowing by adding the new lines to buffer
 	if int(pager.written)+height <= int(pager.size) {
 		for _, line := range lines {
@@ -82,7 +81,17 @@ func (pager *Pager) MoveDown() {
 		return
 	}
 
-	// newly created lines will exceed the current page
+	// in some cases a log might be to long that it ends up taking so many
+	// lines that pager.written+height is >= pager.size leaving "empy" slots
+	// in the buffer which must be filled before we can splice and append new lines
+	freeSlots := int(pager.size - pager.written)
+	for i := 0; i < freeSlots; i++ {
+		pager.buffer[pager.written] = lines[i]
+		pager.written += 1
+		lines = lines[1:]
+	}
+
+	// newly fetched lines from item will exceed the current page
 	// size and we need to cut of the beginning of buffer
 	pager.buffer = append(pager.buffer[height:], lines...)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
