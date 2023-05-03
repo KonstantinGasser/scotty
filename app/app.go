@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"strconv"
 	"strings"
 
@@ -225,7 +224,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		prefix := lipgloss.NewStyle().Foreground(config.color).Render(msg.Label) + " | "
 
-		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), bytes.TrimSpace(msg.Data)...))
+		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), msg.Data...))
 		// update follow component asap in order to allow background updates while
 		// in a different tab
 		app.compontens[tabFollow], _ = app.compontens[tabFollow].Update(msg)

@@ -8,6 +8,10 @@ import (
 	"net"
 )
 
+var (
+	newLine = byte(10) // -> \n
+)
+
 type stream struct {
 	label  string
 	msgs   chan<- Message
@@ -39,13 +43,25 @@ func (s *stream) handle() error {
 	for {
 
 		msg, err := buf.ReadBytes('\n')
-
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return Error(fmt.Errorf("unable to read from %q: %w", s.label, err))
 		}
+
+		if len(msg) <= 0 {
+			continue
+		}
+
+		if len(msg) == 1 && msg[0] == newLine {
+			continue
+		}
+
+		if msg[len(msg)-1] == newLine {
+			msg = msg[:len(msg)-1]
+		}
+
 		s.msgs <- Message{
 			Label: s.label,
 			Data:  msg,
