@@ -1,6 +1,8 @@
 package store
 
 import (
+	"strings"
+
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
@@ -23,14 +25,18 @@ func (store *Store) Insert(label string, offset int, data []byte) {
 }
 
 func (store Store) NewPager(size uint8, width int) Pager {
+	buf := make([]string, size)
+	for i := range buf {
+		buf[i] = "\000"
+	}
 	return Pager{
 		size:       size,
 		ttyWidth:   width,
 		reader:     &store.buffer,
 		position:   0,
-		buffer:     make([]string, size),
+		buffer:     buf,
 		written:    0,
-		bufferView: "",
+		bufferView: strings.Join(buf, "\n"),
 	}
 }
 

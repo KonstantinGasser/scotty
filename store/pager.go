@@ -157,5 +157,10 @@ func (pager *Pager) GoToBottom() {
 func (pager *Pager) Reset(width int, height uint8) {
 	pager.ttyWidth = width
 	pager.size = height
+
 	pager.buffer = make([]string, pager.size)
+	for i := range pager.buffer {
+		pager.buffer[i] = "\000"
+	}
+	pager.bufferView = strings.Join(pager.buffer, "\n")
 }
