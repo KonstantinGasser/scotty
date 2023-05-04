@@ -179,7 +179,9 @@ func (formatter *Formatter) buildForeground() {
 		string(broken),
 	)
 
-	formatter.foreground = modalStyle.Render(content)
+	formatter.foreground = modalStyle.
+		Width(modalWidth(formatter.ttyWidth)).
+		Render(content)
 }
 
 func (formatter *Formatter) Reset(width int, height uint8) {
