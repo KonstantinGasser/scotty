@@ -31,7 +31,7 @@ brew install scotty beam
 ## go installed ?
 
 ```
-go install github.com/KonstantinGasser/scotty@v0.0.1
+go install github.com/KonstantinGasser/scotty@v0.0.3
 go install github.com/KonstantinGasser/beam@v0.0.1
 ```
 
