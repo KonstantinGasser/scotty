@@ -102,6 +102,7 @@ func (buf Buffer) Head() uint32 {
 // at the beginning of the returned slice while the next items are the
 // oldest items in the buffer.
 // Range add items regardless of there zero value.
+// idea: func(start, buf []Item) size based on len(buf)?
 func (buf *Buffer) Range(start int, size int) Slice {
 
 	var out []Item = make([]Item, 0, size)
