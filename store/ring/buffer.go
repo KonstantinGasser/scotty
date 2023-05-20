@@ -5,23 +5,11 @@ import "github.com/KonstantinGasser/scotty/debug"
 type Reader interface {
 	At(i uint32) Item
 	Range(start int, size int) Slice
+	OffsetWrite(offset int, buf []Item)
 	Head() uint32
 }
 
 type Slice []Item
-
-// Strings transforms the slice of Items to a slice
-// of strings where the call determins which struct field
-// should be included in the resulting slice.
-func (s Slice) Strings(fn func(i Item) string) []string {
-	var out = make([]string, len(s))
-
-	for i, item := range s {
-		out[i] = fn(item)
-	}
-
-	return out
-}
 
 // Item represents one element in the Buffer.
 // While fields such as the index or the label
@@ -104,6 +92,8 @@ func (buf Buffer) Head() uint32 {
 // at the beginning of the returned slice while the next items are the
 // oldest items in the buffer.
 // Range add items regardless of there zero value.
+// idea: func(start, buf []Item) size based on len(buf)?
+// MAYBE DEPRICATED IN THE NEXT VERSION
 func (buf *Buffer) Range(start int, size int) Slice {
 
 	var out []Item = make([]Item, 0, size)
@@ -116,6 +106,23 @@ func (buf *Buffer) Range(start int, size int) Slice {
 	}
 
 	return out
+}
+
+// OffsetWrite fills the passed in slice of Items starting from
+// the requested offset.
+// OffsetWrite will not check for dirty reads. This means that items
+// from the end of the buffer may be at the begining of the slice
+// followed by the first items inserted and not yet overwritten by
+// the buffer.
+func (buf *Buffer) OffsetWrite(offset int, b []Item) {
+
+	var index uint32
+
+	for i, j := offset, 0; i < offset+len(b); i, j = i+1, j+1 {
+		index = buf.marshalIndex(uint32(i))
+		b[j] = buf.data[index]
+	}
+
 }
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {

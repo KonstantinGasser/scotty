@@ -55,7 +55,8 @@ func (formtter Formatter) CurrentIndex() uint32 {
 
 func (formatter *Formatter) Load(start int) {
 
-	formatter.buffer = formatter.reader.Range(start, int(formatter.size))
+	formatter.buffer = make([]ring.Item, formatter.size)
+	formatter.reader.OffsetWrite(start, formatter.buffer)
 
 	formatter.relative = 0 // make the first item of the buffer be the absolute item
 	formatter.absolute = uint32(start)
