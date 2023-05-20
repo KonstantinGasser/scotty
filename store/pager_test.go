@@ -17,9 +17,9 @@ func TestMoveDownNoOverflow(t *testing.T) {
 	}
 
 	sequence := []string{
-		"[1] test-label | Line-1\n\n\n",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n\n",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n",
+		"[1] test-label | Line-1\n\x00\n\x00\n\x00",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n\x00\n\x00",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n\x00",
 		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
 	}
 
@@ -43,9 +43,9 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 
 	sequence := []string{
-		"[1] test-label | Line-1\n\n\n",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n\n",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n",
+		"[1] test-label | Line-1\n\x00\n\x00\n\x00",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n\x00\n\x00",
+		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n\x00",
 		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
 		"[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5",
 		"[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5\n[6] test-label | Line-6",

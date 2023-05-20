@@ -93,8 +93,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, model.bindings.Down):
 			model.formatter.Next()
+			model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
 		case key.Matches(msg, model.bindings.Up):
 			model.formatter.Privous()
+			model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
 		case key.Matches(msg, model.bindings.Exit):
 			model.prompt.Blur()
 			model.prompt.Reset()

@@ -52,6 +52,16 @@ func TestRangeNoOverflow(t *testing.T) {
 				{Raw: "Line-9"},
 			},
 		},
+		{
+			name:  "random range",
+			start: 5,
+			size:  8,
+			want: []Item{
+				{Raw: "Line-4"},
+				{Raw: "Line-5"},
+				{Raw: "Line-6"},
+			},
+		},
 	}
 
 	for _, tc := range tt {

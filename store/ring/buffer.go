@@ -1,5 +1,7 @@
 package ring
 
+import "github.com/KonstantinGasser/scotty/debug"
+
 type Reader interface {
 	At(i uint32) Item
 	Range(start int, size int) Slice
@@ -99,7 +101,7 @@ func (buf *Buffer) Range(start int, size int) Slice {
 
 	for i := start; i < start+size; i++ {
 		index = buf.marshalIndex(uint32(i))
-
+		debug.Print("Index: %d\n", index)
 		out = append(out, buf.data[index])
 	}
 

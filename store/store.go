@@ -45,6 +45,7 @@ func (store Store) NewFormatter(size uint8, width int) Formatter {
 		size:     size,
 		ttyWidth: width,
 		reader:   &store.buffer,
-		selected: 0,
+		absolute: 0,
+		relative: 0,
 	}
 }
