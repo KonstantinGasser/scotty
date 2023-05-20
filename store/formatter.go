@@ -55,7 +55,8 @@ type Formatter struct {
 
 func (formatter *Formatter) Load(start int) {
 
-	formatter.buffer = formatter.reader.Range(start-1, int(formatter.size))
+	formatter.buffer = make([]ring.Item, formatter.size)
+	formatter.reader.OffsetWrite(start, formatter.buffer)
 
 	formatter.offset = 0 // make the first item of the buffer be the selected item
 	formatter.selected = uint32(start - 1)
