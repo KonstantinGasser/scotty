@@ -49,8 +49,9 @@ type Formatter struct {
 	ttyWidth int
 }
 
-func (formatter Formatter) Absolute() uint32 { return formatter.absolute }
-func (formatter Formatter) Relative() uint8  { return formatter.relative }
+func (formtter Formatter) CurrentIndex() uint32 {
+	return formtter.buffer[formtter.relative].Index()
+}
 
 func (formatter *Formatter) Load(start int) {
 
@@ -67,7 +68,7 @@ func (formatter *Formatter) Next() {
 	formatter.absolute += 1
 
 	// turn page forward by formatter.size
-	if formatter.relative+1 > formatter.visibleItemCount-1 {
+	if formatter.relative+1 > formatter.size {
 		formatter.buffer = formatter.reader.Range(int(formatter.absolute), int(formatter.size))
 		formatter.relative = 0
 
