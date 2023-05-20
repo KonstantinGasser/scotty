@@ -37,7 +37,7 @@ func main() {
 
 	sl.Info("Hello Scotty", zap.String("state", "ready to beam"), zap.Int("index", 0))
 
-	var i int = 1
+	var i int = 0
 	for {
 		i++
 		time.Sleep(time.Millisecond * time.Duration(*delay))
