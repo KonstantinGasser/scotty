@@ -49,8 +49,8 @@ type Formatter struct {
 	ttyWidth int
 }
 
-func (formtter Formatter) CurrentIndex() uint32 {
-	return formtter.buffer[formtter.relative].Index()
+func (formatter Formatter) CurrentIndex() uint32 {
+	return formatter.absolute
 }
 
 func (formatter *Formatter) Load(start int) {
