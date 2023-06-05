@@ -9,7 +9,7 @@ func TestRangeNoOverflow(t *testing.T) {
 
 	buffer := New(12)
 
-	for i := 0; i < 12; i++ { // overflow by 18-12 => 6 items
+	for i := 0; i < 12; i++ {
 		buffer.Insert(Item{
 			Raw: fmt.Sprintf("Line-%d", i+1),
 		})
@@ -57,9 +57,14 @@ func TestRangeNoOverflow(t *testing.T) {
 			start: 5,
 			size:  8,
 			want: []Item{
-				{Raw: "Line-4"},
-				{Raw: "Line-5"},
 				{Raw: "Line-6"},
+				{Raw: "Line-7"},
+				{Raw: "Line-8"},
+				{Raw: "Line-9"},
+				{Raw: "Line-10"},
+				{Raw: "Line-11"},
+				{Raw: "Line-12"},
+				{Raw: "Line-1"},
 			},
 		},
 	}
