@@ -1,6 +1,7 @@
 package store
 
 import (
+	// "github.com/KonstantinGasser/scotty/debug"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
@@ -57,43 +58,28 @@ func (pager *Pager) MoveDown() {
 	next := pager.reader.At(pager.position)
 	pager.position++
 
-	height, lines := buildLines(next, pager.ttyWidth)
-	// no issue of overflowing by adding the new lines to buffer
-	if int(pager.written)+height <= int(pager.size) {
-		for _, line := range lines {
+	// lines holds a single log line wrapped
+	// into multiple strings each no longer than
+	// pager.ttyWidth
+	_, lines := buildLines(next, pager.ttyWidth)
+
+	// insert new log line into buffer
+	for _, line := range lines {
+		// while buffer is not full (number of logs written
+		// is less than the page size) we can write into the
+		// next index
+		if int(pager.written) < int(pager.size) {
 			pager.buffer[pager.written] = line
 			pager.written += 1
+			continue
 		}
-
-		pager.bufferView = strings.Join(pager.buffer, "\n")
-		return
+		// default behaviour:
+		// cut first element of buffer and append new line
+		// since the cap never changes this operation should
+		// be efficient enough
+		pager.buffer = append(pager.buffer[1:], line)
 	}
 
-	// height: 10
-	// size: 7
-	// -> last 7 rows of lines can only be used
-	// 	  the rest is out of view as it does not fit
-	//    the page size
-	if height > int(pager.size) {
-		overflow := height - int(pager.size)
-		pager.buffer = append(pager.buffer[:], lines[overflow:]...)
-		pager.bufferView = strings.Join(pager.buffer, "\n")
-		return
-	}
-
-	// in some cases a log might be to long that it ends up taking so many
-	// lines that pager.written+height is >= pager.size leaving "empy" slots
-	// in the buffer which must be filled before we can splice and append new lines
-	freeSlots := int(pager.size - pager.written)
-	for i := 0; i < freeSlots; i++ {
-		pager.buffer[pager.written] = lines[i]
-		pager.written += 1
-		lines = lines[1:]
-	}
-
-	// newly fetched lines from item will exceed the current page
-	// size and we need to cut of the beginning of buffer
-	pager.buffer = append(pager.buffer[height:], lines...)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 }
 

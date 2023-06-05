@@ -156,6 +156,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"test-label | Line-9",
 			},
 			checksum: []string{
+				"ine-5",
 				"[6] test-label | L",
 				"ine-6",
 				"[7] test-label | L",
@@ -183,7 +184,8 @@ func TestMoveDownAssertHeight(t *testing.T) {
 			t.Fatalf("[%s] wanted height: %d - got height: %d - content:\n%s", tc.name, tc.maxHeight, lineCount, contents)
 		}
 
-		for i, line := range strings.Split(contents, "\n") {
+		testLines := strings.Split(contents, "\n")
+		for i, line := range testLines {
 			if tc.checksum[i] != line {
 				t.Fatalf("[%s] content missmatch:\ncontent:\n%s\n\nwanted line: %s - got line: %s\n", tc.name, contents, tc.checksum[i], line)
 			}
