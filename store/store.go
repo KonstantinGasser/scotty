@@ -2,6 +2,7 @@ package store
 
 import (
 	"strings"
+	"time"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
@@ -24,11 +25,12 @@ func (store *Store) Insert(label string, offset int, data []byte) {
 	})
 }
 
-func (store Store) NewPager(size uint8, width int) Pager {
+func (store Store) NewPager(size uint8, width int, refresh time.Duration) Pager {
 	buf := make([]string, size)
 	for i := range buf {
 		buf[i] = "\000"
 	}
+
 	return Pager{
 		size:       size,
 		ttyWidth:   width,
@@ -37,6 +39,7 @@ func (store Store) NewPager(size uint8, width int) Pager {
 		buffer:     buf,
 		written:    0,
 		bufferView: strings.Join(buf, "\n"),
+		ticker:     time.NewTicker(refresh),
 	}
 }
 

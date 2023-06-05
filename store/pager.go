@@ -1,8 +1,8 @@
 package store
 
 import (
-	// "github.com/KonstantinGasser/scotty/debug"
 	"strings"
+	"time"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
@@ -40,6 +40,8 @@ type Pager struct {
 	// is full since until then we only need to append data not
 	// trim at the beginning
 	written uint8
+
+	ticker *time.Ticker
 }
 
 // MoveDown shifts the pagers content down by one item
@@ -80,7 +82,13 @@ func (pager *Pager) MoveDown() {
 		pager.buffer = append(pager.buffer[1:], line)
 	}
 
-	pager.bufferView = strings.Join(pager.buffer, "\n")
+	// only update the buffer view if refresh rate ticks
+	select {
+	case <-pager.ticker.C:
+		pager.bufferView = strings.Join(pager.buffer, "\n")
+	default: // empty default required else waiting for refresh and causing buffering of messages
+
+	}
 }
 
 // String returns a finshed formatted string representing
@@ -148,5 +156,11 @@ func (pager *Pager) Reset(width int, height uint8) {
 	for i := range pager.buffer {
 		pager.buffer[i] = "\000"
 	}
+	pager.bufferView = strings.Join(pager.buffer, "\n")
+}
+
+// Refresh disregards the time.Ticker and updates
+// the pager's view immediately
+func (pager *Pager) Refresh() {
 	pager.bufferView = strings.Join(pager.buffer, "\n")
 }

@@ -52,7 +52,7 @@ func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
 	return &Socket{
 		quite:       q,
 		errors:      make(chan Error),
-		messages:    make(chan Message),
+		messages:    make(chan Message, 1000), // TODO @KonstantinGasser: does this channel acutally needs to be buffered or are we just fixing symptoms?
 		subscribe:   make(chan Subscriber),
 		subscribers: make(map[string]struct{}),
 		unsubscribe: make(chan Unsubscribe),

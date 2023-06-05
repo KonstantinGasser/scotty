@@ -3,6 +3,7 @@ package app
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/KonstantinGasser/scotty/app/component/browsing"
 	"github.com/KonstantinGasser/scotty/app/component/docs"
@@ -82,10 +83,10 @@ type App struct {
 	infoComponent tea.Model
 	// map of all available components mapped to
 	// the available tabs
-	compontens map[int]tea.Model
+	components map[int]tea.Model
 }
 
-func New(q chan<- struct{}, lStore *store.Store, consumer multiplexer.Consumer) *App {
+func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer multiplexer.Consumer) *App {
 
 	return &App{
 		quite:     q,
@@ -102,8 +103,8 @@ func New(q chan<- struct{}, lStore *store.Store, consumer multiplexer.Consumer) 
 		activeTab: tabUnset,
 
 		infoComponent: info.New(),
-		compontens: map[int]tea.Model{
-			tabFollow: tailing.New(lStore.NewPager(0, 0)),
+		components: map[int]tea.Model{
+			tabFollow: tailing.New(lStore.NewPager(0, 0, refresh)),
 			tabBrowse: browsing.New(lStore.NewFormatter(0, 0)),
 			tabQuery:  querying.New(),
 			tabDocs:   docs.New(),
@@ -133,11 +134,11 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, app.bindings.Quit):
 			app.quite <- struct{}{}
 			return app, tea.Quit
-		// some compontens requested to ignore these keys as they are relevent to be
+		// some components requested to ignore these keys as they are relevent to be
 		// processed within the component itself
 		case key.Matches(msg, app.ignoreBindings...):
 			// propagate ignored keys to the active componten
-			app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
 			cmds = append(cmds, cmd)
 			return app, tea.Batch(cmds...)
 		case key.Matches(msg, app.bindings.SwitchTab):
@@ -153,7 +154,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		}
 		if app.activeTab > tabUnset {
-			app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
 			cmds = append(cmds, cmd)
 		}
 
@@ -168,12 +169,12 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.infoComponent, cmd = app.infoComponent.Update(msg)
 		cmds = append(cmds, cmd)
 
-		// iterate over all compontens as they are not
+		// iterate over all components as they are not
 		// aware of the inital width and height of the tty
 		if !app.ready {
 
-			for i, comp := range app.compontens {
-				app.compontens[i], cmd = comp.Update(msg)
+			for i, comp := range app.components {
+				app.components[i], cmd = comp.Update(msg)
 				cmds = append(cmds, cmd)
 			}
 
@@ -181,7 +182,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return app, tea.Batch(cmds...)
 		}
 
-		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
 		cmds = append(cmds, cmd)
 		return app, tea.Batch(cmds...)
 	// triggered each time a new stream connects successfully to scotty and is procssed
@@ -202,6 +203,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return app, tea.Batch(cmds...)
 
 	case multiplexer.Unsubscribe:
+		if app.activeTab == tabFollow {
+			app.components[tabFollow], _ = app.components[tabFollow].Update(tailing.ForceRefresh()())
+		}
+
 		app.infoComponent, _ = app.infoComponent.Update(info.DisconnectBeam(msg))
 		return app, tea.Batch(cmds...)
 
@@ -227,7 +232,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), msg.Data...))
 		// update follow component asap in order to allow background updates while
 		// in a different tab
-		app.compontens[tabFollow], _ = app.compontens[tabFollow].Update(msg)
+		app.components[tabFollow], _ = app.components[tabFollow].Update(msg)
 		cmds = append(cmds, app.consumeMsg)
 
 		app.infoComponent, _ = app.infoComponent.Update(event.Increment(msg.Label))
@@ -236,7 +241,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// follow component is updates asap after a message is received
 	if app.activeTab != tabUnset && app.activeTab != tabFollow {
-		app.compontens[app.activeTab], cmd = app.compontens[app.activeTab].Update(msg)
+		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -257,7 +262,7 @@ func (app App) View() string {
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
 				app.tabLine,
-				app.compontens[app.activeTab].View(),
+				app.components[app.activeTab].View(),
 				app.infoComponent.View(),
 			),
 		)

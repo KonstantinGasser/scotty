@@ -73,9 +73,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case multiplexer.Message:
 		if model.state == paused {
-			break
+			return model, nil
 		}
 		model.pager.MoveDown()
+	case forceRefresh:
+		model.pager.Refresh()
+		return model, nil
+
 	}
 
 	return model, tea.Batch(cmds...)

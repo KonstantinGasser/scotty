@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/KonstantinGasser/scotty/app"
 	"github.com/KonstantinGasser/scotty/multiplexer"
@@ -23,6 +24,7 @@ func main() {
 	network := flag.String("network", "unix", "network interface to listen for beams (option: tcp)")
 	addr := flag.String("addr", "/tmp/scotty.sock", "address for the network interface")
 	buffer := flag.Int("buffer", 4096, "buffer to store logs will hold up N items")
+	refresh := flag.Duration("refresh", time.Millisecond*50, "refresh rate of the pager. Can be increased if high through put is expected in order to reduce lags")
 	flag.Parse()
 
 	quite := make(chan struct{})
@@ -36,7 +38,7 @@ func main() {
 	go multiplex.Run()
 
 	lStore := store.New(uint32(*buffer))
-	ui := app.New(quite, lStore, multiplex)
+	ui := app.New(quite, *refresh, lStore, multiplex)
 
 	bubble := tea.NewProgram(ui,
 		tea.WithAltScreen(),
