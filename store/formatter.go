@@ -83,7 +83,7 @@ func (formatter *Formatter) Next() {
 
 func (formatter *Formatter) Privous() {
 
-	if formatter.absolute-1 == 0 {
+	if formatter.absolute-1 < 0 {
 		return
 	}
 

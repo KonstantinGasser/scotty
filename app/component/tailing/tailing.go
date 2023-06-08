@@ -50,7 +50,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, model.bindings.Pause):
 			if model.state == paused {
 				model.state = running
-				cmds = append(cmds, event.TaillingResumedRequest())
+				model.pager.Refresh()
+				// cmds = append(cmds, event.TaillingResumedRequest())
 				break
 			}
 			model.state = paused
@@ -75,6 +76,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if model.state == paused {
 			return model, nil
 		}
+
 		model.pager.MoveDown()
 	case forceRefresh:
 		model.pager.Refresh()
