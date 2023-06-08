@@ -72,11 +72,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.pager.Rerender(model.width, model.height)
 
 	case multiplexer.Message:
-		if model.state == paused {
-			return model, nil
-		}
+		// if model.state == paused {
+		// 	return model, nil
+		// }
 
-		model.pager.MoveDown()
+		model.pager.MoveDown(model.state == paused)
 	case forceRefresh:
 		model.pager.Refresh()
 		return model, nil
