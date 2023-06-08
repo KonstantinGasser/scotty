@@ -3,7 +3,6 @@ package info
 import (
 	"fmt"
 
-	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -28,29 +27,32 @@ const (
 	symbolDisconnected = "◌"
 )
 
-type beam struct {
+type stat struct {
 	label   string
 	colored string
+	style   lipgloss.Style
 	count   int
 	state   int
 }
 
-func (b *beam) increment() { b.count++ }
+func (s *stat) increment() { s.count++ }
 
 type Model struct {
-	ready         bool
-	width, height int
-	beams         map[string]*beam
-	ordered       []string
+	ready bool
+	// width, height int
+	stats   map[string]*stat
+	ordered []string
+	mode    string
 }
 
 func New() *Model {
 	return &Model{
-		ready:   false,
-		width:   0,
-		height:  0,
-		beams:   map[string]*beam{},
+		ready: false,
+		// width:   0,
+		// height:  0,
+		stats:   map[string]*stat{},
 		ordered: []string{},
+		mode:    "",
 	}
 }
 
@@ -70,63 +72,75 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.ready = true
 		}
 
-		model.width = msg.Width()
-		model.height = msg.Height()
-	case beam:
-		if _, ok := model.beams[msg.label]; ok {
-			model.beams[msg.label].state = connected
+		// model.width = msg.Width()
+		// model.height = msg.Height()
+	case requestSubscribe:
+		if _, ok := model.stats[msg.label]; ok {
+			model.stats[msg.label].state = connected
 			break
 		}
-		model.beams[msg.label] = &msg
+		model.stats[msg.label] = &stat{
+			label: msg.label,
+			style: lipgloss.NewStyle().Padding(0, 1).Foreground(msg.fg).Background(styles.BgFooter),
+			state: msg.state,
+			count: msg.count,
+		}
 		model.ordered = append(model.ordered, msg.label)
-	case DisconnectBeam:
-		if _, ok := model.beams[string(msg)]; !ok {
+	case requestUnsubscribe:
+		if _, ok := model.stats[string(msg)]; !ok {
 			break
 		}
-		model.beams[string(msg)].state = disconnected
-	case event.TaillingPaused:
-		for label := range model.beams {
-			if model.beams[label].state == disconnected {
+		model.stats[string(msg)].state = disconnected
+	case requestPause:
+		for label := range model.stats {
+			if model.stats[label].state == disconnected {
 				continue
 			}
-			model.beams[label].state = paused
+			model.stats[label].state = paused
 		}
-	case event.TaillingResumed:
-		for label := range model.beams {
-			if model.beams[label].state == disconnected {
+	case requestResume:
+		for label := range model.stats {
+			if model.stats[label].state == disconnected {
 				continue
 			}
-			model.beams[label].state = connected
+			model.stats[label].state = connected
 		}
-	case event.Increment:
-		if beam, ok := model.beams[string(msg)]; ok {
+	case requestIncrement:
+		if beam, ok := model.stats[string(msg)]; ok {
 			beam.increment()
 		}
+	case requestMode:
+		model.mode = lipgloss.NewStyle().
+			Padding(0, 1).
+			Bold(true).
+			Foreground(lipgloss.Color("#ffffff")).
+			Background(msg.bg).
+			Render(msg.mode)
 	}
 	return model, tea.Batch(cmds...)
 }
 
 func (model Model) View() string {
 
-	var beams = []string{}
+	var items = make([]string, len(model.ordered)+2) // +1 for the mode at the beginning of the line +1 for the spacer between mode and stats
+	items[0] = model.mode
+	items[1] = styles.SingleLineSpacer(5).Background(styles.BgFooter).Render("")
 	var status = symbolConnected
 	for i, label := range model.ordered {
-		if model.beams[label].state == disconnected {
-			status = symbolDisconnected
-		}
 
-		if model.beams[label].state == paused {
+		stat := model.stats[label]
+
+		switch model.stats[label].state {
+		case disconnected:
+			status = symbolDisconnected
+		case paused:
 			status = symbolPaused
 		}
 
-		if i < len(model.ordered)-1 {
-			beams = append(beams, status+" "+model.beams[label].colored+": "+fmt.Sprint(model.beams[label].count), " - ")
-			continue
-		}
-		beams = append(beams, status+" "+model.beams[label].colored+": "+fmt.Sprint(model.beams[label].count))
+		items[i+2 /*+2 as the zero/one items is the mode and spacer*/] = stat.style.Render(fmt.Sprintf("%s %d", status, stat.count))
 	}
 
-	list := lipgloss.JoinHorizontal(lipgloss.Top, beams...)
+	list := lipgloss.JoinHorizontal(lipgloss.Top, items...)
 
 	return list
 }
@@ -144,14 +158,3 @@ func min(lower int, compare int) int {
 	}
 	return compare
 }
-
-func NewBeam(label string, color lipgloss.Color) tea.Msg {
-	return beam{
-		label:   label,
-		colored: lipgloss.NewStyle().Foreground(color).Render(label),
-		count:   0,
-		state:   connected,
-	}
-}
-
-type DisconnectBeam string

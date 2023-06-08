@@ -1,7 +1,6 @@
 package tailing
 
 import (
-	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
@@ -51,11 +50,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if model.state == paused {
 				model.state = running
 				model.pager.Refresh()
-				// cmds = append(cmds, event.TaillingResumedRequest())
+				cmds = append(cmds, RequestResume())
 				break
 			}
 			model.state = paused
-			cmds = append(cmds, event.TaillingPausedRequest())
+			cmds = append(cmds, RequestPause())
 		// reset/reload pager with latest page
 		case key.Matches(msg, model.bindings.FastForward):
 			model.pager.GoToBottom()

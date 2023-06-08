@@ -12,7 +12,6 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
@@ -26,6 +25,16 @@ const (
 	tabBrowse
 	tabQuery
 	tabDocs
+)
+
+type mode struct {
+	label string
+	bg    lipgloss.Color
+}
+
+var (
+	modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
+	modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
 )
 
 type streamConfig struct {
@@ -48,8 +57,8 @@ type App struct {
 	ignoreBindings []key.Binding
 	/* multiplexer / i/o properties */
 	// channels to consume multiplexer events
-	consumer      multiplexer.Consumer
-	streamConfigs map[string]streamConfig
+	consumer   multiplexer.Consumer
+	subscriber map[string]streamConfig
 
 	// place where all logs are written
 	// to. App manly uses it for inserts
@@ -59,13 +68,13 @@ type App struct {
 	// finished parsed and build tabs
 	// where one tab is shown as active.
 	// Default is welcome-tab:active
-	tabLine *styles.Tabs
+	headerComponent *styles.Tabs
 	// indication which tab is currently
 	// active and thereby which component
 	activeTab int
 
 	/* component specific properties */
-	infoComponent tea.Model
+	footerComponent tea.Model
 	// map of all available components mapped to
 	// the available tabs
 	components map[int]tea.Model
@@ -80,14 +89,14 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		ready:     false,
 		bindings:  defaultBindings,
 
-		consumer:      consumer,
-		streamConfigs: make(map[string]streamConfig),
-		logstore:      lStore,
+		consumer:   consumer,
+		subscriber: make(map[string]streamConfig),
+		logstore:   lStore,
 
-		tabLine:   styles.NewTabs(0, "(1) follow logs", "(2) browse logs", "(3) query logs", "(4) docs"), //defaultTabLine,
-		activeTab: tabUnset,
+		headerComponent: styles.NewTabs(0, "(1) follow logs", "(2) browse logs", "(3) query logs", "(4) docs"),
+		activeTab:       tabUnset,
 
-		infoComponent: info.New(),
+		footerComponent: info.New(),
 		components: map[int]tea.Model{
 			tabFollow: tailing.New(lStore.NewPager(0, 0, refresh)),
 			tabBrowse: browsing.New(lStore.NewFormatter(0, 0)),
@@ -101,7 +110,7 @@ func (app App) Init() tea.Cmd {
 	return tea.Batch(
 		app.consumeMsg,
 		app.consumeSubscriber,
-		app.consumerUnsubscribe,
+		app.consumeUnsubscribe,
 		app.consumeErrs,
 	)
 }
@@ -135,7 +144,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			app.activeTab = int(tabIndex)
-			app.tabLine.SetActive(app.activeTab)
+			app.headerComponent.SetActive(app.activeTab)
 
 		}
 		if app.activeTab > tabUnset {
@@ -154,13 +163,12 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// aware of the inital width and height of the tty
 		if !app.ready {
 			app.grid = styles.NewGrid(msg.Width, msg.Height)
-			debug.Print("True height: %d - Grid: %+v\n", msg.Height, app.grid)
 			app.ready = true
 		} else {
 			app.grid.Adjust(msg.Width, msg.Height)
 		}
 
-		app.infoComponent, cmd = app.infoComponent.Update(app.grid.FooterLine)
+		app.footerComponent, cmd = app.footerComponent.Update(app.grid.FooterLine)
 		cmds = append(cmds, cmd)
 		for i, comp := range app.components {
 			app.components[i], cmd = comp.Update(app.grid.Content)
@@ -168,18 +176,36 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		return app, tea.Batch(cmds...)
+
+	// triggered by the tailing component indicating that the "p" key was pressed
+	// and the pager stops at the current index only updating in the background
+	case tailing.PauseRequest:
+		cmds = append(cmds,
+			info.RequestPause(),
+			info.RequestMode(modePaused.label, modePaused.bg),
+		)
+
+	// triggered by the tailing component indicating that the pager resumes to render
+	// the latest logs
+	case tailing.ResumeRequest:
+		cmds = append(cmds,
+			info.RequestResume(),
+			info.RequestMode(modeFollowing.label, modeFollowing.bg),
+			tailing.RequestRefresh(),
+		)
+
 	// triggered each time a new stream connects successfully to scotty and is procssed
 	// by the multiplexer. A random color is assigned to the stream if not yet pressent
 	// (identified by its label). An update about the new stream is propagated to the info
 	// component.
 	case multiplexer.Subscriber:
-		if _, ok := app.streamConfigs[string(msg)]; !ok {
+		if _, ok := app.subscriber[string(msg)]; !ok {
 			fg, _ := styles.RandColor()
-			app.streamConfigs[string(msg)] = streamConfig{color: fg}
+			app.subscriber[string(msg)] = streamConfig{color: fg}
 		}
 
-		app.infoComponent, _ = app.infoComponent.Update(
-			info.NewBeam(string(msg), app.streamConfigs[string(msg)].color),
+		app.footerComponent, _ = app.footerComponent.Update(
+			info.RequestSubscribe(string(msg), app.subscriber[string(msg)].color)(),
 		)
 
 		cmds = append(cmds, app.consumeSubscriber)
@@ -187,10 +213,11 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case multiplexer.Unsubscribe:
 		if app.activeTab == tabFollow {
-			app.components[tabFollow], _ = app.components[tabFollow].Update(tailing.ForceRefresh()())
+			app.components[tabFollow], _ = app.components[tabFollow].Update(tailing.RequestRefresh()())
 		}
+		app.footerComponent, _ = app.footerComponent.Update(info.RequestUnsubscribe(string(msg))())
 
-		app.infoComponent, _ = app.infoComponent.Update(info.DisconnectBeam(msg))
+		cmds = append(cmds, app.consumeUnsubscribe)
 		return app, tea.Batch(cmds...)
 
 	// triggered each time a new message is pushed from the multiplexer to
@@ -202,13 +229,14 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case multiplexer.Message:
 		if app.activeTab == tabUnset {
 			app.activeTab = tabFollow
+			cmds = append(cmds, info.RequestMode(modeFollowing.label, modeFollowing.bg))
 			// no longer required. Default of active Tab is zero
 			// and tabFollow == 0
 			// ...
 			// app.updateActiveTab()
 		}
 
-		config, ok := app.streamConfigs[msg.Label]
+		config, ok := app.subscriber[msg.Label]
 		if !ok {
 			break
 		}
@@ -221,7 +249,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		app.components[tabFollow], _ = app.components[tabFollow].Update(msg)
 		cmds = append(cmds, app.consumeMsg)
 
-		app.infoComponent, _ = app.infoComponent.Update(event.Increment(msg.Label))
+		app.footerComponent, _ = app.footerComponent.Update(info.RequestIncrement(msg.Label)())
 		return app, tea.Batch(cmds...)
 	}
 
@@ -231,7 +259,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	app.infoComponent, cmd = app.infoComponent.Update(msg)
+	app.footerComponent, cmd = app.footerComponent.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return app, tea.Batch(cmds...)
@@ -247,34 +275,15 @@ func (app App) View() string {
 		// Padding(styles.ContentPaddingVertical, 0).
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
-				app.tabLine.View(),
+				app.headerComponent.View(),
 				app.components[app.activeTab].View(),
-				app.infoComponent.View(),
+				app.grid.FooterLine.Render(app.footerComponent.View()),
 			),
 		)
 }
 
-// func (app *App) updateActiveTab() {
-// 	items := make([]string, len(tabItems))
-// 	for i, label := range tabItems {
-// 		if i == app.activeTab {
-// 			items[i] = styles.ActiveTab(label)
-// 			continue
-// 		}
-// 		items[i] = styles.Tab(label)
-// 	}
-// 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, items...)
-// 	app.tabLine = lipgloss.NewStyle().
-// 		Border(lipgloss.DoubleBorder()).
-// 		BorderTop(false).BorderLeft(false).BorderRight(false).
-// 		BorderBottom(true).
-// 		Render(
-// 			tabs + strings.Repeat(" ", app.grid.FullWidth-lipgloss.Width(tabs)),
-// 		)
-// }
-
 /* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */
-func (app *App) consumeMsg() tea.Msg          { return <-app.consumer.Messages() }
-func (app *App) consumeErrs() tea.Msg         { return <-app.consumer.Errors() }
-func (app *App) consumeSubscriber() tea.Msg   { return <-app.consumer.Subscribers() }
-func (app *App) consumerUnsubscribe() tea.Msg { return <-app.consumer.Unsubscribers() }
+func (app *App) consumeMsg() tea.Msg         { return <-app.consumer.Messages() }
+func (app *App) consumeErrs() tea.Msg        { return <-app.consumer.Errors() }
+func (app *App) consumeSubscriber() tea.Msg  { return <-app.consumer.Subscribers() }
+func (app *App) consumeUnsubscribe() tea.Msg { return <-app.consumer.Unsubscribers() }
