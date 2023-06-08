@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+)
+
+var (
+	testRefreshRate = time.Nanosecond * 0 // evaluates to a nil time.Ticker causing asap update of pager
 )
 
 func TestMoveDownNoOverflow(t *testing.T) {
 
 	store := New(12)
-	pager := store.NewPager(4, 23)
+	pager := store.NewPager(4, 23, testRefreshRate)
 
 	prefix := "test-label | "
 	for i := 0; i < 4; i++ {
@@ -25,7 +30,7 @@ func TestMoveDownNoOverflow(t *testing.T) {
 
 	// seqID := 0
 	for _, seq := range sequence {
-		pager.MoveDown()
+		pager.MoveDown(false)
 		if seq != pager.String() {
 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
 		}
@@ -35,7 +40,7 @@ func TestMoveDownNoOverflow(t *testing.T) {
 func TestMoveDownOverflow(t *testing.T) {
 
 	store := New(12)
-	pager := store.NewPager(4, 23)
+	pager := store.NewPager(4, 23, testRefreshRate)
 
 	prefix := "test-label | "
 	for i := 0; i < 9; i++ {
@@ -55,7 +60,7 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 
 	for _, seq := range sequence {
-		pager.MoveDown()
+		pager.MoveDown(false)
 		if seq != pager.String() {
 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
 		}
@@ -170,11 +175,11 @@ func TestMoveDownAssertHeight(t *testing.T) {
 	}
 	for _, tc := range tt {
 		store = New(12)
-		pager = store.NewPager(uint8(height), tc.maxWidth)
+		pager = store.NewPager(uint8(height), tc.maxWidth, testRefreshRate)
 
 		for _, seq := range tc.sequence {
 			store.Insert("test-label", len(prefix), []byte(seq))
-			pager.MoveDown()
+			pager.MoveDown(false)
 		}
 
 		contents := pager.String()
@@ -196,7 +201,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 
 func BenchmarkMoveDown(b *testing.B) {
 	store := New(2048)
-	pager := store.NewPager(44, 100)
+	pager := store.NewPager(44, 100, testRefreshRate)
 
 	// fill ring buffer until full so pager.position always is a hit
 	for i := 0; i < 2048; i++ {
@@ -207,6 +212,6 @@ func BenchmarkMoveDown(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		pager.MoveDown()
+		pager.MoveDown(false)
 	}
 }
