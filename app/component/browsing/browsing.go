@@ -104,8 +104,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case styles.Content:
-		model.width = styles.ContentWidth(msg.Width())
-		model.height = styles.ContentHeght(msg.Height()) - promptHeight
+		model.width = msg.Width()
+		model.height = msg.Height() - promptHeight
 		model.prompt.Width = promptWidth
 
 		if !model.ready {

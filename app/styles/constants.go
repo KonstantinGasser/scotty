@@ -71,8 +71,8 @@ func (dim dimensions) Height() int {
 }
 
 const (
-	tabLineDefaultHeight    = 3
-	footerLineDefaultHeight = 2
+	tabLineDefaultHeight    = 2
+	footerLineDefaultHeight = 1
 )
 
 type TabLine struct {

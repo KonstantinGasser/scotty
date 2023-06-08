@@ -71,7 +71,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		model.width = msg.Width()
-		model.height = styles.InfoHeight(msg.Height())
+		model.height = msg.Height()
 	case beam:
 		if _, ok := model.beams[msg.label]; ok {
 			model.beams[msg.label].state = connected
@@ -127,15 +127,8 @@ func (model Model) View() string {
 	}
 
 	list := lipgloss.JoinHorizontal(lipgloss.Top, beams...)
-	listWidth := lipgloss.Width(list)
-	width := max(model.width, min(25, listWidth))
 
-	return style.
-		Padding(0, 1).
-		Width(width + 2).Height(model.height). // +2 due to padding
-		Render(
-			list,
-		)
+	return list
 }
 
 func max(upper int, compare int) int {

@@ -2,7 +2,6 @@ package app
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/KonstantinGasser/scotty/app/component/browsing"
@@ -19,22 +18,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-)
-
-var (
-	tabItems       = []string{"(1) follow logs", "(2) browse logs", "(3) query logs", "(4) docs"}
-	defaultTabLine = lipgloss.NewStyle().
-			Border(lipgloss.DoubleBorder()).
-			BorderTop(false).BorderLeft(false).BorderRight(false).
-			BorderBottom(true).
-			Render(
-			lipgloss.JoinHorizontal(lipgloss.Left,
-				styles.ActiveTab(tabItems[tabFollow]),
-				styles.Tab(tabItems[tabBrowse]),
-				styles.Tab(tabItems[tabQuery]),
-				styles.Tab(tabItems[tabDocs]),
-			),
-		)
 )
 
 const (
@@ -76,7 +59,7 @@ type App struct {
 	// finished parsed and build tabs
 	// where one tab is shown as active.
 	// Default is welcome-tab:active
-	tabLine string
+	tabLine *styles.Tabs
 	// indication which tab is currently
 	// active and thereby which component
 	activeTab int
@@ -101,7 +84,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		streamConfigs: make(map[string]streamConfig),
 		logstore:      lStore,
 
-		tabLine:   defaultTabLine,
+		tabLine:   styles.NewTabs(0, "(1) follow logs", "(2) browse logs", "(3) query logs", "(4) docs"), //defaultTabLine,
 		activeTab: tabUnset,
 
 		infoComponent: info.New(),
@@ -152,7 +135,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			app.activeTab = int(tabIndex)
-			app.updateActiveTab()
+			app.tabLine.SetActive(app.activeTab)
 
 		}
 		if app.activeTab > tabUnset {
@@ -219,7 +202,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case multiplexer.Message:
 		if app.activeTab == tabUnset {
 			app.activeTab = tabFollow
-			app.updateActiveTab()
+			// no longer required. Default of active Tab is zero
+			// and tabFollow == 0
+			// ...
+			// app.updateActiveTab()
 		}
 
 		config, ok := app.streamConfigs[msg.Label]
@@ -261,31 +247,31 @@ func (app App) View() string {
 		// Padding(styles.ContentPaddingVertical, 0).
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
-				app.tabLine,
+				app.tabLine.View(),
 				app.components[app.activeTab].View(),
 				app.infoComponent.View(),
 			),
 		)
 }
 
-func (app *App) updateActiveTab() {
-	items := make([]string, len(tabItems))
-	for i, label := range tabItems {
-		if i == app.activeTab {
-			items[i] = styles.ActiveTab(label)
-			continue
-		}
-		items[i] = styles.Tab(label)
-	}
-	tabs := lipgloss.JoinHorizontal(lipgloss.Left, items...)
-	app.tabLine = lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderTop(false).BorderLeft(false).BorderRight(false).
-		BorderBottom(true).
-		Render(
-			tabs + strings.Repeat(" ", app.grid.FullWidth-lipgloss.Width(tabs)),
-		)
-}
+// func (app *App) updateActiveTab() {
+// 	items := make([]string, len(tabItems))
+// 	for i, label := range tabItems {
+// 		if i == app.activeTab {
+// 			items[i] = styles.ActiveTab(label)
+// 			continue
+// 		}
+// 		items[i] = styles.Tab(label)
+// 	}
+// 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, items...)
+// 	app.tabLine = lipgloss.NewStyle().
+// 		Border(lipgloss.DoubleBorder()).
+// 		BorderTop(false).BorderLeft(false).BorderRight(false).
+// 		BorderBottom(true).
+// 		Render(
+// 			tabs + strings.Repeat(" ", app.grid.FullWidth-lipgloss.Width(tabs)),
+// 		)
+// }
 
 /* consume* yields back a tea.Msg piped through a channel ending in the app.Update func */
 func (app *App) consumeMsg() tea.Msg          { return <-app.consumer.Messages() }
