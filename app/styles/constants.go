@@ -2,6 +2,13 @@ package styles
 
 import "github.com/charmbracelet/lipgloss"
 
+var (
+	BgFooter = lipgloss.AdaptiveColor{
+		Light: "#2c323d",
+		Dark:  "#2c323d",
+	}
+)
+
 type Grid struct {
 	FullWidth  int
 	FullHeight int
@@ -42,7 +49,10 @@ func NewGrid(width int, height int) Grid {
 				width:  width,
 				height: footerLineDefaultHeight,
 			},
-			style: lipgloss.NewStyle(),
+			style: lipgloss.NewStyle().
+				MarginTop(1).
+				Background(BgFooter).
+				Width(width),
 		},
 	}
 }
@@ -72,7 +82,7 @@ func (dim dimensions) Height() int {
 
 const (
 	tabLineDefaultHeight    = 2
-	footerLineDefaultHeight = 1
+	footerLineDefaultHeight = 2
 )
 
 type TabLine struct {
@@ -83,6 +93,10 @@ type TabLine struct {
 func (tabs *TabLine) Adjust(dim dimensions) {
 	tabs.width = dim.width
 	tabs.height = dim.height
+}
+
+func (tabs *TabLine) Render(content string) string {
+	return tabs.style.Render(content)
 }
 
 type Content struct {
@@ -100,7 +114,12 @@ type FooterLine struct {
 	style lipgloss.Style
 }
 
-func (tabs *FooterLine) Adjust(dim dimensions) {
-	tabs.width = dim.width
-	tabs.height = dim.height
+func (footer *FooterLine) Adjust(dim dimensions) {
+	footer.width = dim.width
+	footer.height = dim.height
+	footer.style = footer.style.Width(dim.width)
+}
+
+func (footer *FooterLine) Render(content string) string {
+	return footer.style.Render(content)
 }
