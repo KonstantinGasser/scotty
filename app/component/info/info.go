@@ -65,13 +65,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
+	case styles.FooterLine:
 		if !model.ready {
 			model.ready = true
 		}
 
-		model.width = msg.Width // styles.InfoWidth(msg.Width)
-		model.height = styles.InfoHeight(msg.Height)
+		model.width = msg.Width()
+		model.height = styles.InfoHeight(msg.Height())
 	case beam:
 		if _, ok := model.beams[msg.label]; ok {
 			model.beams[msg.label].state = connected

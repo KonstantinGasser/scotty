@@ -60,8 +60,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, model.bindings.FastForward):
 			model.pager.GoToBottom()
 		}
-	case tea.WindowSizeMsg:
-		model.setDimensions(msg.Width, msg.Height)
+	case styles.Content:
+		model.setDimensions(msg.Width(), msg.Height())
 
 		if !model.ready {
 			model.pager.Reset(model.width, uint8(model.height))
@@ -92,6 +92,6 @@ func (model *Model) View() string {
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width = styles.ContentWidth(width)
-	model.height = styles.ContentHeght(height)
+	model.width = width
+	model.height = height
 }

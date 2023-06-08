@@ -13,6 +13,7 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/charmbracelet/bubbles/key"
@@ -55,6 +56,7 @@ type App struct {
 	quite chan<- struct{}
 	// availabel dimension
 	ttyWidth, ttyHeight int
+	grid                styles.Grid
 	// false until initial tea.WindowSizeMsg send
 	// and App is initialized
 	ready bool
@@ -164,26 +166,24 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case event.ReleaseKeys:
 		app.ignoreBindings = nil
 	case tea.WindowSizeMsg:
-		app.ttyWidth, app.ttyHeight = msg.Width, msg.Height
-
-		app.infoComponent, cmd = app.infoComponent.Update(msg)
-		cmds = append(cmds, cmd)
 
 		// iterate over all components as they are not
 		// aware of the inital width and height of the tty
 		if !app.ready {
-
-			for i, comp := range app.components {
-				app.components[i], cmd = comp.Update(msg)
-				cmds = append(cmds, cmd)
-			}
-
+			app.grid = styles.NewGrid(msg.Width, msg.Height)
+			debug.Print("True height: %d - Grid: %+v\n", msg.Height, app.grid)
 			app.ready = true
-			return app, tea.Batch(cmds...)
+		} else {
+			app.grid.Adjust(msg.Width, msg.Height)
 		}
 
-		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+		app.infoComponent, cmd = app.infoComponent.Update(app.grid.FooterLine)
 		cmds = append(cmds, cmd)
+		for i, comp := range app.components {
+			app.components[i], cmd = comp.Update(app.grid.Content)
+			cmds = append(cmds, cmd)
+		}
+
 		return app, tea.Batch(cmds...)
 	// triggered each time a new stream connects successfully to scotty and is procssed
 	// by the multiplexer. A random color is assigned to the stream if not yet pressent
@@ -254,11 +254,11 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (app App) View() string {
 
 	if app.activeTab == tabUnset {
-		return welcome.New(app.ttyWidth, app.ttyHeight).View()
+		return welcome.New(app.grid.FullWidth, app.grid.FullHeight).View()
 	}
 
 	return lipgloss.NewStyle().
-		Padding(styles.ContentPaddingVertical, 0).
+		// Padding(styles.ContentPaddingVertical, 0).
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
 				app.tabLine,
@@ -283,7 +283,7 @@ func (app *App) updateActiveTab() {
 		BorderTop(false).BorderLeft(false).BorderRight(false).
 		BorderBottom(true).
 		Render(
-			tabs + strings.Repeat(" ", app.ttyWidth-lipgloss.Width(tabs)),
+			tabs + strings.Repeat(" ", app.grid.FullWidth-lipgloss.Width(tabs)),
 		)
 }
 
