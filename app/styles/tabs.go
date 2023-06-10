@@ -66,8 +66,11 @@ var (
 	tabStyle = lipgloss.NewStyle().PaddingBottom(1)
 )
 
+var (
+	tabsStyle = lipgloss.NewStyle().PaddingBottom(1)
+)
+
 func (tabs Tabs) View() string {
-	return lipgloss.NewStyle().
-		PaddingBottom(1).
+	return tabsStyle.
 		Render(tabs.view)
 }
