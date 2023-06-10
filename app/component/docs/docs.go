@@ -39,7 +39,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	case styles.Content:
+	case styles.Dimensions:
 		model.width = msg.Width()
 		model.height = msg.Height()
 

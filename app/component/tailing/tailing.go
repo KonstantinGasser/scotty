@@ -59,7 +59,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, model.bindings.FastForward):
 			model.pager.GoToBottom()
 		}
-	case styles.Content:
+	case styles.Dimensions:
 		model.setDimensions(msg.Width(), msg.Height())
 
 		if !model.ready {

@@ -103,7 +103,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, event.ReleaseKeysRequest())
 		}
 
-	case styles.Content:
+	case styles.Dimensions:
 		model.width = msg.Width()
 		model.height = msg.Height() - promptHeight
 		model.prompt.Width = promptWidth

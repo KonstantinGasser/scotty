@@ -62,6 +62,10 @@ func (tabs *Tabs) build() {
 	tabs.view = lipgloss.JoinHorizontal(lipgloss.Left, items...)
 }
 
+var (
+	tabStyle = lipgloss.NewStyle().PaddingBottom(1)
+)
+
 func (tabs Tabs) View() string {
 	return lipgloss.NewStyle().
 		PaddingBottom(1).

@@ -67,7 +67,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	case styles.FooterLine:
+	case styles.Dimensions:
 		if !model.ready {
 			model.ready = true
 		}

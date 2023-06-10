@@ -31,21 +31,21 @@ func NewGrid(width int, height int) Grid {
 		FullWidth:  width,
 		FullHeight: height,
 		TabLine: TabLine{
-			dimensions: dimensions{
+			Dimensions: Dimensions{
 				width:  width,
 				height: tabLineDefaultHeight,
 			},
 			style: lipgloss.NewStyle(),
 		},
 		Content: Content{
-			dimensions: dimensions{
+			Dimensions: Dimensions{
 				width:  width,
 				height: contentHeight,
 			},
 			style: lipgloss.NewStyle(),
 		},
 		FooterLine: FooterLine{
-			dimensions: dimensions{
+			Dimensions: Dimensions{
 				width:  width,
 				height: footerLineDefaultHeight,
 			},
@@ -67,16 +67,16 @@ func (grid *Grid) Adjust(width int, height int) {
 	grid.Content.height = height - (grid.TabLine.height + grid.FooterLine.height)
 }
 
-type dimensions struct {
+type Dimensions struct {
 	width  int
 	height int
 }
 
-func (dim dimensions) Width() int {
+func (dim Dimensions) Width() int {
 	return dim.width
 }
 
-func (dim dimensions) Height() int {
+func (dim Dimensions) Height() int {
 	return dim.height
 }
 
@@ -86,13 +86,8 @@ const (
 )
 
 type TabLine struct {
-	dimensions
+	Dimensions
 	style lipgloss.Style
-}
-
-func (tabs *TabLine) Adjust(dim dimensions) {
-	tabs.width = dim.width
-	tabs.height = dim.height
 }
 
 func (tabs *TabLine) Render(content string) string {
@@ -100,24 +95,13 @@ func (tabs *TabLine) Render(content string) string {
 }
 
 type Content struct {
-	dimensions
+	Dimensions
 	style lipgloss.Style
-}
-
-func (content *Content) Adjust(dim dimensions) {
-	content.width = dim.width
-	content.height = dim.height
 }
 
 type FooterLine struct {
-	dimensions
+	Dimensions
 	style lipgloss.Style
-}
-
-func (footer *FooterLine) Adjust(dim dimensions) {
-	footer.width = dim.width
-	footer.height = dim.height
-	footer.style = footer.style.Width(dim.width)
 }
 
 func (footer *FooterLine) Render(content string) string {
