@@ -1,4 +1,4 @@
-package multiplexer
+package stream
 
 // any error captured while
 // adding/reading from a stream

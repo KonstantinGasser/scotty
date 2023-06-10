@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/KonstantinGasser/scotty/app"
-	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
+	"github.com/KonstantinGasser/scotty/stream"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -29,7 +29,7 @@ func main() {
 
 	quite := make(chan struct{})
 
-	multiplex, err := multiplexer.New(quite, *network, *addr)
+	multiplex, err := stream.New(quite, *network, *addr)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -43,21 +43,6 @@ func main() {
 	bubble := tea.NewProgram(ui,
 		tea.WithAltScreen(),
 	)
-
-	// go func() {
-	// 	mux := http.NewServeMux()
-
-	// 	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	// 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	// 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	// 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	// 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	// 	server := &http.Server{
-	// 		Addr:    ":8081",
-	// 		Handler: mux,
-	// 	}
-	// 	server.ListenAndServe()
-	// }()
 
 	if _, err := bubble.Run(); err != nil {
 		fmt.Printf("unable to start scotty: %v", err)

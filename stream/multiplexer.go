@@ -1,4 +1,4 @@
-package multiplexer
+package stream
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ type Consumer interface {
 	Unsubscribers() <-chan Unsubscribe
 }
 
-type Socket struct {
+type Listener struct {
 	quite <-chan struct{}
 	// any error while accepting connections, creating the stream
 	// or reading from the stream will be piped to this channel
@@ -42,14 +42,14 @@ type Socket struct {
 	listener net.Listener
 }
 
-func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
+func New(q <-chan struct{}, network string, addr string) (*Listener, error) {
 
 	ln, err := net.Listen(network, addr)
 	if err != nil {
-		return nil, fmt.Errorf("unable to start scotty socket: %w", err)
+		return nil, fmt.Errorf("unable to start scotty ln.t: %w", err)
 	}
 
-	return &Socket{
+	return &Listener{
 		quite:       q,
 		errors:      make(chan Error),
 		messages:    make(chan Message, 1000), // TODO @KonstantinGasser: does this channel acutally needs to be buffered or are we just fixing symptoms?
@@ -60,15 +60,15 @@ func New(q <-chan struct{}, network string, addr string) (*Socket, error) {
 	}, nil
 }
 
-func (sock *Socket) Run() {
+func (ln *Listener) Run() {
 
 	go func() {
-		<-sock.quite
-		sock.listener.Close()
+		<-ln.quite
+		ln.listener.Close()
 	}()
 
 	for {
-		conn, err := sock.listener.Accept()
+		conn, err := ln.listener.Accept()
 		if err != nil {
 			// call to quite lead to closing of listener
 			// scotty is shutting down, break
@@ -84,34 +84,34 @@ func (sock *Socket) Run() {
 		// this can be a blocking operation up to 5 seconds
 		// (sync timeout)
 		go func(c net.Conn) {
-			s, err := newStream(c, sock.messages)
+			s, err := newStream(c, ln.messages)
 			if err != nil {
-				sock.errors <- err
+				ln.errors <- err
 				return
 			}
 			// check for duplicated beams
-			sock.mtx.Lock()
-			if _, ok := sock.subscribers[s.label]; ok {
-				sock.errors <- fmt.Errorf("the label %q is already used by another stream", s.label)
+			ln.mtx.Lock()
+			if _, ok := ln.subscribers[s.label]; ok {
+				ln.errors <- fmt.Errorf("the label %q is already used by another stream", s.label)
 				return
 			} else {
-				sock.subscribers[s.label] = struct{}{}
+				ln.subscribers[s.label] = struct{}{}
 			}
-			sock.mtx.Unlock()
+			ln.mtx.Unlock()
 
-			sock.subscribe <- Subscriber(s.label)
+			ln.subscribe <- Subscriber(s.label)
 
 			// blocking operation until error or EOF of client
 			if err := s.handle(); err != nil {
 				if err == ErrConnDropped {
-					sock.mtx.Lock()
-					delete(sock.subscribers, s.label)
-					sock.mtx.Unlock()
+					ln.mtx.Lock()
+					delete(ln.subscribers, s.label)
+					ln.mtx.Unlock()
 
-					sock.unsubscribe <- Unsubscribe(s.label)
+					ln.unsubscribe <- Unsubscribe(s.label)
 					return
 				}
-				sock.errors <- err
+				ln.errors <- err
 				return
 			}
 
@@ -119,7 +119,7 @@ func (sock *Socket) Run() {
 	}
 }
 
-func (sock *Socket) Errors() <-chan Error              { return sock.errors }
-func (sock *Socket) Messages() <-chan Message          { return sock.messages }
-func (sock *Socket) Subscribers() <-chan Subscriber    { return sock.subscribe }
-func (sock *Socket) Unsubscribers() <-chan Unsubscribe { return sock.unsubscribe }
+func (ln *Listener) Errors() <-chan Error              { return ln.errors }
+func (ln *Listener) Messages() <-chan Message          { return ln.messages }
+func (ln *Listener) Subscribers() <-chan Subscriber    { return ln.subscribe }
+func (ln *Listener) Unsubscribers() <-chan Unsubscribe { return ln.unsubscribe }

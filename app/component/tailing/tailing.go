@@ -2,8 +2,8 @@ package tailing
 
 import (
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
+	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -71,11 +71,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		model.pager.Rerender(model.width, model.height)
 
-	case multiplexer.Message:
-		// if model.state == paused {
-		// 	return model, nil
-		// }
-
+	case stream.Message:
 		model.pager.MoveDown(model.state == paused)
 	case forceRefresh:
 		model.pager.Refresh()

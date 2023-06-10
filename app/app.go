@@ -12,8 +12,8 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
+	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -55,9 +55,9 @@ type App struct {
 	// key bindings
 	bindings       bindings
 	ignoreBindings []key.Binding
-	/* multiplexer / i/o properties */
-	// channels to consume multiplexer events
-	consumer   multiplexer.Consumer
+	/* stream / i/o properties */
+	// channels to consume stream events
+	consumer   stream.Consumer
 	subscriber map[string]streamConfig
 
 	// place where all logs are written
@@ -80,7 +80,7 @@ type App struct {
 	components map[int]tea.Model
 }
 
-func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer multiplexer.Consumer) *App {
+func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer stream.Consumer) *App {
 
 	return &App{
 		quite:     q,
@@ -195,10 +195,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 	// triggered each time a new stream connects successfully to scotty and is procssed
-	// by the multiplexer. A random color is assigned to the stream if not yet pressent
+	// by the stream. A random color is assigned to the stream if not yet pressent
 	// (identified by its label). An update about the new stream is propagated to the info
 	// component.
-	case multiplexer.Subscriber:
+	case stream.Subscriber:
 		if _, ok := app.subscriber[string(msg)]; !ok {
 			fg, _ := styles.RandColor()
 			app.subscriber[string(msg)] = streamConfig{color: fg}
@@ -211,7 +211,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, app.consumeSubscriber)
 		return app, tea.Batch(cmds...)
 
-	case multiplexer.Unsubscribe:
+	case stream.Unsubscribe:
 		if app.activeTab == tabFollow {
 			app.components[tabFollow], _ = app.components[tabFollow].Update(tailing.RequestRefresh()())
 		}
@@ -220,13 +220,13 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, app.consumeUnsubscribe)
 		return app, tea.Batch(cmds...)
 
-	// triggered each time a new message is pushed from the multiplexer to
+	// triggered each time a new message is pushed from the stream to
 	// the consumer.
 	// Requires to identify the stream the message is from, build the prefix
 	// and to store the message in the log-store. Furthermore, inserts into
 	// the log-store will happend dispite the active tab. This allows background
 	// updates of the follow-components between tab switches.
-	case multiplexer.Message:
+	case stream.Message:
 		if app.activeTab == tabUnset {
 			app.activeTab = tabFollow
 			cmds = append(cmds, info.RequestMode(modeFollowing.label, modeFollowing.bg))
