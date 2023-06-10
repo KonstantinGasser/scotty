@@ -31,6 +31,10 @@ func (store Store) NewPager(size uint8, width int, refresh time.Duration) Pager 
 		buf[i] = "\000"
 	}
 
+	var ticker *time.Ticker
+	if refresh > 0 {
+		ticker = time.NewTicker(refresh)
+	}
 	return Pager{
 		size:       size,
 		ttyWidth:   width,
@@ -39,7 +43,7 @@ func (store Store) NewPager(size uint8, width int, refresh time.Duration) Pager 
 		buffer:     buf,
 		written:    0,
 		bufferView: strings.Join(buf, "\n"),
-		ticker:     time.NewTicker(refresh),
+		ticker:     ticker,
 	}
 }
 

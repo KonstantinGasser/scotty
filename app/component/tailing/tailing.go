@@ -1,7 +1,6 @@
 package tailing
 
 import (
-	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/multiplexer"
 	"github.com/KonstantinGasser/scotty/store"
@@ -50,17 +49,18 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, model.bindings.Pause):
 			if model.state == paused {
 				model.state = running
-				cmds = append(cmds, event.TaillingResumedRequest())
+				model.pager.Refresh()
+				cmds = append(cmds, RequestResume())
 				break
 			}
 			model.state = paused
-			cmds = append(cmds, event.TaillingPausedRequest())
+			cmds = append(cmds, RequestPause())
 		// reset/reload pager with latest page
 		case key.Matches(msg, model.bindings.FastForward):
 			model.pager.GoToBottom()
 		}
-	case tea.WindowSizeMsg:
-		model.setDimensions(msg.Width, msg.Height)
+	case styles.Dimensions:
+		model.setDimensions(msg.Width(), msg.Height())
 
 		if !model.ready {
 			model.pager.Reset(model.width, uint8(model.height))
@@ -72,10 +72,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.pager.Rerender(model.width, model.height)
 
 	case multiplexer.Message:
-		if model.state == paused {
-			return model, nil
-		}
-		model.pager.MoveDown()
+		// if model.state == paused {
+		// 	return model, nil
+		// }
+
+		model.pager.MoveDown(model.state == paused)
 	case forceRefresh:
 		model.pager.Refresh()
 		return model, nil
@@ -90,6 +91,6 @@ func (model *Model) View() string {
 }
 
 func (model *Model) setDimensions(width, height int) {
-	model.width = styles.ContentWidth(width)
-	model.height = styles.ContentHeght(height)
+	model.width = width
+	model.height = height
 }

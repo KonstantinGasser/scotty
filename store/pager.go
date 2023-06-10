@@ -55,7 +55,7 @@ type Pager struct {
 // The pager.bufferView is updated with the shifted content.
 // MoveDown will ensure that the number of \n (lines) in the
 // pager.bufferView is not exceeding the current pager.size.
-func (pager *Pager) MoveDown() {
+func (pager *Pager) MoveDown(skipRefresh bool) {
 
 	next := pager.reader.At(pager.position)
 	pager.position++
@@ -80,6 +80,15 @@ func (pager *Pager) MoveDown() {
 		// since the cap never changes this operation should
 		// be efficient enough
 		pager.buffer = append(pager.buffer[1:], line)
+	}
+
+	if skipRefresh {
+		return
+	}
+
+	if pager.ticker == nil {
+		pager.bufferView = strings.Join(pager.buffer, "\n")
+		return
 	}
 
 	// only update the buffer view if refresh rate ticks

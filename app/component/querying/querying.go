@@ -38,13 +38,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
+	case styles.Dimensions:
 		if !model.ready {
 			model.ready = true
 		}
 
-		model.width = styles.ContentWidth(msg.Width)
-		model.height = styles.ContentHeght(msg.Height)
+		model.width = msg.Width()
+		model.height = msg.Height()
 	}
 	return model, tea.Batch(cmds...)
 }
