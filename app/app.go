@@ -4,13 +4,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/KonstantinGasser/scotty/app/bindings"
 	"github.com/KonstantinGasser/scotty/app/component/browsing"
 	"github.com/KonstantinGasser/scotty/app/component/docs"
 	"github.com/KonstantinGasser/scotty/app/component/info"
 	"github.com/KonstantinGasser/scotty/app/component/querying"
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
-	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
@@ -53,7 +53,7 @@ type App struct {
 	// and App is initialized
 	ready bool
 	// key bindings
-	bindings       bindings
+	bindings       *bindings.KeyMap
 	ignoreBindings []key.Binding
 	/* stream / i/o properties */
 	// channels to consume stream events
@@ -82,12 +82,13 @@ type App struct {
 
 func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer stream.Consumer) *App {
 
-	return &App{
+	binds := bindings.New()
+	app := &App{
 		quite:     q,
 		ttyWidth:  -1, // unset/invalid
 		ttyHeight: -1, // unset/invalid
 		ready:     false,
-		bindings:  defaultBindings,
+		bindings:  binds,
 
 		consumer:   consumer,
 		subscriber: make(map[string]streamConfig),
@@ -98,12 +99,34 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 
 		footerComponent: info.New(),
 		components: map[int]tea.Model{
-			tabFollow: tailing.New(lStore.NewPager(0, 0, refresh)),
-			tabBrowse: browsing.New(lStore.NewFormatter(0, 0)),
+			tabFollow: tailing.New(binds, lStore.NewPager(0, 0, refresh)),
+			tabBrowse: browsing.New(binds, lStore.NewFormatter(0, 0)),
 			tabQuery:  querying.New(),
 			tabDocs:   docs.New(),
 		},
 	}
+
+	app.bindings.Map(key.NewBinding(key.WithKeys("1", "2", "3", "4")),
+		func(msg tea.KeyMsg) tea.Cmd {
+			index, _ := strconv.Atoi(msg.String())
+			index = index - 1 // user sees tabs starting from one (1), however slice of tabs starts at zero (0)
+			if index < 0 || app.activeTab == index {
+				return nil
+			}
+			app.activeTab = int(index)
+			app.headerComponent.SetActive(app.activeTab)
+
+			if app.activeTab > tabUnset {
+				var cmd tea.Cmd
+				app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+				return cmd
+			}
+
+			return nil
+		},
+	)
+
+	return app
 }
 
 func (app App) Init() tea.Cmd {
@@ -125,38 +148,44 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, app.bindings.Quit):
-			app.quite <- struct{}{}
-			return app, tea.Quit
-		// some components requested to ignore these keys as they are relevent to be
-		// processed within the component itself
-		case key.Matches(msg, app.ignoreBindings...):
-			// propagate ignored keys to the active componten
-			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+		case app.bindings.Match(msg):
+
+			cmd := app.bindings.Cmd(msg).Call(msg)
 			cmds = append(cmds, cmd)
 			return app, tea.Batch(cmds...)
-		case key.Matches(msg, app.bindings.SwitchTab):
-			tabIndex, _ := strconv.ParseInt(msg.String(), 10, 64)
-			tabIndex = tabIndex - 1 // -1 as it is displayed as 1 2 3 4 but index at 0
-
-			if app.activeTab == int(tabIndex) {
-				return app, tea.Batch(cmds...)
-			}
-
-			app.activeTab = int(tabIndex)
-			app.headerComponent.SetActive(app.activeTab)
-
 		}
-		if app.activeTab > tabUnset {
-			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-			cmds = append(cmds, cmd)
-		}
-
-		return app, tea.Batch(cmds...)
-	case event.BlockKeys:
-		app.ignoreBindings = append(app.ignoreBindings, key.NewBinding(key.WithKeys(msg...)))
-	case event.ReleaseKeys:
-		app.ignoreBindings = nil
+	// 	case key.Matches(msg, app.bindings.Quit):
+	// 		app.quite <- struct{}{}
+	// 		return app, tea.Quit
+	// 	// some components requested to ignore these keys as they are relevent to be
+	// 	// processed within the component itself
+	// 	case key.Matches(msg, app.ignoreBindings...):
+	// 		// propagate ignored keys to the active componten
+	// 		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+	// 		cmds = append(cmds, cmd)
+	// 		return app, tea.Batch(cmds...)
+	// 	case key.Matches(msg, app.bindings.SwitchTab):
+	// 		tabIndex, _ := strconv.ParseInt(msg.String(), 10, 64)
+	// 		tabIndex = tabIndex - 1 // -1 as it is displayed as 1 2 3 4 but index at 0
+	//
+	// 		if app.activeTab == int(tabIndex) {
+	// 			return app, tea.Batch(cmds...)
+	// 		}
+	//
+	// 		app.activeTab = int(tabIndex)
+	// 		app.headerComponent.SetActive(app.activeTab)
+	//
+	// 	}
+	// 	if app.activeTab > tabUnset {
+	// 		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+	// 		cmds = append(cmds, cmd)
+	// }
+	//
+	// 	return app, tea.Batch(cmds...)
+	// case event.BlockKeys:
+	// 	app.ignoreBindings = append(app.ignoreBindings, key.NewBinding(key.WithKeys(msg...)))
+	// case event.ReleaseKeys:
+	// 	app.ignoreBindings = nil
 	case tea.WindowSizeMsg:
 
 		// iterate over all components as they are not
@@ -168,10 +197,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			app.grid.Adjust(msg.Width, msg.Height)
 		}
 
-		app.footerComponent, cmd = app.footerComponent.Update(app.grid.FooterLine)
+		app.footerComponent, cmd = app.footerComponent.Update(app.grid.FooterLine.Dims())
 		cmds = append(cmds, cmd)
 		for i, comp := range app.components {
-			app.components[i], cmd = comp.Update(app.grid.Content)
+			app.components[i], cmd = comp.Update(app.grid.Content.Dims())
 			cmds = append(cmds, cmd)
 		}
 

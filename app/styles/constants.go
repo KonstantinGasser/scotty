@@ -80,6 +80,8 @@ func (dim Dimensions) Height() int {
 	return dim.height
 }
 
+func (dim Dimensions) Dims() Dimensions { return dim }
+
 const (
 	tabLineDefaultHeight    = 2
 	footerLineDefaultHeight = 2

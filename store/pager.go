@@ -1,9 +1,11 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
@@ -56,10 +58,9 @@ type Pager struct {
 // MoveDown will ensure that the number of \n (lines) in the
 // pager.bufferView is not exceeding the current pager.size.
 func (pager *Pager) MoveDown(skipRefresh bool) {
-
+	debug.Print("Pager:\n%s", pager.debug())
 	next := pager.reader.At(pager.position)
 	pager.position++
-
 	// lines holds a single log line wrapped
 	// into multiple strings each no longer than
 	// pager.ttyWidth
@@ -172,4 +173,8 @@ func (pager *Pager) Reset(width int, height uint8) {
 // the pager's view immediately
 func (pager *Pager) Refresh() {
 	pager.bufferView = strings.Join(pager.buffer, "\n")
+}
+
+func (pager *Pager) debug() string {
+	return fmt.Sprintf("Height: %d\nWidth: %d\nPosition: %d, Len(buffer): %d\n", pager.size, pager.ttyWidth, pager.position, len(pager.buffer))
 }
