@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
@@ -58,7 +57,6 @@ type Pager struct {
 // MoveDown will ensure that the number of \n (lines) in the
 // pager.bufferView is not exceeding the current pager.size.
 func (pager *Pager) MoveDown(skipRefresh bool) {
-	debug.Print("Pager:\n%s", pager.debug())
 	next := pager.reader.At(pager.position)
 	pager.position++
 	// lines holds a single log line wrapped

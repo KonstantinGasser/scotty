@@ -3,7 +3,6 @@ package tailing
 import (
 	"github.com/KonstantinGasser/scotty/app/bindings"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
@@ -73,25 +72,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-
-	// case tea.KeyMsg:
-	// 	switch {
-	// 	case key.Matches(msg, model.bindings.Pause):
-	// 		if model.state == paused {
-	// 			model.state = running
-	// 			model.pager.Refresh()
-	// 			cmds = append(cmds, RequestResume())
-	// 			break
-	// 		}
-	// 		model.state = paused
-	// 		cmds = append(cmds, RequestPause())
-	// 	// reset/reload pager with latest page
-	// 	case key.Matches(msg, model.bindings.FastForward):
-	// 		model.pager.GoToBottom()
-	// 	}
 	case styles.Dimensions:
 		model.setDimensions(msg.Width(), msg.Height())
-		debug.Print("[Tailing] Dimensions: width: %d - Height: %d\n", msg.Width(), msg.Height())
 		if !model.ready {
 			model.pager.Reset(model.width, uint8(model.height))
 			model.ready = true

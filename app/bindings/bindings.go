@@ -38,19 +38,10 @@ type KeyMap struct {
 }
 
 func New() *KeyMap {
-	quite := key.NewBinding(
-		key.WithKeys("ctrl+c"),
-		key.WithHelp("ctrl+c", "exit scotty"),
-	)
-
-	keys := KeyMap{
+	return &KeyMap{
 		state: stateLocal,
-		binds: map[*key.Binding]Func{
-			&quite: func(tea.KeyMsg) tea.Cmd { return tea.Quit },
-		},
+		binds: map[*key.Binding]Func{},
 	}
-
-	return &keys
 }
 
 func (keys *KeyMap) Map(k key.Binding, fn Func) {
@@ -62,7 +53,7 @@ func (keys *KeyMap) Match(k tea.KeyMsg) bool {
 
 	for binding := range keys.binds {
 		for _, key := range binding.Keys() {
-			if key == str {
+			if key == str && binding.Enabled() {
 				return true
 			}
 		}

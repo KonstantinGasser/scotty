@@ -106,6 +106,13 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		},
 	}
 
+	app.bindings.Map(key.NewBinding(key.WithKeys("ctrl+c")),
+		func(km tea.KeyMsg) tea.Cmd {
+			app.quite <- struct{}{}
+			return tea.Quit
+		},
+	)
+
 	app.bindings.Map(key.NewBinding(key.WithKeys("1", "2", "3", "4")),
 		func(msg tea.KeyMsg) tea.Cmd {
 			index, _ := strconv.Atoi(msg.String())
@@ -154,38 +161,6 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 			return app, tea.Batch(cmds...)
 		}
-	// 	case key.Matches(msg, app.bindings.Quit):
-	// 		app.quite <- struct{}{}
-	// 		return app, tea.Quit
-	// 	// some components requested to ignore these keys as they are relevent to be
-	// 	// processed within the component itself
-	// 	case key.Matches(msg, app.ignoreBindings...):
-	// 		// propagate ignored keys to the active componten
-	// 		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-	// 		cmds = append(cmds, cmd)
-	// 		return app, tea.Batch(cmds...)
-	// 	case key.Matches(msg, app.bindings.SwitchTab):
-	// 		tabIndex, _ := strconv.ParseInt(msg.String(), 10, 64)
-	// 		tabIndex = tabIndex - 1 // -1 as it is displayed as 1 2 3 4 but index at 0
-	//
-	// 		if app.activeTab == int(tabIndex) {
-	// 			return app, tea.Batch(cmds...)
-	// 		}
-	//
-	// 		app.activeTab = int(tabIndex)
-	// 		app.headerComponent.SetActive(app.activeTab)
-	//
-	// 	}
-	// 	if app.activeTab > tabUnset {
-	// 		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-	// 		cmds = append(cmds, cmd)
-	// }
-	//
-	// 	return app, tea.Batch(cmds...)
-	// case event.BlockKeys:
-	// 	app.ignoreBindings = append(app.ignoreBindings, key.NewBinding(key.WithKeys(msg...)))
-	// case event.ReleaseKeys:
-	// 	app.ignoreBindings = nil
 	case tea.WindowSizeMsg:
 
 		// iterate over all components as they are not

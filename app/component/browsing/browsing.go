@@ -141,39 +141,6 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
-	// case tea.KeyMsg:
-	// 	switch {
-	// 	// this is the initiator to start the prompt but we don't want the ":"
-	// 	// to be set as a value for the prompt
-	// 	case model.prompt.Focused() && key.Matches(msg, key.NewBinding(key.WithKeys(":"))):
-	// 		return model, tea.Batch(cmds...)
-	// 	case key.Matches(msg, model.bindings.Focus):
-	// 		cmds = append(cmds,
-	// 			model.prompt.Focus(),
-	// 			// tell app to ignore these keys
-	// 			event.BlockKeysRequest("1", "2", "3", "4"),
-	// 		)
-	// 		model.prompt.Prompt = focusedPromptChar
-	// 	case key.Matches(msg, model.bindings.Enter):
-	// 		if !model.prompt.Focused() {
-	// 			break
-	// 		}
-	// 		// error canm be ignored as we have validation on the input prompt
-	// 		index, _ := strconv.ParseInt(model.prompt.Value(), 10, 64)
-	// 		model.formatter.Load(int(index))
-	//
-	// 	case key.Matches(msg, model.bindings.Down):
-	// 		model.formatter.Next()
-	// 		model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
-	// 	case key.Matches(msg, model.bindings.Up):
-	// 		model.formatter.Privous()
-	// 		model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
-	// 	case key.Matches(msg, model.bindings.Exit):
-	// 		model.prompt.Blur()
-	// 		model.prompt.Reset()
-	// 		cmds = append(cmds, event.ReleaseKeysRequest())
-	// 	}
-
 	case styles.Dimensions:
 		model.width = msg.Width()
 		model.height = msg.Height() - promptHeight
