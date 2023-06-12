@@ -4,8 +4,8 @@ import "github.com/KonstantinGasser/scotty/debug"
 
 type Reader interface {
 	At(i uint32) Item
-	Range(start int, size int) Slice
-	OffsetWrite(offset int, buf []Item)
+	// Range(start int, size int) Slice
+	OffsetRead(offset int, buf []Item)
 	Head() uint32
 }
 
@@ -108,13 +108,13 @@ func (buf *Buffer) Range(start int, size int) Slice {
 	return out
 }
 
-// OffsetWrite fills the passed in slice of Items starting from
+// OffsetRead fills the passed in slice of Items starting from
 // the requested offset.
-// OffsetWrite will not check for dirty reads. This means that items
+// OffsetRead will not check for dirty reads. This means that items
 // from the end of the buffer may be at the begining of the slice
 // followed by the first items inserted and not yet overwritten by
 // the buffer.
-func (buf *Buffer) OffsetWrite(offset int, b []Item) {
+func (buf *Buffer) OffsetRead(offset int, b []Item) {
 
 	var index uint32
 

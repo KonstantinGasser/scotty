@@ -113,9 +113,23 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		},
 	}
 
-	app.bindings.Bind("ctrl+c").Action(func(km tea.KeyMsg) tea.Cmd {
+	app.bindings.Bind("ctrl+c").Action(func(msg tea.KeyMsg) tea.Cmd {
 		app.quit <- struct{}{}
 		return tea.Quit
+	})
+
+	app.bindings.Bind(" ").Option("f").Action(func(msg tea.KeyMsg) tea.Cmd {
+		debug.Print("[%q] SPC-F\n", msg)
+		app.activeTab = tabFollow
+		app.headerComponent.SetActive(app.activeTab)
+		return nil
+	})
+
+	app.bindings.Bind(" ").Option("b").Action(func(msg tea.KeyMsg) tea.Cmd {
+		debug.Print("[%q] SPC-B\n", msg)
+		app.activeTab = tabBrowse
+		app.headerComponent.SetActive(app.activeTab)
+		return nil
 	})
 
 	app.bindings.Debug()

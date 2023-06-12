@@ -56,7 +56,7 @@ func (formatter Formatter) CurrentIndex() uint32 {
 func (formatter *Formatter) Load(start int) {
 
 	formatter.buffer = make([]ring.Item, formatter.size)
-	formatter.reader.OffsetWrite(start, formatter.buffer)
+	formatter.reader.OffsetRead(start, formatter.buffer)
 
 	formatter.relative = 0 // make the first item of the buffer be the absolute item
 	formatter.absolute = uint32(start)
@@ -70,7 +70,7 @@ func (formatter *Formatter) Next() {
 
 	// turn page forward by formatter.size
 	if formatter.relative+1 > formatter.size {
-		formatter.buffer = formatter.reader.Range(int(formatter.absolute), int(formatter.size))
+		formatter.reader.OffsetRead(int(formatter.absolute), formatter.buffer)
 		formatter.relative = 0
 
 		formatter.buildView()
@@ -89,8 +89,7 @@ func (formatter *Formatter) Privous() {
 
 	formatter.absolute -= 1
 	if formatter.relative == 0 {
-		formatter.buffer = formatter.reader.Range(int(formatter.absolute), int(formatter.size))
-
+		formatter.reader.OffsetRead(int(formatter.absolute), formatter.buffer)
 		formatter.buildView()
 		return
 	}

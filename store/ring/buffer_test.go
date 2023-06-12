@@ -302,7 +302,7 @@ func TestOffsetWrite(t *testing.T) {
 		buffer := newFilledBuffer(tc.bufSize, tc.bufWrite, func(i int) string { return fmt.Sprintf("Line-%d", i) })
 
 		got := make([]Item, tc.pageSize)
-		buffer.OffsetWrite(tc.offset, got)
+		buffer.OffsetRead(tc.offset, got)
 
 		if len(got) != len(tc.want) {
 			t.Fatalf("[%s -- offset: %d] wanted slice of len: %d, got len: %d", tc.name, tc.offset, len(tc.want), len(got))

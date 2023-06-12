@@ -115,8 +115,9 @@ func (pager *Pager) Rerender(width int, height int) {
 	pager.ttyWidth = width
 	pager.size = uint8(height)
 
-	start := clamp(int(pager.position) - int(pager.size))
-	items := pager.reader.Range(start, int(pager.size))
+	start := clamp(int(pager.position) - len(pager.buffer))
+	items := make([]ring.Item, len(pager.buffer))
+	pager.reader.OffsetRead(start, items)
 
 	pager.reload(items)
 	pager.bufferView = strings.Join(pager.buffer, "\n")
@@ -144,16 +145,6 @@ func (pager *Pager) reload(items ring.Slice) {
 
 		pager.buffer = append(pager.buffer[height:], lines...)
 	}
-}
-
-func (pager *Pager) GoToBottom() {
-	pager.position = pager.reader.Head()
-
-	start := clamp(int(pager.position) - int(pager.size))
-	items := pager.reader.Range(start, int(pager.size))
-
-	pager.reload(items)
-	pager.bufferView = strings.Join(pager.buffer, "\n")
 }
 
 func (pager *Pager) Reset(width int, height uint8) {
