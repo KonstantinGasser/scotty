@@ -3,99 +3,81 @@ package bindings
 import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"golang.org/x/exp/slices"
-)
-
-type Mapper interface {
-	Map(k key.Binding, fn Func)
-	Disable(ks ...key.Binding)
-	Enable(ks ...key.Binding)
-	Cmd(msg tea.KeyMsg) Func
-}
-
-const (
-	keySPC = " "
-
-	// if set implies that keySPC has be clicked
-	// which can change the actions of certain local
-	// bindings
-	stateGlobal = iota + 1
-	stateLocal
-)
-
-var global = key.NewBinding(
-	key.WithKeys(keySPC),
-	key.WithHelp("SPC", "start of global command"),
 )
 
 type Func func(tea.KeyMsg) tea.Cmd
 
-func (fn Func) Call(msg tea.KeyMsg) tea.Cmd { return fn(msg) }
+var NilFunc Func = func(tea.KeyMsg) tea.Cmd { return nil }
 
-type KeyMap struct {
-	state uint8
-	binds map[*key.Binding]Func
+type Options map[string]*Node
+
+type Node struct {
+	binding key.Binding
+	options Options
+	action  Func
 }
 
-func New() *KeyMap {
-	return &KeyMap{
-		state: stateLocal,
-		binds: map[*key.Binding]Func{},
+func newNode(k string) *Node {
+	return &Node{
+		binding: key.NewBinding(key.WithKeys(k)),
+		options: Options{},
+		action:  NilFunc,
 	}
 }
 
-func (keys *KeyMap) Map(k key.Binding, fn Func) {
-	keys.binds[&k] = fn
-}
-
-func (keys *KeyMap) Match(k tea.KeyMsg) bool {
-	str := k.String()
-
-	for binding := range keys.binds {
-		for _, key := range binding.Keys() {
-			if key == str && binding.Enabled() {
-				return true
-			}
-		}
+func (node *Node) Option(k string) *Node {
+	if opt, ok := node.options[k]; ok {
+		return opt
 	}
-	return false
+
+	node.options[k] = newNode(k)
+	return node
 }
 
-// TODO @KonstantinGasser:
-// wow, there must be a better way to do things???
-// maybey use a different data structre?
-func (keys *KeyMap) Disable(ks ...key.Binding) {
-	for _, k := range ks {
-		for binding := range keys.binds {
-			findAndFlipOnOff(binding, k.Keys(), false)
-		}
+func (node *Node) Action(act Func) *Node {
+	node.action = act
+	return node
+}
+
+type SequenceTree struct {
+	root *Node
+}
+
+func newSeqTree(k string) SequenceTree {
+	return SequenceTree{
+		root: newNode(k),
 	}
 }
 
-func (keys *KeyMap) Enable(ks ...key.Binding) {
-	for _, k := range ks {
-		for binding := range keys.binds {
-			findAndFlipOnOff(binding, k.Keys(), true)
-		}
+func (seq *SequenceTree) Option(k string) *Node {
+	seq.root.Option(k)
+	return seq.root
+}
+
+func (seq *SequenceTree) Action(act Func) *Node {
+	seq.root.Action(act)
+	return seq.root
+}
+
+type Map struct {
+	activeOpts *Node
+	binds      map[string]SequenceTree
+}
+
+func NewMap() *Map {
+	return &Map{
+		activeOpts: nil,
+		binds:      map[string]SequenceTree{},
 	}
 }
 
-func findAndFlipOnOff(b *key.Binding, keys []string, onOff bool) {
-	for _, kVal := range keys {
-		if slices.Contains(b.Keys(), kVal) {
-			b.SetEnabled(onOff)
-		}
+func (m *Map) Bind(k string) *SequenceTree {
+	if seq, ok := m.binds[k]; ok {
+		return &seq
 	}
 
-}
+	seq := newSeqTree(k)
+	m.binds[k] = seq
 
-func (keys *KeyMap) Cmd(msg tea.KeyMsg) Func {
-	for binding, cmd := range keys.binds {
-		for _, key := range binding.Keys() {
-			if key == msg.String() {
-				return cmd
-			}
-		}
-	}
-	return func(tea.KeyMsg) tea.Cmd { return nil }
+	return &seq
 }
