@@ -32,18 +32,18 @@ type Model struct {
 	width, height int
 	pager         store.Pager
 	state         int
-	bindings      bindings.Mapper
+	bindings      *bindings.Map
 }
 
-func New(binds bindings.Mapper, pager store.Pager) *Model {
+func New(pager store.Pager) *Model {
 	model := &Model{
 		ready:    false,
 		pager:    pager,
 		state:    unset,
-		bindings: binds,
+		bindings: bindings.NewMap(),
 	}
 
-	binds.Map(keyPause, func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind("p").Action(func(msg tea.KeyMsg) tea.Cmd {
 		if model.state == paused {
 			model.state = running
 			model.pager.Refresh()
@@ -54,10 +54,12 @@ func New(binds bindings.Mapper, pager store.Pager) *Model {
 		return RequestPause()
 	})
 
-	binds.Map(keyScrollBottom, func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind("g").Action(func(msg tea.KeyMsg) tea.Cmd {
 		model.pager.Refresh()
 		return nil
 	})
+
+	model.bindings.Debug()
 
 	return model
 }
@@ -83,12 +85,14 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		model.pager.Rerender(model.width, model.height)
 
+	case tea.KeyMsg:
+		if !model.bindings.Matches(msg) {
+			return model, tea.Batch(cmds...)
+		}
+
+		cmds = append(cmds, model.bindings.Exec(msg).Call(msg))
 	case stream.Message:
 		model.pager.MoveDown(model.state == paused)
-	case forceRefresh:
-		model.pager.Refresh()
-		return model, nil
-
 	}
 
 	return model, tea.Batch(cmds...)

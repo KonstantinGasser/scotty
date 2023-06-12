@@ -48,6 +48,16 @@ var (
 	}
 )
 
+/*
+
+What if each component can create their one scope which is a bindings.Map on this scope
+each component defines their scoped bindings.
+The app component then could have a global scope which would be triggered globally
+but then would base the KeyMsg to the currenlty active Tab Component which in tern
+looks up its scoped bindings
+
+*/
+
 var (
 	notImplemeted = lipgloss.NewStyle().
 			Bold(true).
@@ -64,12 +74,12 @@ var (
 type Model struct {
 	ready         bool
 	width, height int
-	bindings      bindings.Mapper
+	bindings      *bindings.Map
 	prompt        textinput.Model
 	formatter     store.Formatter
 }
 
-func New(binds bindings.Mapper, formatter store.Formatter) *Model {
+func New(formatter store.Formatter) *Model {
 
 	prompt := textinput.New()
 	prompt.Placeholder = defaultPromptTxt
@@ -83,22 +93,28 @@ func New(binds bindings.Mapper, formatter store.Formatter) *Model {
 		ready:     false,
 		width:     0,
 		height:    0,
-		bindings:  binds,
+		bindings:  bindings.NewMap(),
 		prompt:    prompt,
 		formatter: formatter,
 	}
 
-	model.bindings.Map(keyInitTyping, func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind(":").Option("esc").Action(func(msg tea.KeyMsg) tea.Cmd {
+		model.prompt.Blur()
+		model.prompt.Reset()
+		// enable disabled tab keys???
+		return nil
+	})
+	model.bindings.Bind(":").Action(func(msg tea.KeyMsg) tea.Cmd {
 		if model.prompt.Focused() {
 			return nil
 		}
 
-		model.bindings.Disable(keysTabs...)
+		// diable tab keys???
 		model.prompt.Prompt = focusedPromptChar
 		return model.prompt.Focus()
 	})
 
-	model.bindings.Map(keyEnterTyping, func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind(":").Option("enter").Action(func(msg tea.KeyMsg) tea.Cmd {
 		if !model.prompt.Focused() {
 			return nil
 		}
@@ -107,20 +123,13 @@ func New(binds bindings.Mapper, formatter store.Formatter) *Model {
 		return nil
 	})
 
-	model.bindings.Map(keyExitTyping, func(msg tea.KeyMsg) tea.Cmd {
-		model.prompt.Blur()
-		model.prompt.Reset()
-		model.bindings.Enable(keysTabs...)
-		return nil
-	})
-
-	model.bindings.Map(keyUp, func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind("j").Action(func(msg tea.KeyMsg) tea.Cmd {
 		model.formatter.Privous()
 		model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
 		return nil
 	})
 
-	model.bindings.Map(keyDown, func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind("k").Action(func(msg tea.KeyMsg) tea.Cmd {
 		model.formatter.Next()
 		model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
 		return nil
@@ -150,6 +159,12 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.formatter.Reset(model.width, uint8(model.height))
 			model.ready = true
 		}
+	case tea.KeyMsg:
+		if !model.bindings.Matches(msg) {
+			return model, tea.Batch(cmds...)
+		}
+
+		cmds = append(cmds, model.bindings.Exec(msg).Call(msg))
 	}
 
 	if model.ready {

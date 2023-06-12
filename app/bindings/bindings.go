@@ -1,13 +1,22 @@
 package bindings
 
 import (
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kr/pretty"
 )
 
 type Func func(tea.KeyMsg) tea.Cmd
 
-var NilFunc Func = func(tea.KeyMsg) tea.Cmd { return nil }
+func (fn Func) Call(msg tea.KeyMsg) tea.Cmd {
+	return fn(msg)
+}
+
+var NilFunc Func = func(msg tea.KeyMsg) tea.Cmd {
+	debug.Print("call to NilFunc for Key %q\n", msg.String())
+	return nil
+}
 
 type Options map[string]*Node
 
@@ -59,6 +68,10 @@ func (seq *SequenceTree) Action(act Func) *Node {
 	return seq.root
 }
 
+type Binder interface {
+	Bind(k string) *SequenceTree
+}
+
 type Map struct {
 	activeOpts *Node
 	binds      map[string]SequenceTree
@@ -80,4 +93,46 @@ func (m *Map) Bind(k string) *SequenceTree {
 	m.binds[k] = seq
 
 	return &seq
+}
+
+func (m *Map) Matches(msg tea.KeyMsg) bool {
+	if m.activeOpts != nil {
+		_, ok := m.activeOpts.options[msg.String()]
+		return ok
+	}
+
+	seq, ok := m.binds[msg.String()]
+	if !ok {
+		return false
+	}
+	m.activeOpts = seq.root.options[msg.String()]
+	return true
+}
+
+func (m *Map) Exec(msg tea.KeyMsg) Func {
+
+	if m.activeOpts != nil {
+		if len(m.activeOpts.options) == 0 {
+			return m.activeOpts.action
+		}
+
+		opt, ok := m.activeOpts.options[msg.String()]
+		if !ok {
+			return NilFunc
+		}
+
+		m.activeOpts = opt
+		return opt.action
+	}
+
+	seq, ok := m.binds[msg.String()]
+	if !ok {
+		return NilFunc
+	}
+
+	return seq.root.action
+}
+
+func (m *Map) Debug() {
+	debug.Print("AST of bindings.Map:\n%s\n", pretty.Sprint(*m))
 }

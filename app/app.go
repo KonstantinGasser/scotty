@@ -1,7 +1,6 @@
 package app
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/KonstantinGasser/scotty/app/bindings"
@@ -12,6 +11,7 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
@@ -27,6 +27,11 @@ const (
 	tabDocs
 )
 
+const (
+	scopeFollow = "SCOPE-FOLLOW"
+	scopeBrowse = "SCOPE-BROWSE"
+)
+
 type mode struct {
 	label string
 	bg    lipgloss.Color
@@ -35,6 +40,9 @@ type mode struct {
 var (
 	modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
 	modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
+	modeGlobalCmd mode = mode{label: "SPC..", bg: lipgloss.Color("54")}
+
+	globalKey = key.NewBinding(key.WithKeys(" "))
 )
 
 type streamConfig struct {
@@ -45,7 +53,7 @@ type App struct {
 	/* internal properties */
 	// indication to close and stop work.
 	// Signal send from outside
-	quite chan<- struct{}
+	quit chan<- struct{}
 	// availabel dimension
 	ttyWidth, ttyHeight int
 	grid                styles.Grid
@@ -53,7 +61,7 @@ type App struct {
 	// and App is initialized
 	ready bool
 	// key bindings
-	bindings       *bindings.KeyMap
+	bindings       *bindings.Map
 	ignoreBindings []key.Binding
 	/* stream / i/o properties */
 	// channels to consume stream events
@@ -82,13 +90,12 @@ type App struct {
 
 func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer stream.Consumer) *App {
 
-	binds := bindings.New()
 	app := &App{
-		quite:     q,
+		quit:      q,
 		ttyWidth:  -1, // unset/invalid
 		ttyHeight: -1, // unset/invalid
 		ready:     false,
-		bindings:  binds,
+		bindings:  bindings.NewMap(),
 
 		consumer:   consumer,
 		subscriber: make(map[string]streamConfig),
@@ -99,39 +106,56 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 
 		footerComponent: info.New(),
 		components: map[int]tea.Model{
-			tabFollow: tailing.New(binds, lStore.NewPager(0, 0, refresh)),
-			tabBrowse: browsing.New(binds, lStore.NewFormatter(0, 0)),
+			tabFollow: tailing.New(lStore.NewPager(0, 0, refresh)),
+			tabBrowse: browsing.New(lStore.NewFormatter(0, 0)),
 			tabQuery:  querying.New(),
 			tabDocs:   docs.New(),
 		},
 	}
 
-	app.bindings.Map(key.NewBinding(key.WithKeys("ctrl+c")),
-		func(km tea.KeyMsg) tea.Cmd {
-			app.quite <- struct{}{}
-			return tea.Quit
-		},
-	)
+	app.bindings.Bind("ctrl+c").Action(func(km tea.KeyMsg) tea.Cmd {
+		app.quit <- struct{}{}
+		return tea.Quit
+	})
 
-	app.bindings.Map(key.NewBinding(key.WithKeys("1", "2", "3", "4")),
-		func(msg tea.KeyMsg) tea.Cmd {
-			index, _ := strconv.Atoi(msg.String())
-			index = index - 1 // user sees tabs starting from one (1), however slice of tabs starts at zero (0)
-			if index < 0 || app.activeTab == index {
-				return nil
-			}
-			app.activeTab = int(index)
-			app.headerComponent.SetActive(app.activeTab)
+	app.bindings.Debug()
 
-			if app.activeTab > tabUnset {
-				var cmd tea.Cmd
-				app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-				return cmd
-			}
+	// app.bindings.Bind()
+	//
+	// app.bindings.Bind(
+	// 	bindings.NewChain(key.NewBinding(key.WithKeys("ctrl+c"))),
+	// 	func(km tea.KeyMsg) tea.Cmd {
+	// 		app.quit <- struct{}{}
+	// 		return tea.Quit
+	// 	},
+	// )
+	//
+	// app.bindings.Bind(
+	// 	bindings.NewChain(globalKey).Then(key.NewBinding(key.WithKeys("f"))),
+	// 	func(km tea.KeyMsg) tea.Cmd {
+	// 		return info.RequestMode(modeGlobalCmd.label, modeGlobalCmd.bg)
+	// 	},
+	// )
 
-			return nil
-		},
-	)
+	// app.bindings.Map(key.NewBinding(key.WithKeys("1", "2", "3", "4")),
+	// 	func(msg tea.KeyMsg) tea.Cmd {
+	// 		index, _ := strconv.Atoi(msg.String())
+	// 		index = index - 1 // user sees tabs starting from one (1), however slice of tabs starts at zero (0)
+	// 		if index < 0 || app.activeTab == index {
+	// 			return nil
+	// 		}
+	// 		app.activeTab = int(index)
+	// 		app.headerComponent.SetActive(app.activeTab)
+	//
+	// 		if app.activeTab > tabUnset {
+	// 			var cmd tea.Cmd
+	// 			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+	// 			return cmd
+	// 		}
+	//
+	// 		return nil
+	// 	},
+	// )
 
 	return app
 }
@@ -152,15 +176,22 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 	)
 
+	debug.Print("[App:Update] Msg: %T\n", msg)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch {
-		case app.bindings.Match(msg):
-
-			cmd := app.bindings.Cmd(msg).Call(msg)
+		if !app.bindings.Matches(msg) {
+			// does not mean the action component
+			// might not do something with the event
+			// so we pass it down to the active component
+			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
 			cmds = append(cmds, cmd)
 			return app, tea.Batch(cmds...)
 		}
+
+		cmds = append(cmds, app.bindings.Exec(msg).Call(msg))
+		return app, tea.Batch(cmds...)
+
 	case tea.WindowSizeMsg:
 
 		// iterate over all components as they are not
@@ -195,7 +226,6 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds,
 			info.RequestResume(),
 			info.RequestMode(modeFollowing.label, modeFollowing.bg),
-			tailing.RequestRefresh(),
 		)
 
 	// triggered each time a new stream connects successfully to scotty and is procssed
@@ -258,10 +288,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// follow component is updates asap after a message is received
-	if app.activeTab != tabUnset && app.activeTab != tabFollow {
-		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-		cmds = append(cmds, cmd)
-	}
+	// if app.activeTab != tabUnset && app.activeTab != tabFollow {
+	// 	app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+	// 	cmds = append(cmds, cmd)
+	// }
 
 	app.footerComponent, cmd = app.footerComponent.Update(msg)
 	cmds = append(cmds, cmd)
