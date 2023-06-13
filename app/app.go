@@ -39,8 +39,9 @@ type mode struct {
 
 var (
 	modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
+	modeBrowsing  mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
 	modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
-	modeGlobalCmd mode = mode{label: "SPC..", bg: lipgloss.Color("54")}
+	modeGlobalCmd mode = mode{label: "GLOBAL (esc for exit)", bg: lipgloss.Color("54")}
 
 	globalKey = key.NewBinding(key.WithKeys(" "))
 )
@@ -101,7 +102,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		subscriber: make(map[string]streamConfig),
 		logstore:   lStore,
 
-		headerComponent: styles.NewTabs(0, "(1) follow logs", "(2) browse logs", "(3) query logs", "(4) docs"),
+		headerComponent: styles.NewTabs(0, "follow logs", "browse logs", "query logs", "docs"),
 		activeTab:       tabUnset,
 
 		footerComponent: info.New(),
@@ -118,58 +119,55 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		return tea.Quit
 	})
 
-	app.bindings.Bind(" ").Option("f").Action(func(msg tea.KeyMsg) tea.Cmd {
-		debug.Print("[%q] SPC-F\n", msg)
-		app.activeTab = tabFollow
-		app.headerComponent.SetActive(app.activeTab)
-		return nil
-	})
+	app.bindings.Bind(" ").
+		Action(func(msg tea.KeyMsg) tea.Cmd {
+			return info.RequestMode(modeGlobalCmd.label, modeGlobalCmd.bg)
+		}).
+		Option("f").
+		Action(func(msg tea.KeyMsg) tea.Cmd {
+			if app.activeTab == tabFollow {
+				return nil
+			}
+			app.activeTab = tabFollow
+			app.headerComponent.SetActive(app.activeTab)
 
-	app.bindings.Bind(" ").Option("b").Action(func(msg tea.KeyMsg) tea.Cmd {
-		debug.Print("[%q] SPC-B\n", msg)
+			return info.RequestMode(modeFollowing.label, modeFollowing.bg)
+		})
+
+	app.bindings.Bind(" ").OnESC(func(msg tea.KeyMsg) tea.Cmd {
+		return info.RequestMode(modeBrowsing.label, modeBrowsing.bg)
+	}).
+		Option("b").Action(func(msg tea.KeyMsg) tea.Cmd {
+		if app.activeTab == tabBrowse {
+			return nil
+		}
+
 		app.activeTab = tabBrowse
 		app.headerComponent.SetActive(app.activeTab)
 		return nil
 	})
 
+	app.bindings.Bind(" ").Option("s").Action(func(msg tea.KeyMsg) tea.Cmd {
+		if app.activeTab == tabQuery {
+			return nil
+		}
+
+		app.activeTab = tabQuery
+		app.headerComponent.SetActive(app.activeTab)
+		return nil
+	})
+
+	app.bindings.Bind(" ").Option("d").Action(func(msg tea.KeyMsg) tea.Cmd {
+		if app.activeTab == tabDocs {
+			return nil
+		}
+
+		app.activeTab = tabDocs
+		app.headerComponent.SetActive(app.activeTab)
+		return nil
+	})
+
 	app.bindings.Debug()
-
-	// app.bindings.Bind()
-	//
-	// app.bindings.Bind(
-	// 	bindings.NewChain(key.NewBinding(key.WithKeys("ctrl+c"))),
-	// 	func(km tea.KeyMsg) tea.Cmd {
-	// 		app.quit <- struct{}{}
-	// 		return tea.Quit
-	// 	},
-	// )
-	//
-	// app.bindings.Bind(
-	// 	bindings.NewChain(globalKey).Then(key.NewBinding(key.WithKeys("f"))),
-	// 	func(km tea.KeyMsg) tea.Cmd {
-	// 		return info.RequestMode(modeGlobalCmd.label, modeGlobalCmd.bg)
-	// 	},
-	// )
-
-	// app.bindings.Map(key.NewBinding(key.WithKeys("1", "2", "3", "4")),
-	// 	func(msg tea.KeyMsg) tea.Cmd {
-	// 		index, _ := strconv.Atoi(msg.String())
-	// 		index = index - 1 // user sees tabs starting from one (1), however slice of tabs starts at zero (0)
-	// 		if index < 0 || app.activeTab == index {
-	// 			return nil
-	// 		}
-	// 		app.activeTab = int(index)
-	// 		app.headerComponent.SetActive(app.activeTab)
-	//
-	// 		if app.activeTab > tabUnset {
-	// 			var cmd tea.Cmd
-	// 			app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-	// 			return cmd
-	// 		}
-	//
-	// 		return nil
-	// 	},
-	// )
 
 	return app
 }
@@ -194,6 +192,17 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// we dont allow any key binding actions
+		// while no beam has connected and we are in the
+		// welcome screen
+		if app.activeTab == tabUnset {
+			if key.Matches(msg, key.NewBinding(key.WithKeys("ctrl+c"))) {
+				cmds = append(cmds, app.bindings.Exec(msg).Call(msg))
+				return app, tea.Batch(cmds...)
+			}
+			break
+		}
+
 		if !app.bindings.Matches(msg) {
 			// does not mean the action component
 			// might not do something with the event

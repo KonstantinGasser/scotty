@@ -10,6 +10,9 @@ import (
 type Func func(tea.KeyMsg) tea.Cmd
 
 func (fn Func) Call(msg tea.KeyMsg) tea.Cmd {
+	if fn == nil {
+		return NilFunc.Call(msg)
+	}
 	return fn(msg)
 }
 
@@ -21,46 +24,58 @@ var NilFunc Func = func(msg tea.KeyMsg) tea.Cmd {
 type Options map[string]*Node
 
 type Node struct {
-	binding key.Binding
-	options Options
-	action  Func
+	binding      key.Binding
+	bindingLabel string
+	options      Options
+	action       Func
 }
 
 func newNode(k string) *Node {
 	return &Node{
-		binding: key.NewBinding(key.WithKeys(k)),
-		options: Options{},
-		action:  NilFunc,
+		binding:      key.NewBinding(key.WithKeys(k)),
+		bindingLabel: k,
+		options:      Options{},
+		action:       nil,
 	}
 }
 
 func (node *Node) Option(k string) *Node {
 	if opt, ok := node.options[k]; ok {
+		debug.Print("Option node present for Key(%q) reusing node\n", k)
 		return opt
 	}
 
-	node.options[k] = newNode(k)
-	return node
+	optionNode := newNode(k)
+	node.options[k] = optionNode
+
+	return optionNode
 }
 
 func (node *Node) Action(act Func) *Node {
 	node.action = act
+	debug.Print("adding fn(%v) to node with bindng <%q>\n", act, node.bindingLabel)
 	return node
 }
 
 type SequenceTree struct {
-	root *Node
+	onESC Func
+	root  *Node
 }
 
 func newSeqTree(k string) SequenceTree {
 	return SequenceTree{
-		root: newNode(k),
+		onESC: NilFunc,
+		root:  newNode(k),
 	}
 }
 
+func (seq *SequenceTree) OnESC(fn Func) *SequenceTree {
+	seq.onESC = fn
+	return seq
+}
+
 func (seq *SequenceTree) Option(k string) *Node {
-	seq.root.Option(k)
-	return seq.root
+	return seq.root.Option(k)
 }
 
 func (seq *SequenceTree) Action(act Func) *Node {
@@ -72,19 +87,24 @@ type Binder interface {
 	Bind(k string) *SequenceTree
 }
 
+type seqOption struct {
+	onESC Func
+	node  *Node
+}
 type Map struct {
-	activeOpts *Node
-	binds      map[string]SequenceTree
+	next  *seqOption
+	binds map[string]SequenceTree
 }
 
 func NewMap() *Map {
 	return &Map{
-		activeOpts: nil,
-		binds:      map[string]SequenceTree{},
+		next:  nil,
+		binds: map[string]SequenceTree{},
 	}
 }
 
 func (m *Map) Bind(k string) *SequenceTree {
+
 	if seq, ok := m.binds[k]; ok {
 		return &seq
 	}
@@ -96,40 +116,99 @@ func (m *Map) Bind(k string) *SequenceTree {
 }
 
 func (m *Map) Matches(msg tea.KeyMsg) bool {
-	if m.activeOpts != nil {
-		_, ok := m.activeOpts.options[msg.String()]
-		return ok
+
+	try := msg.String()
+
+	// first we need to check if the past call to Matches
+	// set options we and if the KeyMsg matches any of
+	// these options
+	if m.next != nil {
+		// expend bindings by "esc"
+		// which ends the sequence execution
+		if try == "esc" {
+			return true
+		}
+
+		_, ok := m.next.node.options[try]
+		// if no option was found we do nothing.
+		// user might have typed to wrong key or somthing
+		// we keep the options as is.
+		if !ok {
+			debug.Print("[Matches] Key(%q) does not match an options\n", try)
+			return false
+		}
+		debug.Print("[Matches] Key(%q) does match an option\n", try)
+		// user chose an option from the current next node
+		return true
 	}
 
-	seq, ok := m.binds[msg.String()]
+	// try and see if the key exists in the bindings map
+	seq, ok := m.binds[try]
 	if !ok {
+		debug.Print("[Matches] Key(%q) does not match any binding: %+v\n", try, m.binds)
 		return false
 	}
-	m.activeOpts = seq.root.options[msg.String()]
+
+	// in case it does there might be further options
+	// set on the root node
+	if len(seq.root.options) > 0 {
+		debug.Print("[Matches] Key(%q) found in bindings with options. Setting options\n", try)
+		m.next = &seqOption{
+			onESC: seq.onESC,
+			node:  seq.root,
+		}
+	}
+
 	return true
 }
 
 func (m *Map) Exec(msg tea.KeyMsg) Func {
 
-	if m.activeOpts != nil {
-		if len(m.activeOpts.options) == 0 {
-			return m.activeOpts.action
-		}
+	var n Node
+	if m.next != nil {
+		n = *m.next.node
+	}
 
-		opt, ok := m.activeOpts.options[msg.String()]
-		if !ok {
+	debug.Print("===\nKey: %q\nNext: %+v\nBindings: %+v\n===\n", msg, n, m.binds)
+	// we need to check if the KeyMsg matches the m.next.binding
+	// if so return m.next.action. if not we need to check if the
+	// KeyMsg machtes any m.next.options if so return m.next.options[x].action
+	// and update the m.next with m.next.options[x]
+	if m.next != nil {
+		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) {
+			m.next = nil
+			debug.Print("1: return NilFunc\n")
 			return NilFunc
 		}
 
-		m.activeOpts = opt
-		return opt.action
+		if key.Matches(msg, m.next.node.binding) {
+			debug.Print("2: return m.next.action\n")
+			act := m.next.node.action
+			if len(m.next.node.options) <= 0 {
+				m.next = nil
+			}
+			return act
+		}
+
+		// next check and update options
+		next, ok := m.next.node.options[msg.String()]
+		if !ok {
+			debug.Print("3: return NilFunc\n")
+			return NilFunc
+		}
+
+		m.next.node = next
+		debug.Print("4: return m.next.action: %+v\n", *m.next)
+		return m.next.node.action
 	}
 
 	seq, ok := m.binds[msg.String()]
 	if !ok {
+		debug.Print("5: return NilFunc\n")
 		return NilFunc
 	}
 
+	debug.Print("6: return m.root.action\n")
 	return seq.root.action
 }
 

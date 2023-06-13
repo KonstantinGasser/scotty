@@ -135,6 +135,8 @@ func New(formatter store.Formatter) *Model {
 		return nil
 	})
 
+	model.bindings.Debug()
+
 	return model
 }
 
