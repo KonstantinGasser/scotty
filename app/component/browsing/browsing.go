@@ -98,30 +98,33 @@ func New(formatter store.Formatter) *Model {
 		formatter: formatter,
 	}
 
-	model.bindings.Bind(":").Option("esc").Action(func(msg tea.KeyMsg) tea.Cmd {
-		model.prompt.Blur()
-		model.prompt.Reset()
-		// enable disabled tab keys???
-		return nil
-	})
-	model.bindings.Bind(":").Action(func(msg tea.KeyMsg) tea.Cmd {
-		if model.prompt.Focused() {
-			return nil
-		}
+	model.bindings.Bind(":").
+		OnESC(
+			func(msg tea.KeyMsg) tea.Cmd {
+				model.prompt.Blur()
+				model.prompt.Reset()
+				return nil
+			},
+		).
+		Action(
+			func(msg tea.KeyMsg) tea.Cmd {
+				if model.prompt.Focused() {
+					return nil
+				}
+				model.prompt.Prompt = focusedPromptChar
+				return model.prompt.Focus()
+			},
+		).
+		Option("enter").Action(
+		func(msg tea.KeyMsg) tea.Cmd {
+			if !model.prompt.Focused() {
+				return nil
+			}
 
-		// diable tab keys???
-		model.prompt.Prompt = focusedPromptChar
-		return model.prompt.Focus()
-	})
-
-	model.bindings.Bind(":").Option("enter").Action(func(msg tea.KeyMsg) tea.Cmd {
-		if !model.prompt.Focused() {
+			index, _ := strconv.Atoi(model.prompt.Value())
+			model.formatter.Load(index)
 			return nil
-		}
-		index, _ := strconv.Atoi(model.prompt.Value())
-		model.formatter.Load(index)
-		return nil
-	})
+		})
 
 	model.bindings.Bind("j").Action(func(msg tea.KeyMsg) tea.Cmd {
 		model.formatter.Privous()
@@ -162,11 +165,10 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.ready = true
 		}
 	case tea.KeyMsg:
-		if !model.bindings.Matches(msg) {
-			return model, tea.Batch(cmds...)
+		if model.bindings.Matches(msg) {
+			cmds = append(cmds, model.bindings.Exec(msg).Call(msg))
 		}
 
-		cmds = append(cmds, model.bindings.Exec(msg).Call(msg))
 	}
 
 	if model.ready {

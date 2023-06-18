@@ -175,14 +175,14 @@ func (m *Map) Exec(msg tea.KeyMsg) Func {
 	// KeyMsg machtes any m.next.options if so return m.next.options[x].action
 	// and update the m.next with m.next.options[x]
 	if m.next != nil {
+		debug.Print("Options found: len => %d\n", len(m.next.node.options))
 		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) {
+			onESC := m.next.onESC
 			m.next = nil
-			debug.Print("1: return NilFunc\n")
-			return NilFunc
+			return onESC
 		}
 
 		if key.Matches(msg, m.next.node.binding) {
-			debug.Print("2: return m.next.action\n")
 			act := m.next.node.action
 			if len(m.next.node.options) <= 0 {
 				m.next = nil
@@ -193,22 +193,23 @@ func (m *Map) Exec(msg tea.KeyMsg) Func {
 		// next check and update options
 		next, ok := m.next.node.options[msg.String()]
 		if !ok {
-			debug.Print("3: return NilFunc\n")
 			return NilFunc
 		}
 
+		if len(next.options) <= 0 {
+			m.next = nil
+			return next.action
+		}
+
 		m.next.node = next
-		debug.Print("4: return m.next.action: %+v\n", *m.next)
 		return m.next.node.action
 	}
 
 	seq, ok := m.binds[msg.String()]
 	if !ok {
-		debug.Print("5: return NilFunc\n")
 		return NilFunc
 	}
 
-	debug.Print("6: return m.root.action\n")
 	return seq.root.action
 }
 

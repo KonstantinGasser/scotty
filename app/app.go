@@ -114,6 +114,25 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		},
 	}
 
+	/*
+				ctrl-c:
+					=> should work from anywhere no mater what
+		  	SPC+f:
+					=> SPC:
+						=> puts the app in global keybinding mode
+							 emits event to change info.Mode to global
+							 can be aborted using ESC key
+		           => f:
+									opens the tab FOLLOW if not open
+									emits event to change info.Mode to following
+									clears the sequence-tree options
+							 => b:
+									opens the tab BRWOSING if not open
+									emits event to change info.Mode to browsing
+							    clears the sequence-tree options
+
+	*/
+
 	app.bindings.Bind("ctrl+c").Action(func(msg tea.KeyMsg) tea.Cmd {
 		app.quit <- struct{}{}
 		return tea.Quit
