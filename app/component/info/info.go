@@ -12,11 +12,6 @@ const (
 	minHeight = 15
 )
 
-var (
-	style = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder())
-)
-
 const (
 	connected = iota
 	paused
@@ -38,21 +33,20 @@ type stat struct {
 func (s *stat) increment() { s.count++ }
 
 type Model struct {
-	ready bool
-	// width, height int
-	stats   map[string]*stat
-	ordered []string
-	mode    string
+	ready    bool
+	stats    map[string]*stat
+	ordered  []string
+	mode     string
+	modeOpts string
 }
 
 func New() *Model {
 	return &Model{
-		ready: false,
-		// width:   0,
-		// height:  0,
-		stats:   map[string]*stat{},
-		ordered: []string{},
-		mode:    "",
+		ready:    false,
+		stats:    map[string]*stat{},
+		ordered:  []string{},
+		mode:     "",
+		modeOpts: "",
 	}
 }
 
@@ -116,6 +110,20 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Foreground(lipgloss.Color("#ffffff")).
 			Background(msg.bg).
 			Render(msg.mode)
+
+		model.modeOpts = "" // this is not good because it means showing/not showing options is tided to setting a mode in the footer
+		if len(msg.opts) > 0 {
+			opts := []string{}
+			for i, opt := range msg.opts {
+				o := lipgloss.NewStyle().Bold(true).Background(styles.BgFooter)
+				if i < len(msg.opts) {
+					o.PaddingRight(2)
+				}
+				opts = append(opts, o.Render(opt))
+			}
+
+			model.modeOpts = lipgloss.JoinHorizontal(lipgloss.Left, opts...)
+		}
 	}
 	return model, tea.Batch(cmds...)
 }
@@ -125,6 +133,11 @@ func (model Model) View() string {
 	var items = make([]string, len(model.ordered)+2) // +1 for the mode at the beginning of the line +1 for the spacer between mode and stats
 	items[0] = model.mode
 	items[1] = styles.SingleLineSpacer(5).Background(styles.BgFooter).Render("")
+
+	if model.modeOpts != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Top, items[0], items[1], model.modeOpts)
+	}
+
 	var status = symbolConnected
 	for i, label := range model.ordered {
 

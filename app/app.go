@@ -10,8 +10,8 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/querying"
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
+	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
@@ -27,21 +27,17 @@ const (
 	tabDocs
 )
 
-const (
-	scopeFollow = "SCOPE-FOLLOW"
-	scopeBrowse = "SCOPE-BROWSE"
-)
-
 type mode struct {
 	label string
 	bg    lipgloss.Color
+	opts  []string
 }
 
 var (
 	modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
 	modeBrowsing  mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
 	modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
-	modeGlobalCmd mode = mode{label: "GLOBAL (esc for exit)", bg: lipgloss.Color("54")}
+	modeGlobalCmd mode = mode{label: "GLOBAL (esc for exit)", bg: lipgloss.Color("54"), opts: []string{" ·f follow incoming logs", "·b browse recorded logs"}}
 
 	globalKey = key.NewBinding(key.WithKeys(" "))
 )
@@ -114,48 +110,31 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		},
 	}
 
-	/*
-				ctrl-c:
-					=> should work from anywhere no mater what
-		  	SPC+f:
-					=> SPC:
-						=> puts the app in global keybinding mode
-							 emits event to change info.Mode to global
-							 can be aborted using ESC key
-		           => f:
-									opens the tab FOLLOW if not open
-									emits event to change info.Mode to following
-									clears the sequence-tree options
-							 => b:
-									opens the tab BRWOSING if not open
-									emits event to change info.Mode to browsing
-							    clears the sequence-tree options
-
-	*/
-
 	app.bindings.Bind("ctrl+c").Action(func(msg tea.KeyMsg) tea.Cmd {
+		app.quit <- struct{}{}
+		return tea.Quit
+	})
+
+	app.bindings.Bind(" ").Option("ctrl+c").Action(func(msg tea.KeyMsg) tea.Cmd {
 		app.quit <- struct{}{}
 		return tea.Quit
 	})
 
 	app.bindings.Bind(" ").
 		Action(func(msg tea.KeyMsg) tea.Cmd {
-			return info.RequestMode(modeGlobalCmd.label, modeGlobalCmd.bg)
+			return info.RequestMode(modeGlobalCmd.label, modeGlobalCmd.bg, modeGlobalCmd.opts...)
 		}).
-		Option("f").
-		Action(func(msg tea.KeyMsg) tea.Cmd {
-			if app.activeTab == tabFollow {
-				return nil
-			}
-			app.activeTab = tabFollow
-			app.headerComponent.SetActive(app.activeTab)
+		Option("f").Action(func(msg tea.KeyMsg) tea.Cmd {
+		if app.activeTab == tabFollow {
+			return nil
+		}
+		app.activeTab = tabFollow
+		app.headerComponent.SetActive(app.activeTab)
 
-			return info.RequestMode(modeFollowing.label, modeFollowing.bg)
-		})
+		return info.RequestMode(modeFollowing.label, modeFollowing.bg)
+	})
 
-	app.bindings.Bind(" ").OnESC(func(msg tea.KeyMsg) tea.Cmd {
-		return info.RequestMode(modeBrowsing.label, modeBrowsing.bg)
-	}).
+	app.bindings.Bind(" ").
 		Option("b").Action(func(msg tea.KeyMsg) tea.Cmd {
 		if app.activeTab == tabBrowse {
 			return nil
@@ -163,27 +142,11 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 
 		app.activeTab = tabBrowse
 		app.headerComponent.SetActive(app.activeTab)
-		return nil
+		return info.RequestMode(modeBrowsing.label, modeBrowsing.bg)
 	})
 
-	app.bindings.Bind(" ").Option("s").Action(func(msg tea.KeyMsg) tea.Cmd {
-		if app.activeTab == tabQuery {
-			return nil
-		}
-
-		app.activeTab = tabQuery
-		app.headerComponent.SetActive(app.activeTab)
-		return nil
-	})
-
-	app.bindings.Bind(" ").Option("d").Action(func(msg tea.KeyMsg) tea.Cmd {
-		if app.activeTab == tabDocs {
-			return nil
-		}
-
-		app.activeTab = tabDocs
-		app.headerComponent.SetActive(app.activeTab)
-		return nil
+	app.bindings.Bind(" ").Option("r").Action(func(msg tea.KeyMsg) tea.Cmd {
+		return event.RequestGlobalBufferRefresh
 	})
 
 	app.bindings.Debug()
@@ -206,8 +169,6 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 		cmd  tea.Cmd
 	)
-
-	debug.Print("[App:Update] Msg: %T\n", msg)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:

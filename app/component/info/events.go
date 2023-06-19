@@ -60,13 +60,15 @@ func RequestResume() tea.Cmd {
 type requestMode struct {
 	mode string
 	bg   lipgloss.Color
+	opts []string
 }
 
-func RequestMode(mode string, bg lipgloss.Color) tea.Cmd {
+func RequestMode(mode string, bg lipgloss.Color, opts ...string) tea.Cmd {
 	return func() tea.Msg {
 		return requestMode{
 			mode: strings.ToUpper(mode),
 			bg:   bg,
+			opts: opts,
 		}
 	}
 }

@@ -17,7 +17,6 @@ func (fn Func) Call(msg tea.KeyMsg) tea.Cmd {
 }
 
 var NilFunc Func = func(msg tea.KeyMsg) tea.Cmd {
-	debug.Print("call to NilFunc for Key %q\n", msg.String())
 	return nil
 }
 
@@ -41,7 +40,6 @@ func newNode(k string) *Node {
 
 func (node *Node) Option(k string) *Node {
 	if opt, ok := node.options[k]; ok {
-		debug.Print("Option node present for Key(%q) reusing node\n", k)
 		return opt
 	}
 
@@ -53,7 +51,6 @@ func (node *Node) Option(k string) *Node {
 
 func (node *Node) Action(act Func) *Node {
 	node.action = act
-	debug.Print("adding fn(%v) to node with bindng <%q>\n", act, node.bindingLabel)
 	return node
 }
 
@@ -134,10 +131,8 @@ func (m *Map) Matches(msg tea.KeyMsg) bool {
 		// user might have typed to wrong key or somthing
 		// we keep the options as is.
 		if !ok {
-			debug.Print("[Matches] Key(%q) does not match an options\n", try)
 			return false
 		}
-		debug.Print("[Matches] Key(%q) does match an option\n", try)
 		// user chose an option from the current next node
 		return true
 	}
@@ -145,14 +140,12 @@ func (m *Map) Matches(msg tea.KeyMsg) bool {
 	// try and see if the key exists in the bindings map
 	seq, ok := m.binds[try]
 	if !ok {
-		debug.Print("[Matches] Key(%q) does not match any binding: %+v\n", try, m.binds)
 		return false
 	}
 
 	// in case it does there might be further options
 	// set on the root node
 	if len(seq.root.options) > 0 {
-		debug.Print("[Matches] Key(%q) found in bindings with options. Setting options\n", try)
 		m.next = &seqOption{
 			onESC: seq.onESC,
 			node:  seq.root,
@@ -164,18 +157,11 @@ func (m *Map) Matches(msg tea.KeyMsg) bool {
 
 func (m *Map) Exec(msg tea.KeyMsg) Func {
 
-	var n Node
-	if m.next != nil {
-		n = *m.next.node
-	}
-
-	debug.Print("===\nKey: %q\nNext: %+v\nBindings: %+v\n===\n", msg, n, m.binds)
 	// we need to check if the KeyMsg matches the m.next.binding
 	// if so return m.next.action. if not we need to check if the
 	// KeyMsg machtes any m.next.options if so return m.next.options[x].action
 	// and update the m.next with m.next.options[x]
 	if m.next != nil {
-		debug.Print("Options found: len => %d\n", len(m.next.node.options))
 		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) {
 			onESC := m.next.onESC
 			m.next = nil
