@@ -128,13 +128,13 @@ func New(formatter store.Formatter) *Model {
 			return nil
 		})
 
-	model.bindings.Bind("j").Action(func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind("k").Action(func(msg tea.KeyMsg) tea.Cmd {
 		model.formatter.Privous()
 		model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
 		return nil
 	})
 
-	model.bindings.Bind("k").Action(func(msg tea.KeyMsg) tea.Cmd {
+	model.bindings.Bind("j").Action(func(msg tea.KeyMsg) tea.Cmd {
 		model.formatter.Next()
 		model.prompt.SetValue(strconv.Itoa(int(model.formatter.CurrentIndex())))
 		return nil
