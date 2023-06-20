@@ -37,27 +37,28 @@ var (
 	infoGlobal = lipgloss.NewStyle().Render(
 		strings.Join([]string{
 			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("Global keys"),
-			styles.Bold.Render("SPC f") + " · open view to follow/tail all logs",
-			styles.Bold.Render("SPC b") + " · open view to browse all logs",
-			styles.Bold.Render("SPC s") + " · open view to query the logs",
+			styles.Bold.Render("SPC f") + " ● open view to follow/tail all logs",
+			styles.Bold.Render("SPC b") + " ● open view to browse all logs",
+			styles.Bold.Render("SPC s") + " ● open view to query the logs",
 		}, "\n"),
 	)
 
 	infoTabFollow = lipgloss.NewStyle().Render(
 		strings.Join([]string{
 			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\n[View] Following/Tailing"),
-			styles.Bold.Render("p") + " · to pause the tailing (if not paused). Use p to contiune tailing",
-			styles.Bold.Render("g") + " · to tail the latest logs. Useful while in paused state",
+			styles.Bold.Render("p") + " ● to pause the tailing (if not paused). Use p to contiune tailing",
+			styles.Bold.Render("g") + " ● to tail the latest logs. Useful while in paused state",
 		}, "\n"),
 	)
 
 	infoTabBrowsing = lipgloss.NewStyle().Render(
 		strings.Join([]string{
 			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\n[View] Browsing"),
-			styles.Bold.Render(":") + " · to enable prompt input for index selection",
-			styles.Bold.Render("\tenter") + " · sets the sected formatted log to the requested index",
-			styles.Bold.Render("j") + " · to format the next log line",
-			styles.Bold.Render("k") + " · to format the previous log line",
+			styles.Bold.Render(":") + " ● to enable prompt input for index selection",
+			styles.Bold.Render("\tenter") + " ● sets the sected formatted log to the requested index",
+			styles.Bold.Render("j") + " ● to format the next log line",
+			styles.Bold.Render("k") + " ● to format the previous log line",
+			styles.Bold.Render("r") + " ● to reload the formatter with the latest log lines",
 		}, "\n"),
 	)
 
