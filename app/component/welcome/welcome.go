@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -12,64 +13,63 @@ var (
 		MarginBottom(2).
 		Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0f7b")).Render(
 					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#fd3863")).Render(
 					"██╔════╝██╔════╝██╔═══██╗╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#fc5154")).Render(
 					"███████╗██║     ██║   ██║   ██║      ██║    ╚████╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#fb6648")).Render(
 					"╚════██║██║     ██║   ██║   ██║      ██║     ╚██╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#fa7f39")).Render(
 					"███████║╚██████╗╚██████╔╝   ██║      ██║      ██║",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("43")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#f89b29")).Render(
 					"╚══════╝ ╚═════╝ ╚═════╝    ╚═╝      ╚═╝      ╚═╝",
 				),
 			}, "\n"),
 		)
 
-	helpUsage      = strings.Join([]string{}, "\n")
-	styleHelpUsage = lipgloss.NewStyle().
-			Render(helpUsage)
+	infoGlobal = lipgloss.NewStyle().Render(
+		strings.Join([]string{
+			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("Global keys"),
+			styles.Bold.Render("SPC f") + " · open view to follow/tail all logs",
+			styles.Bold.Render("SPC b") + " · open view to browse all logs",
+			styles.Bold.Render("SPC s") + " · open view to query the logs",
+		}, "\n"),
+	)
 
-	helpBindings = []string{
-		"format|SPC f",
-		"query|SPC fq",
-		"docs|SPC d",
-	}
-	// styleHelpBindings = lipgloss.NewStyle().
-	// 			Render(helpBindings)
+	infoTabFollow = lipgloss.NewStyle().Render(
+		strings.Join([]string{
+			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\n[View] Following/Tailing"),
+			styles.Bold.Render("p") + " · to pause the tailing (if not paused). Use p to contiune tailing",
+			styles.Bold.Render("g") + " · to tail the latest logs. Useful while in paused state",
+		}, "\n"),
+	)
 
-	// welcomeUsage = lipgloss.NewStyle().
-	// 		MarginBottom(2).
-	// 		Render(
-	// 		strings.Join([]string{
-	// 			lipgloss.NewStyle().Bold(true).Underline(true).Render("beam logs:\n"),
-	// 			"\tfrom stderr:" + lipgloss.NewStyle().Bold(false).Render("go run -race my/awesome/app.go 2>&1 | beam -label=navigation_service"),
-	// 			"\tfrom stdout:" + lipgloss.NewStyle().Bold(false).Render("cat uss_enterprise_engine_logs.log | beam -label=engine_service"),
-	// 		}, "\n"),
-	// 	)
-	//
-	// howToText = lipgloss.NewStyle().
-	// 		Render(
-	// 		strings.Join([]string{
-	// 			lipgloss.NewStyle().Bold(true).Underline(true).Render("tips and notes:\n"),
-	// 			lipgloss.NewStyle().Bold(false).Render("\t- hit \":\" and type an index to format a specific line. \nUse k/j to format the previous or next log"),
-	// 			lipgloss.NewStyle().Bold(false).Render("\t  also hit \":\" to just hold the logs (continue with q)"),
-	// 			lipgloss.NewStyle().Bold(false).Render("\t- hit \"cmd+f\" and type a comma separated list of beams \nto highlight them (ctrl+f: beam-one,beam-two)"),
-	// 			lipgloss.NewStyle().Bold(false).Render("\t  while in the filter mode you can add/remove individual\nbeams by user the prefix +/- followed by the beam"),
-	// 		}, "\n"),
-	// 	)
+	infoTabBrowsing = lipgloss.NewStyle().Render(
+		strings.Join([]string{
+			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\n[View] Browsing"),
+			styles.Bold.Render(":") + " · to enable prompt input for index selection",
+			styles.Bold.Render("\tenter") + " · sets the sected formatted log to the requested index",
+			styles.Bold.Render("j") + " · to format the next log line",
+			styles.Bold.Render("k") + " · to format the previous log line",
+		}, "\n"),
+	)
 
-	border = lipgloss.NewStyle().
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		Foreground(lipgloss.Color("43"))
+	infoUsage = lipgloss.NewStyle().
+			MarginBottom(2).
+			Render(
+			strings.Join([]string{
+				lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\nUsage"),
+				styles.Bold.Render("from stderr: ") + lipgloss.NewStyle().Render("go run -race my/awesome/app.go 2>&1 | beam navigation_service"),
+				styles.Bold.Render("from stdout: ") + lipgloss.NewStyle().Render("cat uss_enterprise_engine_logs.log | beam -d engine_service"),
+			}, "\n"),
+		)
 )
 
 type Model struct {
@@ -87,19 +87,12 @@ func New(width int, height int) *Model {
 
 func (m *Model) View() string {
 
-	hBindings := []string{}
-	for _, h := range helpBindings {
-		parts := strings.Split(h, "|")
-		hBindings = append(hBindings,
-			lipgloss.JoinHorizontal(lipgloss.Left,
-				lipgloss.NewStyle().Width(int(m.width)/3).Render(parts[0]),
-				lipgloss.NewStyle().Width(int(m.width)/3).Render(parts[1]),
-			))
-	}
-
 	maxWidth := max(
 		lipgloss.Width(logo),
-		lipgloss.Width(strings.Join(hBindings, "\n")),
+		lipgloss.Width(infoGlobal),
+		lipgloss.Width(infoTabFollow),
+		lipgloss.Width(infoTabBrowsing),
+		lipgloss.Width(infoUsage),
 	)
 
 	welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -108,25 +101,30 @@ func (m *Model) View() string {
 			lipgloss.Center,
 			logo,
 		),
-		// lipgloss.PlaceHorizontal(
-		// 	maxWidth,
-		// 	lipgloss.Left,
-		// 	styleHelpUsage,
-		// ),
 		lipgloss.PlaceHorizontal(
 			maxWidth,
-			lipgloss.Center,
-			strings.Join(hBindings, "\n"),
+			lipgloss.Left,
+			infoGlobal,
+		),
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Left,
+			infoTabFollow,
+		),
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Left,
+			infoTabBrowsing,
+		),
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Left,
+			infoUsage,
 		),
 	)
 
-	// maxHeight := lipgloss.Height(welcome)
-
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center,
-		border.
-			Render(
-				welcome,
-			),
+		welcome,
 	)
 
 }

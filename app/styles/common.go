@@ -17,4 +17,6 @@ var (
 			Padding(0, 1).
 			Background(DefaultColor.Error).
 			Render
+
+	Bold = lipgloss.NewStyle().Bold(true).Copy()
 )

@@ -142,7 +142,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 
 		app.activeTab = tabBrowse
 		app.headerComponent.SetActive(app.activeTab)
-		return info.RequestMode(modeBrowsing.label, modeBrowsing.bg)
+		return tea.Batch(info.RequestMode(modeBrowsing.label, modeBrowsing.bg), browsing.RequestInitialView)
 	})
 
 	app.bindings.Bind(" ").Option("r").Action(func(msg tea.KeyMsg) tea.Cmd {
@@ -291,10 +291,10 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// follow component is updates asap after a message is received
-	// if app.activeTab != tabUnset && app.activeTab != tabFollow {
-	// 	app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
-	// 	cmds = append(cmds, cmd)
-	// }
+	if app.activeTab != tabUnset && app.activeTab != tabFollow {
+		app.components[app.activeTab], cmd = app.components[app.activeTab].Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	app.footerComponent, cmd = app.footerComponent.Update(msg)
 	cmds = append(cmds, cmd)

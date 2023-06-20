@@ -123,6 +123,8 @@ func New(formatter store.Formatter) *Model {
 
 			index, _ := strconv.Atoi(model.prompt.Value())
 			model.formatter.Load(index)
+			model.prompt.Blur()
+
 			return nil
 		})
 
@@ -138,7 +140,10 @@ func New(formatter store.Formatter) *Model {
 		return nil
 	})
 
-	model.bindings.Debug()
+	model.bindings.Bind("r").Action(func(msg tea.KeyMsg) tea.Cmd {
+		model.formatter.Load(int(model.formatter.CurrentIndex()))
+		return nil
+	})
 
 	return model
 }
@@ -169,6 +174,11 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, model.bindings.Exec(msg).Call(msg))
 		}
 
+	case initView:
+		if !model.ready {
+			break
+		}
+		model.formatter.Load(0)
 	}
 
 	if model.ready {
