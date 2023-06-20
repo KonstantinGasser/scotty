@@ -10,8 +10,8 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/querying"
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
-	"github.com/KonstantinGasser/scotty/app/event"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
@@ -98,7 +98,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		subscriber: make(map[string]streamConfig),
 		logstore:   lStore,
 
-		headerComponent: styles.NewTabs(0, "follow logs", "browse logs", "query logs", "docs"),
+		headerComponent: nil, //styles.NewTabs(0, "follow logs", "browse logs", "query logs", "docs"),
 		activeTab:       tabUnset,
 
 		footerComponent: info.New(),
@@ -115,6 +115,19 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		return tea.Quit
 	})
 
+	app.bindings.Bind(" ").OnESC(func(msg tea.KeyMsg) tea.Cmd {
+		debug.Print("onESC => Key(%s) => Tab: %d\n", msg, app.activeTab)
+		switch app.activeTab {
+		case tabFollow:
+			return info.RequestMode(modeFollowing.label, modeFollowing.bg)
+		case tabBrowse:
+			return info.RequestMode(modeBrowsing.label, modeBrowsing.bg)
+		default:
+			return nil
+		}
+	})
+	// set quit option here again in order to quit the app while running a
+	// key stroke sequence
 	app.bindings.Bind(" ").Option("ctrl+c").Action(func(msg tea.KeyMsg) tea.Cmd {
 		app.quit <- struct{}{}
 		return tea.Quit
@@ -129,8 +142,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 			return nil
 		}
 		app.activeTab = tabFollow
-		app.headerComponent.SetActive(app.activeTab)
-
+		// app.headerComponent.SetActive(app.activeTab)
 		return info.RequestMode(modeFollowing.label, modeFollowing.bg)
 	})
 
@@ -141,12 +153,8 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		}
 
 		app.activeTab = tabBrowse
-		app.headerComponent.SetActive(app.activeTab)
+		// app.headerComponent.SetActive(app.activeTab)
 		return tea.Batch(info.RequestMode(modeBrowsing.label, modeBrowsing.bg), browsing.RequestInitialView)
-	})
-
-	app.bindings.Bind(" ").Option("r").Action(func(msg tea.KeyMsg) tea.Cmd {
-		return event.RequestGlobalBufferRefresh
 	})
 
 	app.bindings.Debug()
@@ -169,6 +177,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 		cmd  tea.Cmd
 	)
+
+	app.bindings.Debug()
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -312,7 +322,7 @@ func (app App) View() string {
 		// Padding(styles.ContentPaddingVertical, 0).
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
-				app.headerComponent.View(),
+				// app.headerComponent.View(),
 				app.components[app.activeTab].View(),
 				app.grid.FooterLine.Render(app.footerComponent.View()),
 			),
