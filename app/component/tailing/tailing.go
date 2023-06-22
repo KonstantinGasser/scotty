@@ -59,8 +59,6 @@ func New(pager store.Pager) *Model {
 		return nil
 	})
 
-	model.bindings.Debug()
-
 	return model
 }
 

@@ -4,13 +4,18 @@ import (
 	"strconv"
 
 	"github.com/KonstantinGasser/scotty/app/bindings"
+	"github.com/KonstantinGasser/scotty/app/component/info"
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/store"
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+type mode struct {
+	label string
+	bg    lipgloss.Color
+}
 
 const (
 	promptHeight = 3
@@ -18,34 +23,37 @@ const (
 )
 
 var (
-	keyInitTyping = key.NewBinding(
-		key.WithKeys(":"),
-	)
+	promptMode mode = mode{label: "INPUT (exit with ESC)", bg: lipgloss.Color("54")}
+	noramlNode mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
 
-	keyEnterTyping = key.NewBinding(
-		key.WithKeys("enter"),
-	)
-
-	keyExitTyping = key.NewBinding(
-		key.WithKeys("esc"),
-	)
-
-	keyUp = key.NewBinding(
-		key.WithKeys("k"),
-	)
-
-	keyDown = key.NewBinding(
-		key.WithKeys("j"),
-	)
-
-	// used to disable these keys
-	// while typing in indices in the prompt
-	keysTabs = []key.Binding{
-		key.NewBinding(key.WithKeys("1")),
-		key.NewBinding(key.WithKeys("2")),
-		key.NewBinding(key.WithKeys("3")),
-		key.NewBinding(key.WithKeys("4")),
-	}
+	// keyInitTyping      = key.NewBinding(
+	// 	key.WithKeys(":"),
+	// )
+	//
+	// keyEnterTyping = key.NewBinding(
+	// 	key.WithKeys("enter"),
+	// )
+	//
+	// keyExitTyping = key.NewBinding(
+	// 	key.WithKeys("esc"),
+	// )
+	//
+	// keyUp = key.NewBinding(
+	// 	key.WithKeys("k"),
+	// )
+	//
+	// keyDown = key.NewBinding(
+	// 	key.WithKeys("j"),
+	// )
+	//
+	// // used to disable these keys
+	// // while typing in indices in the prompt
+	// keysTabs = []key.Binding{
+	// 	key.NewBinding(key.WithKeys("1")),
+	// 	key.NewBinding(key.WithKeys("2")),
+	// 	key.NewBinding(key.WithKeys("3")),
+	// 	key.NewBinding(key.WithKeys("4")),
+	// }
 )
 
 /*
@@ -103,7 +111,7 @@ func New(formatter store.Formatter) *Model {
 			func(msg tea.KeyMsg) tea.Cmd {
 				model.prompt.Blur()
 				model.prompt.Reset()
-				return nil
+				return info.RequestMode(noramlNode.label, noramlNode.bg)
 			},
 		).
 		Action(
@@ -112,7 +120,7 @@ func New(formatter store.Formatter) *Model {
 					return nil
 				}
 				model.prompt.Prompt = focusedPromptChar
-				return model.prompt.Focus()
+				return tea.Batch(model.prompt.Focus(), info.RequestMode(promptMode.label, promptMode.bg))
 			},
 		).
 		Option("enter").Action(
@@ -125,7 +133,7 @@ func New(formatter store.Formatter) *Model {
 			model.formatter.Load(index)
 			model.prompt.Blur()
 
-			return nil
+			return info.RequestMode(noramlNode.label, noramlNode.bg)
 		})
 
 	model.bindings.Bind("k").Action(func(msg tea.KeyMsg) tea.Cmd {

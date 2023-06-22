@@ -163,6 +163,7 @@ func (m *Map) Exec(msg tea.KeyMsg) Func {
 	// and update the m.next with m.next.options[x]
 	if m.next != nil {
 		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) {
+			debug.Print("Canceling key stroke sequence...\n")
 			onESC := m.next.onESC
 			m.next = nil
 			return onESC
