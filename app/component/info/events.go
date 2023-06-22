@@ -57,18 +57,32 @@ func RequestResume() tea.Cmd {
 	}
 }
 
+type AppMode struct {
+	Label string
+	Bg    lipgloss.Color
+	Opts  []string
+}
+
+var (
+	ModeFollowing    AppMode = AppMode{Label: "FOLLOWING", Bg: lipgloss.Color("#98c379")}
+	ModeBrowsing     AppMode = AppMode{Label: "BROWSING", Bg: lipgloss.Color("#98c378")}
+	ModePaused       AppMode = AppMode{Label: "PAUSED", Bg: lipgloss.Color("#ff9640")}
+	ModeGlobalCmd    AppMode = AppMode{Label: "GLOBAL (esc for exit)", Bg: lipgloss.Color("54"), Opts: []string{" ·f follow incoming logs", "·b browse recorded logs"}}
+	ModePromptActive AppMode = AppMode{Label: "INPUT (exit with ESC)", Bg: lipgloss.Color("54")}
+)
+
 type requestMode struct {
 	mode string
 	bg   lipgloss.Color
 	opts []string
 }
 
-func RequestMode(mode string, bg lipgloss.Color, opts ...string) tea.Cmd {
+func RequestMode(mode AppMode) tea.Cmd {
 	return func() tea.Msg {
 		return requestMode{
-			mode: strings.ToUpper(mode),
-			bg:   bg,
-			opts: opts,
+			mode: strings.ToUpper(mode.Label),
+			bg:   mode.Bg,
+			opts: mode.Opts,
 		}
 	}
 }

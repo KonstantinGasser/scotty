@@ -24,40 +24,6 @@ const (
 	promptWidth  = 24
 )
 
-var (
-	promptMode mode = mode{label: "INPUT (exit with ESC)", bg: lipgloss.Color("54")}
-	noramlNode mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
-
-	// keyInitTyping      = key.NewBinding(
-	// 	key.WithKeys(":"),
-	// )
-	//
-	// keyEnterTyping = key.NewBinding(
-	// 	key.WithKeys("enter"),
-	// )
-	//
-	// keyExitTyping = key.NewBinding(
-	// 	key.WithKeys("esc"),
-	// )
-	//
-	// keyUp = key.NewBinding(
-	// 	key.WithKeys("k"),
-	// )
-	//
-	// keyDown = key.NewBinding(
-	// 	key.WithKeys("j"),
-	// )
-	//
-	// // used to disable these keys
-	// // while typing in indices in the prompt
-	// keysTabs = []key.Binding{
-	// 	key.NewBinding(key.WithKeys("1")),
-	// 	key.NewBinding(key.WithKeys("2")),
-	// 	key.NewBinding(key.WithKeys("3")),
-	// 	key.NewBinding(key.WithKeys("4")),
-	// }
-)
-
 /*
 
 What if each component can create their one scope which is a bindings.Map on this scope
@@ -113,7 +79,7 @@ func New(formatter store.Formatter) *Model {
 			func(msg tea.KeyMsg) tea.Cmd {
 				model.prompt.Blur()
 				model.prompt.Reset()
-				return info.RequestMode(noramlNode.label, noramlNode.bg)
+				return info.RequestMode(info.ModeBrowsing)
 			},
 		).
 		Action(
@@ -122,7 +88,7 @@ func New(formatter store.Formatter) *Model {
 					return nil
 				}
 				model.prompt.Prompt = focusedPromptChar
-				return tea.Batch(model.prompt.Focus(), info.RequestMode(promptMode.label, promptMode.bg))
+				return tea.Batch(model.prompt.Focus(), info.RequestMode(info.ModePromptActive))
 			},
 		).
 		Option("enter").Action(
@@ -135,7 +101,7 @@ func New(formatter store.Formatter) *Model {
 			model.formatter.Load(index)
 			model.prompt.Blur()
 
-			return info.RequestMode(noramlNode.label, noramlNode.bg)
+			return info.RequestMode(info.ModeBrowsing)
 		})
 
 	model.bindings.Bind("k").Action(func(msg tea.KeyMsg) tea.Cmd {

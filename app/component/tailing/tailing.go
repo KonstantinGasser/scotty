@@ -5,7 +5,6 @@ import (
 	"github.com/KonstantinGasser/scotty/app/styles"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -15,16 +14,6 @@ const (
 	unset = iota
 	running
 	paused
-)
-
-var (
-	keyPause = key.NewBinding(
-		key.WithKeys("p"),
-	)
-
-	keyScrollBottom = key.NewBinding(
-		key.WithKeys("g"),
-	)
 )
 
 type Model struct {

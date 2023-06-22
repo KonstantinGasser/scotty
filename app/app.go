@@ -34,12 +34,12 @@ type mode struct {
 }
 
 var (
-	modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
-	modeBrowsing  mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
-	modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
-	modeGlobalCmd mode = mode{label: "GLOBAL (esc for exit)", bg: lipgloss.Color("54"), opts: []string{" ·f follow incoming logs", "·b browse recorded logs"}}
-
-	globalKey = key.NewBinding(key.WithKeys(" "))
+// modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
+// modeBrowsing  mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
+// modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
+// modeGlobalCmd mode = mode{label: "GLOBAL (esc for exit)", bg: lipgloss.Color("54"), opts: []string{" ·f follow incoming logs", "·b browse recorded logs"}}
+//
+// globalKey = key.NewBinding(key.WithKeys(" "))
 )
 
 type streamConfig struct {
@@ -119,9 +119,9 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		debug.Print("onESC => Key(%s) => Tab: %d\n", msg, app.activeTab)
 		switch app.activeTab {
 		case tabFollow:
-			return info.RequestMode(modeFollowing.label, modeFollowing.bg)
+			return info.RequestMode(info.ModeFollowing)
 		case tabBrowse:
-			return info.RequestMode(modeBrowsing.label, modeBrowsing.bg)
+			return info.RequestMode(info.ModeBrowsing)
 		default:
 			return nil
 		}
@@ -135,7 +135,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 
 	app.bindings.Bind(" ").
 		Action(func(msg tea.KeyMsg) tea.Cmd {
-			return info.RequestMode(modeGlobalCmd.label, modeGlobalCmd.bg, modeGlobalCmd.opts...)
+			return info.RequestMode(info.ModeGlobalCmd)
 		}).
 		Option("f").Action(func(msg tea.KeyMsg) tea.Cmd {
 		if app.activeTab == tabFollow {
@@ -143,7 +143,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		}
 		app.activeTab = tabFollow
 		// app.headerComponent.SetActive(app.activeTab)
-		return info.RequestMode(modeFollowing.label, modeFollowing.bg)
+		return info.RequestMode(info.ModeFollowing)
 	})
 
 	app.bindings.Bind(" ").
@@ -154,7 +154,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 
 		app.activeTab = tabBrowse
 		// app.headerComponent.SetActive(app.activeTab)
-		return tea.Batch(info.RequestMode(modeBrowsing.label, modeBrowsing.bg), browsing.RequestInitialView)
+		return tea.Batch(info.RequestMode(info.ModeBrowsing), browsing.RequestInitialView)
 	})
 
 	app.bindings.Debug()
@@ -230,7 +230,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tailing.PauseRequest:
 		cmds = append(cmds,
 			info.RequestPause(),
-			info.RequestMode(modePaused.label, modePaused.bg),
+			info.RequestMode(info.ModePaused),
 		)
 
 	// triggered by the tailing component indicating that the pager resumes to render
@@ -238,7 +238,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tailing.ResumeRequest:
 		cmds = append(cmds,
 			info.RequestResume(),
-			info.RequestMode(modeFollowing.label, modeFollowing.bg),
+			info.RequestMode(info.ModeFollowing),
 		)
 
 	// triggered each time a new stream connects successfully to scotty and is procssed
@@ -276,7 +276,7 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case stream.Message:
 		if app.activeTab == tabUnset {
 			app.activeTab = tabFollow
-			cmds = append(cmds, info.RequestMode(modeFollowing.label, modeFollowing.bg))
+			cmds = append(cmds, info.RequestMode(info.ModeFollowing))
 			// no longer required. Default of active Tab is zero
 			// and tabFollow == 0
 			// ...
