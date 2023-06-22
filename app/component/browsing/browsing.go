@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// we now have this in two places (app.go and browsing.go)
+// maybe this should come from the info package??
 type mode struct {
 	label string
 	bg    lipgloss.Color

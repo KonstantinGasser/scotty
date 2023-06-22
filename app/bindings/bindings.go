@@ -90,24 +90,24 @@ type seqOption struct {
 }
 type Map struct {
 	next  *seqOption
-	binds map[string]SequenceTree
+	binds map[string]*SequenceTree
 }
 
 func NewMap() *Map {
 	return &Map{
 		next:  nil,
-		binds: map[string]SequenceTree{},
+		binds: map[string]*SequenceTree{},
 	}
 }
 
 func (m *Map) Bind(k string) *SequenceTree {
 
 	if seq, ok := m.binds[k]; ok {
-		return &seq
+		return seq
 	}
 
 	seq := newSeqTree(k)
-	m.binds[k] = seq
+	m.binds[k] = &seq
 
 	return &seq
 }
@@ -126,7 +126,7 @@ func (m *Map) Matches(msg tea.KeyMsg) bool {
 			return true
 		}
 
-		_, ok := m.next.node.options[try]
+		next, ok := m.next.node.options[try]
 		// if no option was found we do nothing.
 		// user might have typed to wrong key or somthing
 		// we keep the options as is.
@@ -134,6 +134,7 @@ func (m *Map) Matches(msg tea.KeyMsg) bool {
 			return false
 		}
 		// user chose an option from the current next node
+		m.next.node = next
 		return true
 	}
 
@@ -150,6 +151,7 @@ func (m *Map) Matches(msg tea.KeyMsg) bool {
 			onESC: seq.onESC,
 			node:  seq.root,
 		}
+
 	}
 
 	return true
@@ -163,7 +165,6 @@ func (m *Map) Exec(msg tea.KeyMsg) Func {
 	// and update the m.next with m.next.options[x]
 	if m.next != nil {
 		if key.Matches(msg, key.NewBinding(key.WithKeys("esc"))) {
-			debug.Print("Canceling key stroke sequence...\n")
 			onESC := m.next.onESC
 			m.next = nil
 			return onESC

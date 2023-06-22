@@ -50,11 +50,6 @@ func TestOptionSeqTree(t *testing.T) {
 		},
 	}
 
-	// kSPC := key.NewBinding(key.WithKeys(" "))
-	// kF := key.NewBinding(key.WithKeys("f"))
-	// t.Logf("KeyMsg(SPC) == Binding(SPC) => %v\n", key.Matches(msgs[0], kSPC))
-	// t.Logf("KeyMsg(f) == Binding(f) => %v\n", key.Matches(msgs[1], kF))
-
 	for _, msg := range msgs {
 		ok := m.Matches(msg)
 		if !ok {
@@ -64,4 +59,44 @@ func TestOptionSeqTree(t *testing.T) {
 
 		t.Logf("Key: %q found in Map. Action: %v\n", msg, m.Exec(msg).Call(msg))
 	}
+}
+
+func TestOnESCForSequence(t *testing.T) {
+
+	m := NewMap()
+
+	m.Bind(" ").OnESC(func(msg tea.KeyMsg) tea.Cmd {
+		return func() tea.Msg { return 1 }
+	}).Option("f").Action(func(km tea.KeyMsg) tea.Cmd { return nil })
+
+	msgs := []tea.KeyMsg{
+		{
+			Type:  tea.KeySpace,
+			Runes: []rune(" "),
+			Alt:   false,
+		},
+		{
+			Type:  tea.KeyEsc,
+			Runes: []rune("esc"),
+			Alt:   false,
+		},
+	}
+
+	for _, msg := range msgs {
+		if ok := m.Matches(msg); !ok && msg.String() != "esc" {
+			t.Fatalf("Key: %q invalid key for sequence", msg)
+		}
+
+		call := m.Exec(msg)
+		if msg.String() == "esc" {
+			resp := call.Call(msg)
+			if resp == nil {
+				t.Fatalf("onESC CMD is nil!")
+			}
+			if val := resp(); val != 1 {
+				t.Fatalf("ESC call returned not expected value: got: %v, wanted: %d", val, 1)
+			}
+		}
+	}
+
 }
