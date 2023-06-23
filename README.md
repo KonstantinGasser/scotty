@@ -39,7 +39,9 @@ go install github.com/KonstantinGasser/beam@v0.0.1
 
 In oder to maintain a manageable memory footprint `scotty` is using a ring buffer which allows a maxinmum number of logs before starting to overwrite the latest entries.
 However, you can choose a size that works for you. scotty will buffer *1024* items by default.
-To overwrite this default start scotty with the `-buffer=<size>` flag.
+To overwrite this default start scotty with the `-buffer=<size>` flag. 
+Depending on the workload you expect you can also adjust the refresh rate of scotty for taling logs. Asuming you expect many many logs (about 1 log every 20ms in average)
+it can make sense to increase the `-refresh` flag. By setting a refresh rate scotty will only render logs every refresh intervall (note no logs are lost, only the time until they are displayed increases).
 
 ```
 $ scotty -buffer=2048
@@ -85,25 +87,30 @@ You can imagine any other command prior to `beam` which produces logs. Say a co
 from your ECS/EKS (or what not) cluster instances.
 
 
-## Navigation in scotty
+## Navigation
 
-Once at least one beam is connected to soctty and started beaming logs you see multiple tabs. By using the keys `1`, `2`, `3` and `4` you can navigate between the respective tabs.
+By default once a beam connects to scotty the *follow view* is opened. To switch to the *browsing view* hit `SPC` then `b`, to switch back use `SPC` and then `f`. These keys are accessible from anywhere.
+
+<!-- ## Navigation in scotty -->
+<!---->
+<!-- Once at least one beam is connected to soctty and started beaming logs you see multiple tabs. By using the keys `1`, `2`, `3` and `4` you can navigate between the respective tabs. -->
 
 ### TAB: Follow
 
 After the first beam connects to scotty by default the `follow logs` tab is opened. In here you see all logs from all connected beams.
 This tab essentaully behaves like the `tail -f` command where each new recorded log is pushed to the end of the screen.
-Use the `p` key to pause the tailing and resume by pressing `p` again.
+Use the `p` key to pause the tailing and resume by pressing `p` again. With the `g` key you can load the latest logs from the buffer (usefull while tailing is paused).
 
-![example_tab_follow.png](resources/example_tab_follow.png)
+![example_tab_follow.png](resources/example_follow_v0.0.4-rc.png)
 
 ### TAB: Browse
 
 The inital tab content will not show much, but rather ask you to provide an index of the log item which you want to format (in the `Follow logs` tab each log as an index as prefix which you can use and refer to in this tab).
 After you hit enter you will see the requested log is formatted and next logs are shown in the background.
-With the keys `j` and `k` you can format the next or previous log.
+With the keys `j` and `k` you can format the next or previous log. Different from the tailing view while in the browsing view logs are not reloaded (tailed) when new logs are received, however using the `r` key you
+can reload the latest logs. Reloading will cause the selected formatted log line to update.
 
-![example_tab_browsing.png](resources/example_tab_browsing.png)
+![example_tab_browsing.png](resources/example_browse_v0.0.4-rc.png)
 
 ### TAB: Query
 

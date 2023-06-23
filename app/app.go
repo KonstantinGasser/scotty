@@ -319,7 +319,6 @@ func (app App) View() string {
 	}
 
 	return lipgloss.NewStyle().
-		// Padding(styles.ContentPaddingVertical, 0).
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
 				// app.headerComponent.View(),
