@@ -64,8 +64,8 @@ type AppMode struct {
 }
 
 var (
-	ModeFollowing    AppMode = AppMode{Label: "FOLLOWING", Bg: lipgloss.Color("#98c379")}
-	ModeBrowsing     AppMode = AppMode{Label: "BROWSING", Bg: lipgloss.Color("#98c378")}
+	ModeFollowing    AppMode = AppMode{Label: "FOLLOWING", Bg: lipgloss.Color("#98c379"), Opts: []string{" ·p pause/continue tailing", " ·g go to latest log line"}}
+	ModeBrowsing     AppMode = AppMode{Label: "BROWSING", Bg: lipgloss.Color("#98c378"), Opts: []string{" ·j next log", " ·k previous log", " ·r reload buffer"}}
 	ModePaused       AppMode = AppMode{Label: "PAUSED", Bg: lipgloss.Color("#ff9640")}
 	ModeGlobalCmd    AppMode = AppMode{Label: "GLOBAL (esc for exit)", Bg: lipgloss.Color("54"), Opts: []string{" ·f follow incoming logs", "·b browse recorded logs"}}
 	ModePromptActive AppMode = AppMode{Label: "INPUT (exit with ESC)", Bg: lipgloss.Color("54")}
