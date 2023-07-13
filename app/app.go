@@ -33,15 +33,6 @@ type mode struct {
 	opts  []string
 }
 
-var (
-// modeFollowing mode = mode{label: "FOLLOWING", bg: lipgloss.Color("#98c379")}
-// modeBrowsing  mode = mode{label: "BROWSING", bg: lipgloss.Color("#98c378")}
-// modePaused    mode = mode{label: "PAUSED", bg: lipgloss.Color("#ff9640")}
-// modeGlobalCmd mode = mode{label: "GLOBAL (esc for exit)", bg: lipgloss.Color("54"), opts: []string{" ·f follow incoming logs", "·b browse recorded logs"}}
-//
-// globalKey = key.NewBinding(key.WithKeys(" "))
-)
-
 type streamConfig struct {
 	color lipgloss.Color
 }
@@ -98,7 +89,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		subscriber: make(map[string]streamConfig),
 		logstore:   lStore,
 
-		headerComponent: nil, //styles.NewTabs(0, "follow logs", "browse logs", "query logs", "docs"),
+		headerComponent: nil,
 		activeTab:       tabUnset,
 
 		footerComponent: info.New(),
@@ -116,7 +107,6 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 	})
 
 	app.bindings.Bind(" ").OnESC(func(msg tea.KeyMsg) tea.Cmd {
-		debug.Print("onESC => Key(%s) => Tab: %d\n", msg, app.activeTab)
 		switch app.activeTab {
 		case tabFollow:
 			return info.RequestMode(info.ModeFollowing)
@@ -126,6 +116,7 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 			return nil
 		}
 	})
+
 	// set quit option here again in order to quit the app while running a
 	// key stroke sequence
 	app.bindings.Bind(" ").Option("ctrl+c").Action(func(msg tea.KeyMsg) tea.Cmd {
@@ -142,7 +133,6 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 			return nil
 		}
 		app.activeTab = tabFollow
-		// app.headerComponent.SetActive(app.activeTab)
 		return info.RequestMode(info.ModeFollowing)
 	})
 
@@ -153,7 +143,6 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		}
 
 		app.activeTab = tabBrowse
-		// app.headerComponent.SetActive(app.activeTab)
 		return tea.Batch(info.RequestMode(info.ModeBrowsing), browsing.RequestInitialView)
 	})
 
@@ -321,7 +310,6 @@ func (app App) View() string {
 	return lipgloss.NewStyle().
 		Render(
 			lipgloss.JoinVertical(lipgloss.Left,
-				// app.headerComponent.View(),
 				app.components[app.activeTab].View(),
 				app.grid.FooterLine.Render(app.footerComponent.View()),
 			),
