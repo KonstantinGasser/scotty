@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/kr/pretty v0.3.1
+	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v2 v2.4.0
 )
 
