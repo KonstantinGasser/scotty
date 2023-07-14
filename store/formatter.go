@@ -157,9 +157,13 @@ func (formatter *Formatter) buildForeground() {
 
 	item := formatter.reader.At(uint32(formatter.absolute))
 
-	pretty, _ := jsonF.Format(
+	pretty, err := jsonF.Format(
 		[]byte(item.Raw[item.DataPointer:]),
 	)
+
+	if err != nil {
+		pretty = []byte(item.Raw[item.DataPointer:])
+	}
 
 	broken := wrap.Bytes(pretty, modalWidth(formatter.ttyWidth))
 

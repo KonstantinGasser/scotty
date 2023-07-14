@@ -11,7 +11,6 @@ import (
 	"github.com/KonstantinGasser/scotty/app/component/tailing"
 	"github.com/KonstantinGasser/scotty/app/component/welcome"
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
 	"github.com/charmbracelet/bubbles/key"
