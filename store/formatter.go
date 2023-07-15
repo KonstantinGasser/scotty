@@ -1,10 +1,10 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
@@ -77,11 +77,11 @@ func (formatter *Formatter) Load(start int) {
 
 func (formatter *Formatter) Next() {
 
-	formatter.absolute += 1
-
 	if !formatter.reader.HasData(formatter.absolute) {
 		return
 	}
+
+	formatter.absolute += 1
 	// turn page forward by formatter.size
 	if formatter.relative+1 > formatter.size {
 		formatter.reader.OffsetRead(int(formatter.absolute), formatter.buffer)
@@ -129,6 +129,16 @@ func (formatter *Formatter) buildBackground() {
 	for i, item := range formatter.buffer {
 
 		var raw = strings.Builder{}
+
+		// index of an item in this case
+		// may never be zero as we start at 1
+		// for the index shown to the user.
+		// There are other places where an index of
+		// zero does not indicated that the item is
+		// the zero value Item{}
+		if item.Index() > 0 {
+			raw.WriteString(fmt.Sprintf("[%d]", item.Index()-1))
+		}
 
 		if i == int(formatter.relative) {
 			raw.WriteString(selected)
