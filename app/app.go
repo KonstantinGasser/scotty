@@ -145,8 +145,6 @@ func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer
 		return tea.Batch(info.RequestMode(info.ModeBrowsing), browsing.RequestInitialView)
 	})
 
-	app.bindings.Debug()
-
 	return app
 }
 

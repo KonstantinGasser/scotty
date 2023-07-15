@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hokaccha/go-prettyjson"
@@ -16,6 +17,16 @@ var (
 )
 
 func init() {
+	// why? the coloring of the string interfears
+	// with the overlaying of the modal and background.
+	// Due to the color in the line of the modal an ansi
+	// color escape sequence is started but closed maybe
+	// only after multiple lines if the string has to be
+	// broken into multiple lines. This leads to the entire
+	// line (including the background chars) where the sequence
+	// has been started to be colored. This not coloring the
+	// strings when formattings/pretty printing is the solution
+	// for now...
 	jsonF.StringColor = nil
 }
 
@@ -68,6 +79,9 @@ func (formatter *Formatter) Next() {
 
 	formatter.absolute += 1
 
+	if !formatter.reader.HasData(formatter.absolute) {
+		return
+	}
 	// turn page forward by formatter.size
 	if formatter.relative+1 > formatter.size {
 		formatter.reader.OffsetRead(int(formatter.absolute), formatter.buffer)

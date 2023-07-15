@@ -8,7 +8,7 @@ import (
 )
 
 type Store struct {
-	buffer ring.Buffer
+	buffer *ring.Buffer
 }
 
 func New(size uint32) *Store {
@@ -38,7 +38,7 @@ func (store Store) NewPager(size uint8, width int, refresh time.Duration) Pager 
 	return Pager{
 		size:       size,
 		ttyWidth:   width,
-		reader:     &store.buffer,
+		reader:     store.buffer,
 		position:   0,
 		buffer:     buf,
 		written:    0,
@@ -51,7 +51,7 @@ func (store Store) NewFormatter(size uint8, width int) Formatter {
 	return Formatter{
 		size:     size,
 		ttyWidth: width,
-		reader:   &store.buffer,
+		reader:   store.buffer,
 		absolute: 0,
 		relative: 0,
 	}

@@ -6,7 +6,11 @@ type Reader interface {
 	At(i uint32) Item
 	// Range(start int, size int) Slice
 	OffsetRead(offset int, buf []Item)
-	Head() uint32
+	// HasData does an assuption whether
+	// the buffer has actual data behind the
+	// requested index. It can be tricked and
+	// is no guarantee that's correct
+	HasData(index uint32) bool
 }
 
 type Slice []Item
@@ -54,8 +58,8 @@ type Buffer struct {
 	data     []Item
 }
 
-func New(size uint32) Buffer {
-	return Buffer{
+func New(size uint32) *Buffer {
+	return &Buffer{
 		capacity: size,
 		head:     0,
 		written:  0,
@@ -101,7 +105,6 @@ func (buf *Buffer) Range(start int, size int) Slice {
 
 	for i := start; i < start+size; i++ {
 		index = buf.marshalIndex(uint32(i))
-		debug.Print("Index: %d\n", index)
 		out = append(out, buf.data[index])
 	}
 
@@ -122,7 +125,14 @@ func (buf *Buffer) OffsetRead(offset int, b []Item) {
 		index = buf.marshalIndex(uint32(i))
 		b[j] = buf.data[index]
 	}
+}
 
+func (buf *Buffer) HasData(index uint32) bool {
+	if index < 0 || index > buf.written {
+		return false
+	}
+
+	return len(buf.data[index].Raw) > 0
 }
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
