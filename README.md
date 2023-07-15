@@ -45,7 +45,7 @@ it can make sense to increase the `-refresh` flag. By setting a refresh rate sco
 
 ```
 $ scotty -buffer=2048
-// scotty will store up to 2048 logs before overwriting the latest items
+// scotty will store up to 2048 logs before overwriting the first items
 ```
 
 Otherwise if *1024* is good enough simply run `$ scotty` to start scotty.
