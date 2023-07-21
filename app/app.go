@@ -164,8 +164,6 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 	)
 
-	app.bindings.Debug()
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// we dont allow any key binding actions
