@@ -44,7 +44,7 @@ Depending on the workload you expect you can also adjust the refresh rate of sco
 it can make sense to increase the `-refresh` flag. By setting a refresh rate scotty will only render logs every refresh intervall (note no logs are lost, only the time until they are displayed increases).
 
 ```
-$ scotty -buffer=2048
+$ scotty -buffer=2048 -refresh=100ms
 // scotty will store up to 2048 logs before overwriting the first items
 ```
 
