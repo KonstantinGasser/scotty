@@ -1,6 +1,10 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 var (
 	BgFooter = lipgloss.AdaptiveColor{
@@ -108,4 +112,47 @@ type FooterLine struct {
 
 func (footer *FooterLine) Render(content string) string {
 	return footer.style.Render(content)
+}
+
+// SpaceBetween performs a row alignment on the left and
+// right string slices where the content is pushed to the left
+// and right respecifly as much as possible.
+// Like in CSS display:flex; justify-content:space-between;.
+// The slices should be of same length (each left[i] entry is
+// matched with the right[i] entry). If the length differ, the
+// short one is used as an upper limit.
+func SpaceBetween(width int, left []string, right []string, betweenChar string) string {
+
+	if width <= 0 {
+		return ""
+	}
+	var upper = len(left)
+	if len(right) < upper {
+		upper = len(right)
+	}
+
+	// ignores use case where len(a) + len(b) > width
+	var space = func(a string, b string) string {
+		widthA := lipgloss.Width(a)
+		widthB := lipgloss.Width(b)
+
+		between := width - (widthA + widthB)
+		if between < 0 {
+			return ""
+		}
+
+		return strings.Join([]string{
+			a,
+			strings.Repeat(betweenChar, between),
+			b,
+		}, "")
+
+	}
+
+	var rows = make([]string, upper)
+	for i := 0; i < upper; i++ {
+		rows[i] = space(left[i], right[i])
+	}
+
+	return strings.Join(rows, "\n")
 }
