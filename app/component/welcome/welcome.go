@@ -34,33 +34,41 @@ var (
 			}, "\n"),
 		)
 
-	infoGlobal = lipgloss.NewStyle().Render(
-		strings.Join([]string{
-			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("Global keys"),
-			styles.Bold.Render("SPC f") + " ● open view to follow/tail all logs",
-			styles.Bold.Render("SPC b") + " ● open view to browse all logs",
-			styles.Bold.Render("SPC s") + " ● open view to query the logs",
-		}, "\n"),
-	)
+	leaderKeyActions = []string{
+		"follow logs",
+		"browse logs",
+		"query  logs",
+	}
 
-	infoTabFollow = lipgloss.NewStyle().Render(
-		strings.Join([]string{
-			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\n[View] Following/Tailing"),
-			styles.Bold.Render("p") + " ● to pause the tailing (if not paused). Use p to contiune tailing",
-			styles.Bold.Render("g") + " ● to tail the latest logs. Useful while in paused state",
-		}, "\n"),
-	)
+	leaderKeyBindings = []string{
+		styles.Bold.Render("SPC f"),
+		styles.Bold.Render("SPC b"),
+		styles.Bold.Render("SPC s"),
+	}
 
-	infoTabBrowsing = lipgloss.NewStyle().Render(
-		strings.Join([]string{
-			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\n[View] Browsing"),
-			styles.Bold.Render(":") + " ● to enable prompt input for index selection",
-			styles.Bold.Render("\tenter") + " ● sets the sected formatted log to the requested index",
-			styles.Bold.Render("j") + " ● to format the next log line",
-			styles.Bold.Render("k") + " ● to format the previous log line",
-			styles.Bold.Render("r") + " ● to reload the formatter with the latest log lines",
-		}, "\n"),
-	)
+	followKeyActions = []string{
+		"pause/continue",
+		"scroll down",
+	}
+
+	followKeyBindings = []string{
+		styles.Bold.Render("p"),
+		styles.Bold.Render("g"),
+	}
+
+	browseKeyActions = []string{
+		"select index",
+		"next line",
+		"previous line",
+		"reload buffer",
+	}
+
+	browseKeyBindings = []string{
+		styles.Bold.Render(":"),
+		styles.Bold.Render("j"),
+		styles.Bold.Render("k"),
+		styles.Bold.Render("r"),
+	}
 
 	infoUsage = lipgloss.NewStyle().
 			MarginBottom(2).
@@ -88,12 +96,26 @@ func New(width int, height int) *Model {
 
 func (m *Model) View() string {
 
+	between := int(float64(m.width) * 0.35)
+	leaderBindings := lipgloss.JoinVertical(lipgloss.Center,
+		lipgloss.PlaceHorizontal(between, lipgloss.Center, lipgloss.NewStyle().Render("Leader keys")),
+		styles.SpaceBetween(between, leaderKeyActions, leaderKeyBindings, "."),
+	)
+
+	followBindings := lipgloss.JoinVertical(lipgloss.Center,
+		lipgloss.PlaceHorizontal(between, lipgloss.Center, lipgloss.NewStyle().Render("Follow tab")),
+		styles.SpaceBetween(between, followKeyActions, followKeyBindings, "."),
+	)
+
+	browseBindings := lipgloss.JoinVertical(lipgloss.Center,
+		lipgloss.PlaceHorizontal(between, lipgloss.Center, lipgloss.NewStyle().Render("Browse tab")),
+		styles.SpaceBetween(between, browseKeyActions, browseKeyBindings, "."),
+	)
 	maxWidth := max(
 		lipgloss.Width(logo),
-		lipgloss.Width(infoGlobal),
-		lipgloss.Width(infoTabFollow),
-		lipgloss.Width(infoTabBrowsing),
-		lipgloss.Width(infoUsage),
+		lipgloss.Width(leaderBindings),
+		lipgloss.Width(followBindings),
+		lipgloss.Width(browseBindings),
 	)
 
 	welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -104,29 +126,23 @@ func (m *Model) View() string {
 		),
 		lipgloss.PlaceHorizontal(
 			maxWidth,
-			lipgloss.Left,
-			infoGlobal,
+			lipgloss.Center,
+			leaderBindings,
 		),
+		"\n",
 		lipgloss.PlaceHorizontal(
 			maxWidth,
-			lipgloss.Left,
-			infoTabFollow,
+			lipgloss.Center,
+			followBindings,
 		),
+		"\n",
 		lipgloss.PlaceHorizontal(
 			maxWidth,
-			lipgloss.Left,
-			infoTabBrowsing,
-		),
-		lipgloss.PlaceHorizontal(
-			maxWidth,
-			lipgloss.Left,
-			infoUsage,
+			lipgloss.Center,
+			browseBindings,
 		),
 	)
-
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center,
-		welcome,
-	)
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, welcome)
 
 }
 
