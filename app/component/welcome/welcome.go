@@ -13,22 +13,22 @@ var (
 		MarginBottom(2).
 		Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0f7b")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
 					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#fd3863")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
 					"██╔════╝██╔════╝██╔═══██╗╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#fc5154")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
 					"███████╗██║     ██║   ██║   ██║      ██║    ╚████╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#fb6648")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
 					"╚════██║██║     ██║   ██║   ██║      ██║     ╚██╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#fa7f39")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
 					"███████║╚██████╗╚██████╔╝   ██║      ██║      ██║",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#f89b29")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
 					"╚══════╝ ╚═════╝ ╚═════╝    ╚═╝      ╚═╝      ╚═╝",
 				),
 			}, "\n"),
@@ -70,6 +70,16 @@ var (
 		styles.Bold.Render("r"),
 	}
 
+	useageFormats = []string{
+		"from stderr",
+		"from stdout",
+	}
+
+	useageCmds = []string{
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render("go run -race my/awesome/app.go 2>&1 | beam navigation_service"),
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render("cat uss_enterprise_engine_logs.log | beam -d engine_service"),
+	}
+
 	infoUsage = lipgloss.NewStyle().
 			MarginBottom(2).
 			Render(
@@ -96,26 +106,42 @@ func New(width int, height int) *Model {
 
 func (m *Model) View() string {
 
-	between := int(float64(m.width) * 0.35)
+	betweenSmall := int(float64(m.width) * 0.35)
+	betweenMedium := int(float64(m.width) * 0.4)
+
 	leaderBindings := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.PlaceHorizontal(between, lipgloss.Center, lipgloss.NewStyle().Render("Leader keys")),
-		styles.SpaceBetween(between, leaderKeyActions, leaderKeyBindings, "."),
+		lipgloss.PlaceHorizontal(betweenSmall, lipgloss.Center, lipgloss.NewStyle().Render("Leader keys")),
+		styles.SpaceBetween(betweenSmall, leaderKeyActions, leaderKeyBindings, "."),
 	)
 
 	followBindings := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.PlaceHorizontal(between, lipgloss.Center, lipgloss.NewStyle().Render("Follow tab")),
-		styles.SpaceBetween(between, followKeyActions, followKeyBindings, "."),
+		lipgloss.PlaceHorizontal(betweenSmall, lipgloss.Center, lipgloss.NewStyle().Render("Follow tab")),
+		styles.SpaceBetween(betweenSmall, followKeyActions, followKeyBindings, "."),
 	)
 
 	browseBindings := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.PlaceHorizontal(between, lipgloss.Center, lipgloss.NewStyle().Render("Browse tab")),
-		styles.SpaceBetween(between, browseKeyActions, browseKeyBindings, "."),
+		lipgloss.PlaceHorizontal(betweenSmall, lipgloss.Center, lipgloss.NewStyle().Render("Browse tab")),
+		styles.SpaceBetween(betweenSmall, browseKeyActions, browseKeyBindings, "."),
 	)
+
+	// usageStderr := lipgloss.JoinVertical(lipgloss.Center,
+	// 	lipgloss.PlaceHorizontal(betweenMedium, lipgloss.Center, lipgloss.NewStyle().Render("Usage")),
+	// 	styles.SpaceBetween(betweenMedium, useageFormats[0:1], []string{".", "."}, "."),
+	// )
+	// usageStdout := lipgloss.JoinVertical(lipgloss.Center,
+	// 	lipgloss.PlaceHorizontal(betweenMedium, lipgloss.Center, lipgloss.NewStyle().Render("Usage")),
+	// 	styles.SpaceBetween(betweenMedium, useageFormats[1:], []string{".", "."}, "."),
+	// )
+	usageStderr := styles.SpaceBetween(betweenMedium, useageFormats[0:1], []string{".", "."}, ".")
+	usageStdout := styles.SpaceBetween(betweenMedium, useageFormats[1:], []string{".", "."}, ".")
+
 	maxWidth := max(
 		lipgloss.Width(logo),
 		lipgloss.Width(leaderBindings),
 		lipgloss.Width(followBindings),
 		lipgloss.Width(browseBindings),
+		lipgloss.Width(usageStderr),
+		lipgloss.Width(usageStdout),
 	)
 
 	welcome := lipgloss.JoinVertical(lipgloss.Left,
@@ -140,6 +166,18 @@ func (m *Model) View() string {
 			maxWidth,
 			lipgloss.Center,
 			browseBindings,
+		),
+		"\n",
+		lipgloss.PlaceHorizontal(
+			maxWidth,
+			lipgloss.Center,
+			lipgloss.JoinVertical(lipgloss.Left,
+				lipgloss.PlaceHorizontal(betweenMedium, lipgloss.Center, lipgloss.NewStyle().Render("Usage")),
+				usageStderr,
+				styles.FloatRight(betweenMedium, useageCmds[0]),
+				usageStdout,
+				styles.FloatRight(betweenMedium, useageCmds[1]),
+			),
 		),
 	)
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, welcome)

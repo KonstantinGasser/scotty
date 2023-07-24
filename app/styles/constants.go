@@ -1,9 +1,11 @@
 package styles
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/ansi"
 )
 
 var (
@@ -155,4 +157,12 @@ func SpaceBetween(width int, left []string, right []string, betweenChar string) 
 	}
 
 	return strings.Join(rows, "\n")
+}
+
+func FloatRight(width int, str string) string {
+	if width-ansi.PrintableRuneWidth(str)-1 <= 0 {
+		return str
+	}
+
+	return fmt.Sprintf(":%s%s", strings.Repeat(".", width-ansi.PrintableRuneWidth(str)-1), str)
 }
