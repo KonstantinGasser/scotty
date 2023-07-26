@@ -79,16 +79,6 @@ var (
 		lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render("go run -race my/awesome/app.go 2>&1 | beam navigation_service"),
 		lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render("cat uss_enterprise_engine_logs.log | beam -d engine_service"),
 	}
-
-	infoUsage = lipgloss.NewStyle().
-			MarginBottom(2).
-			Render(
-			strings.Join([]string{
-				lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bdbdbe")).Underline(true).Render("\nUsage"),
-				styles.Bold.Render("from stderr: ") + lipgloss.NewStyle().Render("go run -race my/awesome/app.go 2>&1 | beam navigation_service"),
-				styles.Bold.Render("from stdout: ") + lipgloss.NewStyle().Render("cat uss_enterprise_engine_logs.log | beam -d engine_service"),
-			}, "\n"),
-		)
 )
 
 type Model struct {

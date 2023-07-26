@@ -66,6 +66,8 @@ func NewGrid(width int, height int) Grid {
 func (grid *Grid) Adjust(width int, height int) {
 	// for tabLine and footerLine
 	// the height stays static
+	grid.FullWidth = width
+	grid.FullHeight = height
 	grid.TabLine.width = width
 	grid.FooterLine.width = width
 	grid.Content.width = width
