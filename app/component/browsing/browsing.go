@@ -142,9 +142,13 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		model.prompt.Width = promptWidth
 
 		if !model.ready {
-			model.formatter.Reset(model.width, uint8(model.height))
 			model.ready = true
+			model.formatter.Reset(model.width, uint8(model.height))
+			break
 		}
+
+		model.formatter.Resize(model.width, uint8(model.height))
+
 	case tea.KeyMsg:
 		if model.bindings.Matches(msg) {
 			cmds = append(cmds, model.bindings.Exec(msg).Call(msg))

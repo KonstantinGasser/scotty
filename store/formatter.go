@@ -208,6 +208,13 @@ func (formatter *Formatter) Reset(width int, height uint8) {
 	formatter.buffer = make([]ring.Item, formatter.size)
 }
 
+func (formatter *Formatter) Resize(width int, height uint8) {
+	formatter.ttyWidth = width
+	formatter.size = height
+
+	formatter.buildView()
+}
+
 func (formatter Formatter) String() string {
 
 	modalWidth, modalHeight := lipgloss.Width(formatter.foreground), lipgloss.Height(formatter.foreground)

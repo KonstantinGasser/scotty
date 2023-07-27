@@ -114,14 +114,6 @@ func (m *Model) View() string {
 		styles.SpaceBetween(betweenSmall, browseKeyActions, browseKeyBindings, "."),
 	)
 
-	// usageStderr := lipgloss.JoinVertical(lipgloss.Center,
-	// 	lipgloss.PlaceHorizontal(betweenMedium, lipgloss.Center, lipgloss.NewStyle().Render("Usage")),
-	// 	styles.SpaceBetween(betweenMedium, useageFormats[0:1], []string{".", "."}, "."),
-	// )
-	// usageStdout := lipgloss.JoinVertical(lipgloss.Center,
-	// 	lipgloss.PlaceHorizontal(betweenMedium, lipgloss.Center, lipgloss.NewStyle().Render("Usage")),
-	// 	styles.SpaceBetween(betweenMedium, useageFormats[1:], []string{".", "."}, "."),
-	// )
 	usageStderr := styles.SpaceBetween(betweenMedium, useageFormats[0:1], []string{".", "."}, ".")
 	usageStdout := styles.SpaceBetween(betweenMedium, useageFormats[1:], []string{".", "."}, ".")
 
