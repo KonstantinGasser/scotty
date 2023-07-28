@@ -130,7 +130,7 @@ func (buf *Buffer) HasData(index uint32) bool {
 		return false
 	}
 
-	return len(buf.data[index].Raw) > 0
+	return len(buf.data[buf.marshalIndex(index)].Raw) > 0
 }
 
 func (buf *Buffer) marshalIndex(absolute uint32) uint32 {
