@@ -87,6 +87,7 @@ func New(formatter store.Formatter) *Model {
 				if model.prompt.Focused() {
 					return nil
 				}
+				model.prompt.Reset()
 				model.prompt.Prompt = focusedPromptChar
 				return tea.Batch(model.prompt.Focus(), info.RequestMode(info.ModePromptActive))
 			},
