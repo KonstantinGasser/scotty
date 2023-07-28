@@ -199,7 +199,7 @@ func newFilledBuffer(size int, writes int, fn func(i int) string) *Buffer {
 			Raw: fn(i),
 		})
 	}
-	return &buf
+	return buf
 }
 
 func TestOffsetWrite(t *testing.T) {

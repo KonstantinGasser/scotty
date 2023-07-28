@@ -30,14 +30,14 @@ func TestBuildView(t *testing.T) {
 	formatted := formatter.String()
 
 	want := []string{
-		`>>>t╭────────────────────────────────────────╮..`,
-		`test│ test |                                 │..`,
-		`test│ {                                      │..`,
-		`test│   "hello": "world",                    │..`,
-		`test│   "index": 1,                          │..`,
-		`test│   "level": "debug"                     │..`,
-		`test│ }                                      │..`,
-		`test╰────────────────────────────────────────╯..`,
+		`[1]>╭────────────────────────────────────────╮..`,
+		`[2]t│ test |                                 │..`,
+		`[3]t│ {                                      │..`,
+		`[4]t│   "hello": "world",                    │..`,
+		`[5]t│   "index": 1,                          │..`,
+		`[6]t│   "level": "debug"                     │..`,
+		`[7]t│ }                                      │..`,
+		`[8]t╰────────────────────────────────────────╯..`,
 	}
 
 	for i, line := range strings.Split(formatted, "\n") {
