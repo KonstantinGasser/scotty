@@ -2,8 +2,10 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
+	"github.com/muesli/ansi"
 )
 
 // buildLines takes an ring.Item as an input and based on the
@@ -22,10 +24,11 @@ func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (i
 
 	return breaklines(
 		prefix+item.Raw[:item.DataPointer],
-		len(prefix)+len(item.Label)+3, // 3 => prefix format: [index]<ws>label<ws>|<ws> -> 3 for <ws>|<ws>
+		len(prefix)+ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
+		// len(prefix)+len(item.Label)+3, // 3 => prefix format: [index]<ws>label<ws>|<ws> -> 3 for <ws>|<ws>
 		item.Raw[item.DataPointer:],
 		width,
-		0,
+		len(prefix),
 	)
 }
 
@@ -46,20 +49,21 @@ func breaklines(prefix string, escapedPrefixLen int, line string, width int, pad
 
 	line = line[firstLineWidth:]
 
-	if len(line) <= width {
-		return len(lines) + 1, append(lines, line)
+	if len(line)+escapedPrefixLen <= width {
+		return len(lines) + 1, append(lines, strings.Repeat(" ", padding)+prefix[padding:]+line)
 	}
 
 	for len(line) >= width {
 		// try to insert as much as we can (depends on the tty width)
 		// of the line to the slice of line
+		line = strings.Repeat(" ", padding) + prefix[padding:] + line
 		lines = append(lines, line[:width])
 
 		// update line with what is leftover of the line
 		line = line[width:]
 
 		if len(line) <= width {
-			return len(lines) + 1, append(lines, line)
+			return len(lines) + 1, append(lines, strings.Repeat(" ", padding)+prefix[padding:]+line)
 		}
 	}
 

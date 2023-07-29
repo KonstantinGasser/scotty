@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strings"
 	"time"
 
 	"github.com/KonstantinGasser/scotty/app/bindings"
@@ -24,6 +25,8 @@ const (
 	tabBrowse
 	tabQuery
 	tabDocs
+
+	whitespace = " "
 )
 
 type mode struct {
@@ -73,6 +76,12 @@ type App struct {
 	// map of all available components mapped to
 	// the available tabs
 	components map[int]tea.Model
+
+	// labelMaxIndent is the length of the longest
+	// beam label currently connected and has effect on
+	// the prefix of a line to align the data part in the same
+	// terminal column
+	labelMaxIndent uint8
 }
 
 func New(q chan<- struct{}, refresh time.Duration, lStore *store.Store, consumer stream.Consumer) *App {
@@ -239,12 +248,25 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			info.RequestSubscribe(string(msg), app.subscriber[string(msg)].color)(),
 		)
 
+		if uint8(len(string(msg))) > app.labelMaxIndent {
+			app.labelMaxIndent = uint8(len(string(msg)))
+		}
+
 		cmds = append(cmds, app.consumeSubscriber)
 		return app, tea.Batch(cmds...)
 
 	case stream.Unsubscribe:
 		if app.activeTab == tabFollow {
 			app.components[tabFollow], _ = app.components[tabFollow].Update(tailing.RequestRefresh()())
+		}
+
+		if uint8(len(string(msg))) >= app.labelMaxIndent { // this is not perfect; len(msg) = 8 && labelMaxIndent = 8 but len(msg2) = 8 and updated labelMaxIndent last then we do extra work....
+			// find new longest label
+			for label := range app.subscriber {
+				if len(label) >= len(string(msg)) {
+					app.labelMaxIndent = uint8(len(label))
+				}
+			}
 		}
 		app.footerComponent, _ = app.footerComponent.Update(info.RequestUnsubscribe(string(msg))())
 
@@ -272,7 +294,8 @@ func (app *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		prefix := lipgloss.NewStyle().Foreground(config.color).Render(msg.Label) + " | "
+		indent := clamp(int(app.labelMaxIndent) - len(msg.Label))
+		prefix := lipgloss.NewStyle().Foreground(config.color).Render(msg.Label) + strings.Repeat(whitespace, indent) + " | "
 
 		app.logstore.Insert(msg.Label, len(prefix), append([]byte(prefix), msg.Data...))
 		// update follow component asap in order to allow background updates while
@@ -316,3 +339,10 @@ func (app *App) consumeMsg() tea.Msg         { return <-app.consumer.Messages() 
 func (app *App) consumeErrs() tea.Msg        { return <-app.consumer.Errors() }
 func (app *App) consumeSubscriber() tea.Msg  { return <-app.consumer.Subscribers() }
 func (app *App) consumeUnsubscribe() tea.Msg { return <-app.consumer.Unsubscribers() }
+
+func clamp(a int) int {
+	if a < 0 {
+		return 0
+	}
+	return a
+}
