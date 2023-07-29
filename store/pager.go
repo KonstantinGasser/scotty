@@ -9,6 +9,9 @@ import (
 )
 
 type Pager struct {
+	// if enabled the bufferView is
+	// not updated for each received message
+	paused bool
 	// reader includes all required APIs
 	// to perform read operations on the ringbuffer
 	reader ring.Reader
@@ -41,8 +44,25 @@ type Pager struct {
 	// is full since until then we only need to append data not
 	// trim at the beginning
 	written uint8
-
+	// ticker is used to only build the buffered view if the
+	// configured refresh time has been reached in order
+	// to allow to minimize the cost of re-building
 	ticker *time.Ticker
+	// scrollDelta is used to determine the delta position
+	// when starting to scroll up or down. Scrolling is only
+	// possible if the tailing mode is paused (we can debate
+	// if it makes sense to pause tailing the moment a ScrollMsg
+	// is emitted).
+	// A negative delta means based on the starting position
+	// content above/previous from that position is requested.
+	// A delta of 0 implies that the scrolled view matches the
+	// initital view when the tailing has been paused
+	scrollDelta int32
+	// scrollBuffer holds the current items which are
+	// determined by the scrollDelta. This buffer is
+	// only filled and maintained while scrolling is
+	// executed afterwards its drained.
+	scrollBuffer []ring.Item
 }
 
 // MoveDown shifts the pagers content down by one item
@@ -56,13 +76,25 @@ type Pager struct {
 // The pager.bufferView is updated with the shifted content.
 // MoveDown will ensure that the number of \n (lines) in the
 // pager.bufferView is not exceeding the current pager.size.
-func (pager *Pager) MoveDown(skipRefresh bool) {
+//
+// Major issue as of now:
+// The capacity of the buffer is increasing to most twice
+// the starting capacity of the buffer and then slowly shrinks
+// back to the starting capacity which should increase the
+// memmove and growSlice runtime calls which have a certain
+// performance penalty.
+// This issue will not be fixed in this function but rather a
+// new improved function is written.
+func (pager *Pager) MoveDownDeprecated(skipRefresh bool) {
+	// defer debug.Print("Len: %d - Cap: %d\n", len(pager.buffer), cap(pager.buffer))
+
 	next := pager.reader.At(pager.position)
 	pager.position++
 	// lines holds a single log line wrapped
 	// into multiple strings each no longer than
 	// pager.ttyWidth
 	_, lines := buildLines(next, pager.ttyWidth)
+	// debug.Print("Len: %d - Cap: %d - NewLines: %d\n", len(pager.buffer), cap(pager.buffer), len(lines))
 
 	// insert new log line into buffer
 	for _, line := range lines {
@@ -99,10 +131,79 @@ func (pager *Pager) MoveDown(skipRefresh bool) {
 	}
 }
 
+// MovePosition moves the buffers viewing position
+// by one.
+// This means that any new value in the backing ring.Buffer
+// is cached in the pager's buffer after being processed (broken
+// into multiple lines if nessecarry).
+// The buffer's view is not changed and must be called indendenly
+func (pager *Pager) MovePosition() {
+
+	next := pager.reader.At(pager.position)
+	pager.position += 1
+
+	_, lines := buildLines(next, pager.ttyWidth)
+
+	// if less than zero -> pager can write all lines in the not yet full
+	// buffer.
+	// Results > 0 imply that only so many lines can be written in the not full
+	// buffer before the starting items must be truncated
+	overflow := (int(pager.written) + len(lines)) - cap(pager.buffer)
+
+	if overflow <= 0 {
+		for _, line := range lines {
+			pager.buffer[pager.written] = line
+			pager.written += 1
+		}
+
+		// we are done all possible lines where written
+		// in the buffer
+		return
+	}
+
+	// ok at this point we know that either not all lines fitted
+	// in the not yet full buffer and some are left-over or that the
+	// buffer was full to begin with an all lines must be append and
+	// the first lines in the buffer must be truncated.
+	// Either way it's the same...
+
+	// shift the buffer to the left by how many lines need to be written
+	// essentially truncating N lines from the beginning of the buffer.
+	// Question:
+	// why not using sliceing [N:], see func MoveDownDeprecated and
+	// the not regarding growSlice and memmove.
+	for i := overflow; i < cap(pager.buffer); i++ {
+		pager.buffer[i-overflow] = pager.buffer[i]
+	}
+
+	// append new lines without increasing the slice capacity
+	for i, j := (cap(pager.buffer)-1)-(overflow-1), 0; i < cap(pager.buffer); i, j = i+1, j+1 {
+		pager.buffer[i] = lines[j]
+	}
+}
+
+func (pager *Pager) PauseRender()  { pager.paused = true }
+func (pager *Pager) ResumeRender() { pager.paused = false }
+
 // String returns a finshed formatted string representing
 // the current state of the pager.
 func (pager *Pager) String() string {
-	return pager.bufferView
+	if pager.paused {
+		return pager.bufferView
+	}
+
+	if pager.ticker == nil {
+		pager.bufferView = strings.Join(pager.buffer, "\n")
+		return pager.bufferView
+	}
+
+	select {
+	case <-pager.ticker.C:
+		pager.bufferView = strings.Join(pager.buffer, "\n")
+		return pager.bufferView
+	default:
+		return pager.bufferView
+	}
 }
 
 // Rerender updates the pagers internal view which depends on

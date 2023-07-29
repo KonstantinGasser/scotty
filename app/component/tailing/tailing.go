@@ -3,6 +3,7 @@ package tailing
 import (
 	"github.com/KonstantinGasser/scotty/app/bindings"
 	"github.com/KonstantinGasser/scotty/app/styles"
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store"
 	"github.com/KonstantinGasser/scotty/stream"
 	tea "github.com/charmbracelet/bubbletea"
@@ -35,11 +36,13 @@ func New(pager store.Pager) *Model {
 	model.bindings.Bind("p").Action(func(msg tea.KeyMsg) tea.Cmd {
 		if model.state == paused {
 			model.state = running
+			model.pager.ResumeRender()
 			model.pager.Refresh()
 			return RequestResume()
 		}
 
 		model.state = paused
+		model.pager.PauseRender()
 		return RequestPause()
 	})
 
@@ -79,7 +82,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		cmds = append(cmds, model.bindings.Exec(msg).Call(msg))
 	case stream.Message:
-		model.pager.MoveDown(model.state == paused)
+		model.pager.MovePosition()
 	}
 
 	return model, tea.Batch(cmds...)
