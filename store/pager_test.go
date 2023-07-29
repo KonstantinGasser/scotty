@@ -30,7 +30,7 @@ func TestMoveDownNoOverflow(t *testing.T) {
 
 	// seqID := 0
 	for _, seq := range sequence {
-		pager.MoveDown(false)
+		pager.MoveDownDeprecated(false)
 		if seq != pager.String() {
 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
 		}
@@ -60,7 +60,7 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 
 	for _, seq := range sequence {
-		pager.MoveDown(false)
+		pager.MoveDownDeprecated(false)
 		if seq != pager.String() {
 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
 		}
@@ -179,7 +179,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 
 		for _, seq := range tc.sequence {
 			store.Insert("test-label", len(prefix), []byte(seq))
-			pager.MoveDown(false)
+			pager.MoveDownDeprecated(false)
 		}
 
 		contents := pager.String()
@@ -201,7 +201,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 
 func BenchmarkMoveDown(b *testing.B) {
 	store := New(2048)
-	pager := store.NewPager(44, 100, testRefreshRate)
+	pager := store.NewPager(44, 75, testRefreshRate)
 
 	// fill ring buffer until full so pager.position always is a hit
 	for i := 0; i < 2048; i++ {
@@ -212,6 +212,23 @@ func BenchmarkMoveDown(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		pager.MoveDown(false)
+		pager.MoveDownDeprecated(false)
+	}
+}
+
+func BenchmarkMovePosition(b *testing.B) {
+	store := New(2048)
+	pager := store.NewPager(44, 75, testRefreshRate)
+
+	// fill ring buffer until full so pager.position always is a hit
+	for i := 0; i < 2048; i++ {
+		store.Insert("dummy", 0, []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		pager.MovePosition()
 	}
 }

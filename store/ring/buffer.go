@@ -61,7 +61,7 @@ func New(size uint32) *Buffer {
 		capacity: size,
 		head:     0,
 		written:  0,
-		data:     make([]Item, size),
+		data:     make([]Item, size, size),
 	}
 }
 
