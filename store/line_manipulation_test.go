@@ -7,7 +7,7 @@ import (
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
-func TestBreakLines(t *testing.T) {
+func TestBreakInLines(t *testing.T) {
 
 	tt := []struct {
 		name     string
@@ -34,7 +34,7 @@ func TestBreakLines(t *testing.T) {
 
 	for _, tc := range tt {
 		// var depth int = 1
-		depth, lines := breaklines(tc.prefix, 0, tc.line, tc.width, 0)
+		depth, lines := breakInLines(tc.prefix, 0, tc.line, tc.width, 0)
 
 		if depth != tc.depth {
 			t.Fatalf("[%s] expected depth of: %d; got depth: %d and lines:\n\t%q", tc.name, tc.depth, depth, lines)
@@ -85,5 +85,20 @@ func TestBuildLines(t *testing.T) {
 				t.Fatalf("[%s] wanted line: %s - got line: %s", tc.name, tc.wantLines[i], line)
 			}
 		}
+	}
+}
+
+func BenchmarkBuildLines(b *testing.B) {
+
+	width := 75
+	item := ring.Item{
+		Label:       "hello-world",
+		DataPointer: 14,
+		Raw:         `hello-world | {"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`,
+	}
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		buildLines(item, width)
 	}
 }

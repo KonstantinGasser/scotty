@@ -2,8 +2,10 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
+	"github.com/muesli/ansi"
 )
 
 // buildLines takes an ring.Item as an input and based on the
@@ -20,50 +22,51 @@ func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (i
 		prefix = opt(prefix)
 	}
 
-	return breaklines(
-		prefix+item.Raw[:item.DataPointer],
-		len(prefix)+len(item.Label)+3, // 3 => prefix format: [index]<ws>label<ws>|<ws> -> 3 for <ws>|<ws>
+	return breakInLines(
 		item.Raw[item.DataPointer:],
 		width,
-		0,
+		prefix+item.Raw[:item.DataPointer],
+		len(prefix)+ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
+		len(prefix),
 	)
 }
 
-func breaklines(prefix string, escapedPrefixLen int, line string, width int, padding int) (int, []string) {
-
-	firstLineWidth := width - escapedPrefixLen
+func breakInLines(lineData string, maxWidth int, linePrefix string, printablePrefixLen int, whitespaceIndent int) (int, []string) {
 
 	// base case:
 	// prefix and line fit in tty width
-	if escapedPrefixLen+len(line) <= width {
-		return 1, []string{prefix + line}
+	if printablePrefixLen+len(lineData) <= maxWidth {
+		return 1, []string{linePrefix + lineData}
 	}
 
 	// the first line item of the returned slice
 	// must start with the prefix at the beginng
-	var lines []string = []string{prefix + line[:firstLineWidth]}
+	var lines []string = []string{linePrefix + lineData[:(maxWidth-printablePrefixLen)]}
 	// 	=> []string{"some-prefix followed-by-the-line-of-as-much-as-we-can-write-in-the-left-over-space}
 
-	line = line[firstLineWidth:]
+	lineData = lineData[(maxWidth - printablePrefixLen):]
+	indentPrefix := strings.Repeat(" ", whitespaceIndent) + linePrefix[whitespaceIndent:]
 
-	if len(line) <= width {
-		return len(lines) + 1, append(lines, line)
+	if len(lineData)+printablePrefixLen <= maxWidth {
+		return len(lines) + 1, append(lines, indentPrefix+lineData)
 	}
 
-	for len(line) >= width {
+	for len(lineData) >= maxWidth {
 		// try to insert as much as we can (depends on the tty width)
 		// of the line to the slice of line
-		lines = append(lines, line[:width])
+		lineData = indentPrefix + lineData
+		lines = append(lines, lineData[:maxWidth])
 
 		// update line with what is leftover of the line
-		line = line[width:]
+		lineData = lineData[maxWidth:]
 
-		if len(line) <= width {
-			return len(lines) + 1, append(lines, line)
+		if len(lineData) <= maxWidth {
+			return len(lines) + 1, append(lines, indentPrefix+lineData)
 		}
 	}
 
 	return len(lines), lines
+
 }
 
 func clamp(a int) int {
