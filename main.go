@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"time"
 
@@ -43,6 +45,17 @@ func main() {
 	bubble := tea.NewProgram(ui,
 		tea.WithAltScreen(),
 	)
+
+	go func() {
+		mux := http.NewServeMux()
+
+		mux.HandleFunc("/debug/pprof/heap", pprof.Index)
+		server := &http.Server{
+			Addr:    ":8081",
+			Handler: mux,
+		}
+		server.ListenAndServe()
+	}()
 
 	if _, err := bubble.Run(); err != nil {
 		fmt.Printf("unable to start scotty: %v", err)

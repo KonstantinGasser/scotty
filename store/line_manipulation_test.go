@@ -87,3 +87,18 @@ func TestBuildLines(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkBuildLines(b *testing.B) {
+
+	width := 75
+	item := ring.Item{
+		Label:       "hello-world",
+		DataPointer: 14,
+		Raw:         `hello-world | {"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`,
+	}
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		buildLines(item, width)
+	}
+}
