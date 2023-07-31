@@ -7,7 +7,7 @@ import (
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
-func TestBreakLines(t *testing.T) {
+func TestBreakInLines(t *testing.T) {
 
 	tt := []struct {
 		name     string
@@ -34,7 +34,7 @@ func TestBreakLines(t *testing.T) {
 
 	for _, tc := range tt {
 		// var depth int = 1
-		depth, lines := breaklines(tc.prefix, 0, tc.line, tc.width, 0)
+		depth, lines := breakInLines(tc.prefix, 0, tc.line, tc.width, 0)
 
 		if depth != tc.depth {
 			t.Fatalf("[%s] expected depth of: %d; got depth: %d and lines:\n\t%q", tc.name, tc.depth, depth, lines)
