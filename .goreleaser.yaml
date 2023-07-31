@@ -54,22 +54,14 @@ changelog:
     - Merge remote-tracking branch
     - Merge branch
   groups:
-    - layout: post
-title: 'Features'
+    - title: 'Features'
       regexp: "^.*feat[(\\w)]*:+.*$"
       order: 0
-    - layout: post
-title: 'Fixes'
+    - title: 'Fixes'
       regexp: "^.*fix[(\\w)]*:+.*$"
       order: 10
-    - layout: post
-title: Other work
+    - title: Other work
       order: 999
-  # sort: asc
-  # filters:
-  #   exclude:
-  #     - '^docs:'
-  #     - '^test:'
 
 brews:
   - name: scotty
