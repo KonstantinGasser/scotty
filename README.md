@@ -101,7 +101,7 @@ After the first beam connects to scotty by default the `follow logs` tab is open
 This tab essentaully behaves like the `tail -f` command where each new recorded log is pushed to the end of the screen.
 Use the `p` key to pause the tailing and resume by pressing `p` again. With the `g` key you can load the latest logs from the buffer (usefull while tailing is paused).
 
-![example_tab_follow.png](resources/example_follow_v0.0.4-rc.png)
+![example_tab_follow.png](resources/example_follow_v0.1.1.png)
 
 ### TAB: Browse
 
