@@ -86,7 +86,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 		{
 			name:      "each item fits in row ",
 			maxHeight: 9,
-			maxWidth:  30,
+			maxWidth:  35,
 			sequence: []string{
 				"test-label | Line-1",
 				"test-label | Line-2",
@@ -113,7 +113,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 		{
 			name:      "overflow buffer; index prefix change",
 			maxHeight: 9,
-			maxWidth:  30,
+			maxWidth:  35,
 			sequence: []string{
 				"test-label | Line-1",
 				"test-label | Line-2",
@@ -173,6 +173,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tc := range tt {
 		store = New(12)
 		pager = store.NewPager(uint8(height), tc.maxWidth, testRefreshRate)
