@@ -36,13 +36,8 @@ type Item struct {
 	index       uint32
 	Label       string
 	Raw         string
-	Parsed      string
 	DataPointer int
 	Revision    uint8
-}
-
-func (i Item) String() string {
-	return i.Parsed
 }
 
 func (i Item) Index() uint32 {

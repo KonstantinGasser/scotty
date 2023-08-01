@@ -17,6 +17,7 @@ import (
 //	in : label | {data: value, some: value}
 //	out: 2, ["label | {data: value,", " some: value"] for width = 21
 func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (int, []string) {
+
 	prefix := fmt.Sprintf("[%d] ", item.Index())
 	for _, opt := range prefixOpts {
 		prefix = opt(prefix)

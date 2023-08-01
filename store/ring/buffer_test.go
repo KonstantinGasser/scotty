@@ -202,7 +202,7 @@ func newFilledBuffer(size int, writes int, fn func(i int) string) *Buffer {
 	return buf
 }
 
-func TestOffsetWrite(t *testing.T) {
+func TestOffsetRead(t *testing.T) {
 
 	tt := []struct {
 		name     string
@@ -313,4 +313,36 @@ func TestOffsetWrite(t *testing.T) {
 			}
 		}
 	}
+}
+
+/*
+Current benchmark results
+
+goos: darwin
+goarch: arm64
+pkg: github.com/KonstantinGasser/scotty/store/ring
+BenchmarkOffsetRead
+BenchmarkOffsetRead-12    	10446462	        97.18 ns/op	       0 B/op	       0 allocs/op
+*/
+func BenchmarkOffsetRead(b *testing.B) {
+
+	buf := New(2048)
+
+	for i := 0; i < 2048; i++ {
+		buf.Insert(Item{
+			Label:       "hello-world",
+			Raw:         `hello-world | {"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`,
+			DataPointer: 14,
+		})
+	}
+
+	avgRange := 50
+
+	items := make([]Item, avgRange)
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		buf.OffsetRead(avgRange, items)
+	}
+
 }
