@@ -93,12 +93,14 @@ func (ln *Listener) Run() {
 			ln.mtx.Lock()
 			if _, ok := ln.subscribers[s.label]; ok {
 				ln.errors <- fmt.Errorf("the label %q is already used by another stream", s.label)
+				ln.mtx.Unlock()
+
 				return
 			} else {
 				ln.subscribers[s.label] = struct{}{}
-			}
-			ln.mtx.Unlock()
+				ln.mtx.Unlock()
 
+			}
 			ln.subscribe <- Subscriber(s.label)
 
 			// blocking operation until error or EOF of client
