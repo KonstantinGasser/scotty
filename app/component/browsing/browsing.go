@@ -144,10 +144,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if !model.ready {
 			model.ready = true
-			model.formatter.Reset(model.width, uint8(model.height))
-			break
 		}
-
 		model.formatter.Resize(model.width, uint8(model.height))
 
 	case tea.KeyMsg:
