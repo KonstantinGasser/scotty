@@ -46,7 +46,7 @@ func New(q <-chan struct{}, network string, addr string) (*Listener, error) {
 
 	ln, err := net.Listen(network, addr)
 	if err != nil {
-		return nil, fmt.Errorf("unable to start scotty ln.t: %w", err)
+		return nil, fmt.Errorf("unable to start scotty with this network/addrr configurations.\n Make sure no other instance is running on this network/addrr.\nPlease see also the exact network error:\n\t:%v", err)
 	}
 
 	return &Listener{
