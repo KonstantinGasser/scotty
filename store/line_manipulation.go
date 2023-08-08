@@ -26,10 +26,18 @@ func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (i
 	return breakInLines(
 		item.Raw[item.DataPointer:],
 		width,
-		prefix+item.Raw[:item.DataPointer],
-		len(prefix)+ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
-		len(prefix),
+		item.Raw[:item.DataPointer],
+		ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
+		0,
 	)
+
+	// return breakInLines(
+	// 	item.Raw[item.DataPointer:],
+	// 	width,
+	// 	prefix+item.Raw[:item.DataPointer],
+	// 	len(prefix)+ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
+	// 	len(prefix),
+	// )
 }
 
 func breakInLines(lineData string, maxWidth int, linePrefix string, printablePrefixLen int, whitespaceIndent int) (int, []string) {
@@ -46,7 +54,7 @@ func breakInLines(lineData string, maxWidth int, linePrefix string, printablePre
 	// 	=> []string{"some-prefix followed-by-the-line-of-as-much-as-we-can-write-in-the-left-over-space}
 
 	lineData = lineData[(maxWidth - printablePrefixLen):]
-	indentPrefix := strings.Repeat(" ", whitespaceIndent) + linePrefix[whitespaceIndent:]
+	indentPrefix := strings.Repeat(" ", printablePrefixLen-2) + "| "
 
 	if len(lineData)+printablePrefixLen <= maxWidth {
 		return len(lines) + 1, append(lines, indentPrefix+lineData)

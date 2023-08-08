@@ -22,10 +22,10 @@ func TestMoveDownNoOverflow(t *testing.T) {
 	}
 
 	sequence := []string{
-		"[1] test-label | Line-1\n\x00\n\x00\n\x00",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n\x00\n\x00",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n\x00",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
+		"test-label | Line-1\n\x00\n\x00\n\x00",
+		"test-label | Line-1\ntest-label | Line-2\n\x00\n\x00",
+		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\n\x00",
+		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
 	}
 
 	// seqID := 0
@@ -48,15 +48,15 @@ func TestMoveDownOverflow(t *testing.T) {
 	}
 
 	sequence := []string{
-		"[1] test-label | Line-1\n\x00\n\x00\n\x00",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n\x00\n\x00",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n\x00",
-		"[1] test-label | Line-1\n[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4",
-		"[2] test-label | Line-2\n[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5",
-		"[3] test-label | Line-3\n[4] test-label | Line-4\n[5] test-label | Line-5\n[6] test-label | Line-6",
-		"[4] test-label | Line-4\n[5] test-label | Line-5\n[6] test-label | Line-6\n[7] test-label | Line-7",
-		"[5] test-label | Line-5\n[6] test-label | Line-6\n[7] test-label | Line-7\n[8] test-label | Line-8",
-		"[6] test-label | Line-6\n[7] test-label | Line-7\n[8] test-label | Line-8\n[9] test-label | Line-9",
+		"test-label | Line-1\n\x00\n\x00\n\x00",
+		"test-label | Line-1\ntest-label | Line-2\n\x00\n\x00",
+		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\n\x00",
+		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
+		"test-label | Line-2\ntest-label | Line-3\ntest-label | Line-4\ntest-label | Line-5",
+		"test-label | Line-3\ntest-label | Line-4\ntest-label | Line-5\ntest-label | Line-6",
+		"test-label | Line-4\ntest-label | Line-5\ntest-label | Line-6\ntest-label | Line-7",
+		"test-label | Line-5\ntest-label | Line-6\ntest-label | Line-7\ntest-label | Line-8",
+		"test-label | Line-6\ntest-label | Line-7\ntest-label | Line-8\ntest-label | Line-9",
 	}
 
 	for _, seq := range sequence {
@@ -99,15 +99,15 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"test-label | Line-9",
 			},
 			checksum: []string{
-				"[1] test-label | Line-1",
-				"[2] test-label | Line-2",
-				"[3] test-label | Line-3",
-				"[4] test-label | Line-4",
-				"[5] test-label | Line-5",
-				"[6] test-label | Line-6",
-				"[7] test-label | Line-7",
-				"[8] test-label | Line-8",
-				"[9] test-label | Line-9",
+				"test-label | Line-1",
+				"test-label | Line-2",
+				"test-label | Line-3",
+				"test-label | Line-4",
+				"test-label | Line-5",
+				"test-label | Line-6",
+				"test-label | Line-7",
+				"test-label | Line-8",
+				"test-label | Line-9",
 			},
 		},
 		{
@@ -134,15 +134,15 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"test-label | Line-17",
 			},
 			checksum: []string{
-				"[9] test-label | Line-9",
-				"[10] test-label | Line-10",
-				"[11] test-label | Line-11",
-				"[12] test-label | Line-12",
-				"[13] test-label | Line-13",
-				"[14] test-label | Line-14",
-				"[15] test-label | Line-15",
-				"[16] test-label | Line-16",
-				"[17] test-label | Line-17",
+				"test-label | Line-9",
+				"test-label | Line-10",
+				"test-label | Line-11",
+				"test-label | Line-12",
+				"test-label | Line-13",
+				"test-label | Line-14",
+				"test-label | Line-15",
+				"test-label | Line-16",
+				"test-label | Line-17",
 			},
 		},
 		{
@@ -161,15 +161,15 @@ func TestMoveDownAssertHeight(t *testing.T) {
 				"test-label | Line-9",
 			},
 			checksum: []string{
-				"ine-5",
-				"[6] test-label | L",
-				"ine-6",
-				"[7] test-label | L",
-				"ine-7",
-				"[8] test-label | L",
-				"ine-8",
-				"[9] test-label | L",
-				"ine-9",
+				"           | 5",
+				"test-label | Line-",
+				"           | 6",
+				"test-label | Line-",
+				"           | 7",
+				"test-label | Line-",
+				"           | 8",
+				"test-label | Line-",
+				"           | 9",
 			},
 		},
 	}
@@ -206,7 +206,7 @@ func BenchmarkMoveDown(b *testing.B) {
 
 	// fill ring buffer until full so pager.position always is a hit
 	for i := 0; i < 2048; i++ {
-		store.Insert("dummy", 0, []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
+		store.Insert("dummy", len("dummy"), []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
 	}
 
 	b.ResetTimer()
@@ -223,7 +223,7 @@ func BenchmarkMovePosition(b *testing.B) {
 
 	// fill ring buffer until full so pager.position always is a hit
 	for i := 0; i < 2048; i++ {
-		store.Insert("dummy", 0, []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
+		store.Insert("dummy", len("dummy"), []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
 	}
 
 	b.ResetTimer()
