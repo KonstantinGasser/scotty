@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/app/styles"
@@ -24,7 +23,7 @@ func init() {
 	// only after multiple lines if the string has to be
 	// broken into multiple lines. This leads to the entire
 	// line (including the background chars) where the sequence
-	// has been started to be colored. This not coloring the
+	// has been started to be colored. Thes///t coloring the
 	// strings when formattings/pretty printing is the solution
 	// for now...
 	jsonF.StringColor = nil
@@ -121,14 +120,19 @@ func (formatter *Formatter) buildView() {
 var selected = ">>>"
 var trimmedSuffix = "..."
 
+// TODO: range of lines not buffer. Buffer might be longer
+// than the lines (like after a call to Resize where the dims change).
+// Also if buffer > lines running index should be i := buffer - lines
+// in order to capture the latest buffer entries and remove the oldest
 func (formatter *Formatter) buildBackground() {
 
 	var lines = make([]string, formatter.size)
 
 	var printable, ansiEsc int
+	var raw strings.Builder
 	for i, item := range formatter.buffer {
 
-		var raw = strings.Builder{}
+		raw = strings.Builder{}
 
 		// index of an item in this case
 		// may never be zero as we start at 1
@@ -136,13 +140,14 @@ func (formatter *Formatter) buildBackground() {
 		// There are other places where an index of
 		// zero does not indicated that the item is
 		// the zero value Item{}
-		if item.Index() > 0 {
-			raw.WriteString(fmt.Sprintf("[%d]", item.Index()-1))
-		}
+		// if item.Index() > 0 {
+		// 	raw.WriteString(fmt.Sprintf("[%d]", item.Index()-1))
+		// }
 
 		if i == int(formatter.relative) {
 			raw.WriteString(selected)
 		}
+
 		raw.WriteString(item.Raw)
 
 		printable = ansi.PrintableRuneWidth(raw.String())
@@ -158,6 +163,7 @@ func (formatter *Formatter) buildBackground() {
 		raw.Reset()
 	}
 	formatter.background = strings.Join(lines, "\n")
+
 }
 
 var (
@@ -212,6 +218,7 @@ func (formatter *Formatter) Resize(width int, height uint8) {
 	formatter.ttyWidth = width
 	formatter.size = height
 
+	formatter.Load(int(formatter.CurrentIndex()))
 	formatter.buildView()
 }
 
