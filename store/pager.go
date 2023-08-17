@@ -50,21 +50,6 @@ type Pager struct {
 	// configured refresh time has been reached in order
 	// to allow to minimize the cost of re-building
 	ticker *time.Ticker
-	// scrollDelta is used to determine the delta position
-	// when starting to scroll up or down. Scrolling is only
-	// possible if the tailing mode is paused (we can debate
-	// if it makes sense to pause tailing the moment a ScrollMsg
-	// is emitted).
-	// A negative delta means based on the starting position
-	// content above/previous from that position is requested.
-	// A delta of 0 implies that the scrolled view matches the
-	// initital view when the tailing has been paused
-	scrollDelta int32
-	// scrollBuffer holds the current items which are
-	// determined by the scrollDelta. This buffer is
-	// only filled and maintained while scrolling is
-	// executed afterwards its drained.
-	scrollBuffer []ring.Item
 }
 
 // MovePosition moves the buffers viewing position
@@ -81,7 +66,6 @@ func (pager *Pager) MovePosition() {
 	lines := lineWrap(next, pager.ttyWidth)
 
 	pager.shiftAppend(lines)
-	//
 }
 
 // shiftAppend takes the given lines and updates the pager's
@@ -183,7 +167,6 @@ func (pager *Pager) reload(items ring.Slice) {
 		}
 
 		pager.buffer = append(pager.buffer[len(lines):], lines...)
-		// pager.written = written
 	}
 }
 
