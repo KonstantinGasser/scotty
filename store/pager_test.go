@@ -217,6 +217,11 @@ func TestAssertSameCapacity(t *testing.T) {
 
 }
 
+// Current benchmark results:
+//
+// goos: darwin
+// goarch: arm64
+// pkg: github.com/KonstantinGasser/scotty/store
 // BenchmarkMoveDown-12        	16231768	       744.3 ns/op	    4033 B/op	       5 allocs/op
 func BenchmarkMoveDown(b *testing.B) {
 	store := New(2048)
@@ -235,6 +240,11 @@ func BenchmarkMoveDown(b *testing.B) {
 	}
 }
 
+// Current benchmark results:
+//
+// goos: darwin
+// goarch: arm64
+// pkg: github.com/KonstantinGasser/scotty/store
 // BenchmarkMovePosition-12    	54408824	       219.6 ns/op	     515 B/op	       4 allocs/op
 func BenchmarkMovePosition(b *testing.B) {
 	store := New(2048)

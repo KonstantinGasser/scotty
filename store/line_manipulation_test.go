@@ -107,6 +107,12 @@ func TestLineWrap(t *testing.T) {
 	}
 }
 
+// Current benchmark results:
+//
+// goos: darwin
+// goarch: arm64
+// pkg: github.com/KonstantinGasser/scotty/store
+// BenchmarkLineWrapShort-12     	51005851	       215.4 ns/op	     240 B/op	       3 allocs/op
 func BenchmarkLineWrapShort(b *testing.B) {
 
 	ttyWidth := 45
@@ -119,6 +125,12 @@ func BenchmarkLineWrapShort(b *testing.B) {
 	}
 }
 
+// Current benchmark results:
+//
+// goos: darwin
+// goarch: arm64
+// pkg: github.com/KonstantinGasser/scotty/store
+// BenchmarkLineWrapMedium-12    	28089668	       427.9 ns/op	    1616 B/op	       4 allocs/op
 func BenchmarkLineWrapMedium(b *testing.B) {
 
 	ttyWidth := 65
@@ -131,6 +143,12 @@ func BenchmarkLineWrapMedium(b *testing.B) {
 	}
 }
 
+// Current benchmark results:
+//
+// goos: darwin
+// goarch: arm64
+// pkg: github.com/KonstantinGasser/scotty/store
+// BenchmarkLineWrapLong-12      	18874477	       630.1 ns/op	    2880 B/op	       4 allocs/op
 func BenchmarkLineWrapLong(b *testing.B) {
 
 	ttyWidth := 100
