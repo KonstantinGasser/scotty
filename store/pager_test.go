@@ -222,29 +222,6 @@ func TestAssertSameCapacity(t *testing.T) {
 // goos: darwin
 // goarch: arm64
 // pkg: github.com/KonstantinGasser/scotty/store
-// BenchmarkMoveDown-12        	16231768	       744.3 ns/op	    4033 B/op	       5 allocs/op
-func BenchmarkMoveDown(b *testing.B) {
-	store := New(2048)
-	pager := store.NewPager(44, 75, testRefreshRate)
-
-	// fill ring buffer until full so pager.position always is a hit
-	for i := 0; i < 2048; i++ {
-		store.Insert("dummy", len("dummy"), []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
-	}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		pager.MoveDownDeprecated(false)
-	}
-}
-
-// Current benchmark results:
-//
-// goos: darwin
-// goarch: arm64
-// pkg: github.com/KonstantinGasser/scotty/store
 // BenchmarkMovePosition-12    	54408824	       219.6 ns/op	     515 B/op	       4 allocs/op
 func BenchmarkMovePosition(b *testing.B) {
 	store := New(2048)
