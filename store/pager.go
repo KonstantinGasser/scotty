@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
@@ -93,7 +94,7 @@ func (pager *Pager) MoveDownDeprecated(skipRefresh bool) {
 	// lines holds a single log line wrapped
 	// into multiple strings each no longer than
 	// pager.ttyWidth
-	_, lines := buildLines(next, pager.ttyWidth)
+	lines := lineWrap(next, pager.ttyWidth)
 	// debug.Print("Len: %d - Cap: %d - NewLines: %d\n", len(pager.buffer), cap(pager.buffer), len(lines))
 
 	// insert new log line into buffer
@@ -142,13 +143,14 @@ func (pager *Pager) MovePosition() {
 	next := pager.reader.At(pager.position)
 	pager.position += 1
 
-	_, lines := buildLines(next, pager.ttyWidth)
+	lines := lineWrap(next, pager.ttyWidth)
 
+	debug.Print("Lines:\n%s\n", strings.Join(lines, "\n"))
 	// if less than zero -> pager can write all lines in the not yet full
 	// buffer.
 	// Results > 0 imply that only so many lines can be written in the not full
 	// buffer before the starting items must be truncated
-	overflow := (int(pager.written) + len(lines)) - cap(pager.buffer)
+	overflow := (int(pager.written) + len(lines)) - cap(pager.buffer) // cap: 20 written: 15 len(lines): 10 => 15+10 - 20 => 25 - 20 => 5
 
 	if overflow <= 0 {
 		for _, line := range lines {
@@ -160,6 +162,10 @@ func (pager *Pager) MovePosition() {
 		// in the buffer
 		return
 	}
+
+	// TODO:
+	// in pager.reload we need to update the pager.written value..I think at least
+	// we get a panic after buffer full -> width resize of terminal
 
 	// ok at this point we know that either not all lines fitted
 	// in the not yet full buffer and some are left-over or that the
@@ -180,6 +186,10 @@ func (pager *Pager) MovePosition() {
 	for i, j := (cap(pager.buffer)-1)-(overflow-1), 0; i < cap(pager.buffer); i, j = i+1, j+1 {
 		pager.buffer[i] = lines[j]
 	}
+
+	// fmt.Println("=====START=====")
+	// fmt.Println(strings.Join(pager.buffer, "\n"))
+	// fmt.Println("=====END=====")
 }
 
 func (pager *Pager) PauseRender()  { pager.paused = true }
@@ -234,9 +244,9 @@ func (pager *Pager) reload(items ring.Slice) {
 		if len(item.Raw) <= 0 {
 			continue
 		}
-		height, lines := buildLines(item, pager.ttyWidth)
+		lines := lineWrap(item, pager.ttyWidth)
 
-		if int(written)+height <= int(pager.size) {
+		if int(written)+len(lines) <= int(pager.size) {
 			for _, line := range lines {
 				pager.buffer[written] = line
 				written += 1
@@ -244,7 +254,7 @@ func (pager *Pager) reload(items ring.Slice) {
 			continue
 		}
 
-		pager.buffer = append(pager.buffer[height:], lines...)
+		pager.buffer = append(pager.buffer[len(lines):], lines...)
 	}
 }
 
@@ -267,4 +277,11 @@ func (pager *Pager) Refresh() {
 
 func (pager *Pager) debug() string {
 	return fmt.Sprintf("Height: %d\nWidth: %d\nPosition: %d, Len(buffer): %d\n", pager.size, pager.ttyWidth, pager.position, len(pager.buffer))
+}
+
+func clamp(a int) int {
+	if a < 0 {
+		return 0
+	}
+	return a
 }

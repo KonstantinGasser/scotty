@@ -163,7 +163,6 @@ func (formatter *Formatter) buildBackground() {
 		raw.Reset()
 	}
 	formatter.background = strings.Join(lines, "\n")
-
 }
 
 var (

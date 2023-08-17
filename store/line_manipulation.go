@@ -1,86 +1,69 @@
 package store
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/muesli/ansi"
 )
 
-// buildLines takes an ring.Item as an input and based on the
-// ring.Item.Raw value and the current width of the tty returns
-// a slice of string containing the broken down ring.Item.Raw line
-// along with the line count.
-// Example:
-//
-//	in : label | {data: value, some: value}
-//	out: 2, ["label | {data: value,", " some: value"] for width = 21
-func buildLines(item ring.Item, width int, prefixOpts ...func(string) string) (int, []string) {
+const (
+	indentSuffix = "| "
+)
 
-	prefix := fmt.Sprintf("[%d] ", item.Index())
-	for _, opt := range prefixOpts {
-		prefix = opt(prefix)
+func lineWrap(item ring.Item, ttyWidth int) []string {
+
+	truePrefixLen := ansi.PrintableRuneWidth(item.Raw[:item.DataPointer])
+	// here we could do things better..how to avoid the string concadination?
+	indent := strings.Repeat(" ", truePrefixLen-len(indentSuffix)) + indentSuffix
+
+	var builder = strings.Builder{}
+	// in order to minimize runtime.growslice and
+	// runtime.movemem calls we estimate how big
+	// the builder's buffer has to be by using the number of characters
+	// from the item paramter. However, we need to
+	// take new line chars in account which is why
+	// we add + len(item.Raw)/ttyWidth to the buffer size.
+	// Lastly, each second+ row has an inden prefix of the
+	// length of the line prefix which we need to add as well.
+	builder.Grow(len(item.Raw) + len(item.Raw)/ttyWidth + (clamp(int(len(item.Raw)/ttyWidth)-1) * len(indent)))
+
+	if len(item.Raw[item.DataPointer:])+truePrefixLen <= ttyWidth {
+		return []string{item.Raw}
 	}
 
-	return breakInLines(
-		item.Raw[item.DataPointer:],
-		width,
-		item.Raw[:item.DataPointer],
-		ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
-		0,
-	)
+	ansiSeqLen := len(item.Raw[:item.DataPointer]) - truePrefixLen
 
-	// return breakInLines(
-	// 	item.Raw[item.DataPointer:],
-	// 	width,
-	// 	prefix+item.Raw[:item.DataPointer],
-	// 	len(prefix)+ansi.PrintableRuneWidth(item.Raw[:item.DataPointer]),
-	// 	len(prefix),
-	// )
-}
+	var left, right = 0, ttyWidth
 
-func breakInLines(lineData string, maxWidth int, linePrefix string, printablePrefixLen int, whitespaceIndent int) (int, []string) {
+	// writing of the first line which includes the colores prefix
+	// (colored prefix not included in second level lines)
+	builder.WriteString(item.Raw[left : right+ansiSeqLen]) // special case where we can right more than the ttyWidth since ansi color sequences are not printed to the terminal as chars
+	builder.WriteString("\n")
 
-	// base case:
-	// prefix and line fit in tty width
-	if printablePrefixLen+len(lineData) <= maxWidth {
-		return 1, []string{linePrefix + lineData}
+	if right+ttyWidth >= len(item.Raw)-ansiSeqLen {
+		builder.WriteString(indent)
+		builder.WriteString(item.Raw[right+ansiSeqLen:])
+		return strings.Split(builder.String(), "\n")
 	}
 
-	// the first line item of the returned slice
-	// must start with the prefix at the beginng
-	var lines []string = []string{linePrefix + lineData[:(maxWidth-printablePrefixLen)]}
-	// 	=> []string{"some-prefix followed-by-the-line-of-as-much-as-we-can-write-in-the-left-over-space}
+	left += ttyWidth + ansiSeqLen
+	right += ttyWidth + ansiSeqLen
 
-	lineData = lineData[(maxWidth - printablePrefixLen):]
-	indentPrefix := strings.Repeat(" ", printablePrefixLen-2) + "| "
+	for left < len(item.Raw) {
+		builder.WriteString(indent)
+		builder.WriteString(item.Raw[left : right-len(indent)])
+		builder.WriteString("\n")
 
-	if len(lineData)+printablePrefixLen <= maxWidth {
-		return len(lines) + 1, append(lines, indentPrefix+lineData)
-	}
-
-	for len(lineData) >= maxWidth {
-		// try to insert as much as we can (depends on the tty width)
-		// of the line to the slice of line
-		lineData = indentPrefix + lineData
-		lines = append(lines, lineData[:maxWidth])
-
-		// update line with what is leftover of the line
-		lineData = lineData[maxWidth:]
-
-		if len(lineData) <= maxWidth {
-			return len(lines) + 1, append(lines, indentPrefix+lineData)
+		left, right = left+ttyWidth-len(indent), right+ttyWidth-len(indent)
+		// last bits and bytes which are left over need to be
+		// written into the last line
+		if right >= len(item.Raw) {
+			builder.WriteString(indent)
+			builder.WriteString(item.Raw[left:])
+			break
 		}
 	}
 
-	return len(lines), lines
-
-}
-
-func clamp(a int) int {
-	if a < 0 {
-		return 0
-	}
-	return a
+	return strings.Split(builder.String(), "\n")
 }
