@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KonstantinGasser/scotty/debug"
 	"github.com/KonstantinGasser/scotty/store/ring"
 )
 
@@ -45,6 +44,8 @@ type Pager struct {
 	// is full since until then we only need to append data not
 	// trim at the beginning
 	written uint8
+
+	writeHead int
 	// ticker is used to only build the buffered view if the
 	// configured refresh time has been reached in order
 	// to allow to minimize the cost of re-building
@@ -145,51 +146,63 @@ func (pager *Pager) MovePosition() {
 
 	lines := lineWrap(next, pager.ttyWidth)
 
-	debug.Print("Lines:\n%s\n", strings.Join(lines, "\n"))
-	// if less than zero -> pager can write all lines in the not yet full
-	// buffer.
-	// Results > 0 imply that only so many lines can be written in the not full
-	// buffer before the starting items must be truncated
-	overflow := (int(pager.written) + len(lines)) - cap(pager.buffer) // cap: 20 written: 15 len(lines): 10 => 15+10 - 20 => 25 - 20 => 5
+	// at this point we have N new lines we need to append in the buffer.
+	// for this to work we need to consider the fact that the buffer has
+	// a fixed cap and len and is inititally filled with \000 values.
+	// one requirement is to not change the the buffers cap causing
+	// runtime.growslice calls leading to overhead work.
+	// as such the first thing we need to do is to check how full the buffer
+	// currently is. For this we can use the pager.written value which indicates
+	// how many elements have been written into the buffer so far.
+	// Next we need to fill the buffer until full. (Caution: there might be more
+	// lines to write then we can put in the not full buffer).
+	// Once the buffer is full we need to truncate N elements from the beginning
+	// of the buffer (where N is len(lines)) and append all lines at the end of the
+	// buffer. Here we need to be cautious about not causing a growslice call by
+	// changing the buffer's capacity.
 
-	if overflow <= 0 {
-		for _, line := range lines {
-			pager.buffer[pager.written] = line
-			pager.written += 1
+	// this means the buffer has still free (pre-initialised) slots
+	// of \000 values which we need to overwrite before starting to
+	// truncate the beginning of the buffer.
+
+	var lineIndex int
+	if pager.writeHead < cap(pager.buffer) {
+		for pager.writeHead < cap(pager.buffer) && lineIndex < len(lines) {
+			pager.buffer[pager.writeHead] = lines[lineIndex]
+
+			pager.writeHead += 1
+			lineIndex += 1
 		}
+	}
 
-		// we are done all possible lines where written
-		// in the buffer
+	var overflow = len(lines[lineIndex:])
+
+	// no more lines to write
+	if overflow <= 0 {
 		return
 	}
 
-	// TODO:
-	// in pager.reload we need to update the pager.written value..I think at least
-	// we get a panic after buffer full -> width resize of terminal
-
-	// ok at this point we know that either not all lines fitted
-	// in the not yet full buffer and some are left-over or that the
-	// buffer was full to begin with an all lines must be append and
-	// the first lines in the buffer must be truncated.
-	// Either way it's the same...
-
-	// shift the buffer to the left by how many lines need to be written
-	// essentially truncating N lines from the beginning of the buffer.
-	// Question:
-	// why not using sliceing [N:], see func MoveDownDeprecated and
-	// the not regarding growSlice and memmove.
+	// truncate and append buffer by N = len(lines[i:])
+	// even better than truncate is to call this step:
+	// shifting the buffer to the left by N.
 	for i := overflow; i < cap(pager.buffer); i++ {
 		pager.buffer[i-overflow] = pager.buffer[i]
 	}
 
-	// append new lines without increasing the slice capacity
-	for i, j := (cap(pager.buffer)-1)-(overflow-1), 0; i < cap(pager.buffer); i, j = i+1, j+1 {
+	shiftOffset := (cap(pager.buffer)) - overflow
+
+	for i, j := shiftOffset, lineIndex; i < cap(pager.buffer); i, j = i+1, j+1 {
 		pager.buffer[i] = lines[j]
 	}
+}
 
-	// fmt.Println("=====START=====")
-	// fmt.Println(strings.Join(pager.buffer, "\n"))
-	// fmt.Println("=====END=====")
+func (pager Pager) debugf(msg string, args ...interface{}) {
+	defer fmt.Println("====END===")
+	fmt.Println("====DEBUG====")
+	fmt.Printf(msg, args...)
+	for _, line := range pager.buffer {
+		fmt.Println(line)
+	}
 }
 
 func (pager *Pager) PauseRender()  { pager.paused = true }
@@ -255,6 +268,7 @@ func (pager *Pager) reload(items ring.Slice) {
 		}
 
 		pager.buffer = append(pager.buffer[len(lines):], lines...)
+		pager.written = written
 	}
 }
 
