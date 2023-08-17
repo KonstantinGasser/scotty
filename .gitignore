@@ -5,6 +5,8 @@ beam
 **/*.out
 **/*.log
 **/*.test
+**/__debug_bin*
+**/debug.test*
 profile*.svg
 *.pptx
 dist/

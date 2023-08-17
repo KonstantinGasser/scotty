@@ -150,26 +150,26 @@ func TestMoveDownAssertHeight(t *testing.T) {
 			maxHeight: 9,
 			maxWidth:  18,
 			sequence: []string{
-				"test-label | Line-1",
-				"test-label | Line-2",
-				"test-label | Line-3",
-				"test-label | Line-4",
-				"test-label | Line-5",
-				"test-label | Line-6",
-				"test-label | Line-7",
-				"test-label | Line-8",
-				"test-label | Line-9",
+				"test-label | Line-10",
+				"test-label | Line-20",
+				"test-label | Line-30",
+				"test-label | Line-40",
+				"test-label | Line-50",
+				"test-label | Line-60",
+				"test-label | Line-70",
+				"test-label | Line-80",
+				"test-label | Line-90",
 			},
 			checksum: []string{
-				"           | 5",
+				"           | 50",
 				"test-label | Line-",
-				"           | 6",
+				"           | 60",
 				"test-label | Line-",
-				"           | 7",
+				"           | 70",
 				"test-label | Line-",
-				"           | 8",
+				"           | 80",
 				"test-label | Line-",
-				"           | 9",
+				"           | 90",
 			},
 		},
 	}
@@ -180,7 +180,7 @@ func TestMoveDownAssertHeight(t *testing.T) {
 
 		for _, seq := range tc.sequence {
 			store.Insert("test-label", len(prefix), []byte(seq))
-			pager.MoveDownDeprecated(false)
+			pager.MovePosition()
 		}
 
 		contents := pager.String()
@@ -200,23 +200,29 @@ func TestMoveDownAssertHeight(t *testing.T) {
 	}
 }
 
-func BenchmarkMoveDown(b *testing.B) {
-	store := New(2048)
-	pager := store.NewPager(44, 75, testRefreshRate)
+func TestAssertSameCapacity(t *testing.T) {
 
-	// fill ring buffer until full so pager.position always is a hit
+	capacity := 50
+	store := New(1024)
+	pager := store.NewPager(uint8(capacity), 100, testRefreshRate)
+
+	prefix := "test-label | "
 	for i := 0; i < 2048; i++ {
-		store.Insert("dummy", len("dummy"), []byte(`{"level":"warn","ts":1680212791.946584,"caller":"application/structred.go:39","msg":"caution this indicates X","index":998,"ts":1680212791.946579}`))
+		store.Insert("test-label", len(prefix), []byte(`{"level":"error","ts":1692292122.983928,"caller":"application/structred.go:68","msg":"unable to do X","index":81,"error":"unable to do X","ts":1692292122.9839098,"stacktrace":"main.handleLog\n\t/Users/konstantingasser/coffecode/scotty/test/application/structred.go:68\nmain.main\n\t/Users/konstantingasser/coffecode/scotty/test/application/structred.go:47\nruntime.main\n\t/usr/local/go/src/runtime/proc.go:250"}`))
+		pager.MovePosition()
+		if cap(pager.buffer) != capacity {
+			t.Fatalf("Capacity has changed after updating the buffer. From: %d -> To: %d", capacity, cap(pager.buffer))
+		}
 	}
 
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		pager.MoveDownDeprecated(false)
-	}
 }
 
+// Current benchmark results:
+//
+// goos: darwin
+// goarch: arm64
+// pkg: github.com/KonstantinGasser/scotty/store
+// BenchmarkMovePosition-12    	54408824	       219.6 ns/op	     515 B/op	       4 allocs/op
 func BenchmarkMovePosition(b *testing.B) {
 	store := New(2048)
 	pager := store.NewPager(44, 75, testRefreshRate)
