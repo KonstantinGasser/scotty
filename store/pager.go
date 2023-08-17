@@ -146,24 +146,14 @@ func (pager *Pager) MovePosition() {
 
 	lines := lineWrap(next, pager.ttyWidth)
 
-	// at this point we have N new lines we need to append in the buffer.
-	// for this to work we need to consider the fact that the buffer has
-	// a fixed cap and len and is inititally filled with \000 values.
-	// one requirement is to not change the the buffers cap causing
-	// runtime.growslice calls leading to overhead work.
-	// as such the first thing we need to do is to check how full the buffer
-	// currently is. For this we can use the pager.written value which indicates
-	// how many elements have been written into the buffer so far.
-	// Next we need to fill the buffer until full. (Caution: there might be more
-	// lines to write then we can put in the not full buffer).
-	// Once the buffer is full we need to truncate N elements from the beginning
-	// of the buffer (where N is len(lines)) and append all lines at the end of the
-	// buffer. Here we need to be cautious about not causing a growslice call by
-	// changing the buffer's capacity.
+	pager.shiftAppend(lines)
+	//
+}
 
-	// this means the buffer has still free (pre-initialised) slots
-	// of \000 values which we need to overwrite before starting to
-	// truncate the beginning of the buffer.
+// shiftAppend takes the given lines and updates the pager's
+// buffer such that the lines are append to the buffer and if
+// nessecarry truncates the buffer.
+func (pager *Pager) shiftAppend(lines []string) {
 
 	var lineIndex int
 	if pager.writeHead < cap(pager.buffer) {
@@ -193,15 +183,6 @@ func (pager *Pager) MovePosition() {
 
 	for i, j := shiftOffset, lineIndex; i < cap(pager.buffer); i, j = i+1, j+1 {
 		pager.buffer[i] = lines[j]
-	}
-}
-
-func (pager Pager) debugf(msg string, args ...interface{}) {
-	defer fmt.Println("====END===")
-	fmt.Println("====DEBUG====")
-	fmt.Printf(msg, args...)
-	for _, line := range pager.buffer {
-		fmt.Println(line)
 	}
 }
 
@@ -250,7 +231,7 @@ func (pager *Pager) Rerender(width int, height int) {
 func (pager *Pager) reload(items ring.Slice) {
 
 	pager.buffer = make([]string, pager.size)
-	pager.bufferView = "Rebulding view..."
+	pager.bufferView = "Rebuilding view..."
 
 	var written uint8
 	for _, item := range items {
@@ -268,7 +249,7 @@ func (pager *Pager) reload(items ring.Slice) {
 		}
 
 		pager.buffer = append(pager.buffer[len(lines):], lines...)
-		pager.written = written
+		// pager.written = written
 	}
 }
 

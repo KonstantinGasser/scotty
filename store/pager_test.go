@@ -83,68 +83,68 @@ func TestMoveDownAssertHeight(t *testing.T) {
 		maxHeight int
 		checksum  []string
 	}{
-		// {
-		// 	name:      "each item fits in row ",
-		// 	maxHeight: 9,
-		// 	maxWidth:  35,
-		// 	sequence: []string{
-		// 		"test-label | Line-1",
-		// 		"test-label | Line-2",
-		// 		"test-label | Line-3",
-		// 		"test-label | Line-4",
-		// 		"test-label | Line-5",
-		// 		"test-label | Line-6",
-		// 		"test-label | Line-7",
-		// 		"test-label | Line-8",
-		// 		"test-label | Line-9",
-		// 	},
-		// 	checksum: []string{
-		// 		"test-label | Line-1",
-		// 		"test-label | Line-2",
-		// 		"test-label | Line-3",
-		// 		"test-label | Line-4",
-		// 		"test-label | Line-5",
-		// 		"test-label | Line-6",
-		// 		"test-label | Line-7",
-		// 		"test-label | Line-8",
-		// 		"test-label | Line-9",
-		// 	},
-		// },
-		// {
-		// 	name:      "overflow buffer; index prefix change",
-		// 	maxHeight: 9,
-		// 	maxWidth:  35,
-		// 	sequence: []string{
-		// 		"test-label | Line-1",
-		// 		"test-label | Line-2",
-		// 		"test-label | Line-3",
-		// 		"test-label | Line-4",
-		// 		"test-label | Line-5",
-		// 		"test-label | Line-6",
-		// 		"test-label | Line-7",
-		// 		"test-label | Line-8",
-		// 		"test-label | Line-9",
-		// 		"test-label | Line-10",
-		// 		"test-label | Line-11",
-		// 		"test-label | Line-12",
-		// 		"test-label | Line-13",
-		// 		"test-label | Line-14",
-		// 		"test-label | Line-15",
-		// 		"test-label | Line-16",
-		// 		"test-label | Line-17",
-		// 	},
-		// 	checksum: []string{
-		// 		"test-label | Line-9",
-		// 		"test-label | Line-10",
-		// 		"test-label | Line-11",
-		// 		"test-label | Line-12",
-		// 		"test-label | Line-13",
-		// 		"test-label | Line-14",
-		// 		"test-label | Line-15",
-		// 		"test-label | Line-16",
-		// 		"test-label | Line-17",
-		// 	},
-		// },
+		{
+			name:      "each item fits in row ",
+			maxHeight: 9,
+			maxWidth:  35,
+			sequence: []string{
+				"test-label | Line-1",
+				"test-label | Line-2",
+				"test-label | Line-3",
+				"test-label | Line-4",
+				"test-label | Line-5",
+				"test-label | Line-6",
+				"test-label | Line-7",
+				"test-label | Line-8",
+				"test-label | Line-9",
+			},
+			checksum: []string{
+				"test-label | Line-1",
+				"test-label | Line-2",
+				"test-label | Line-3",
+				"test-label | Line-4",
+				"test-label | Line-5",
+				"test-label | Line-6",
+				"test-label | Line-7",
+				"test-label | Line-8",
+				"test-label | Line-9",
+			},
+		},
+		{
+			name:      "overflow buffer; index prefix change",
+			maxHeight: 9,
+			maxWidth:  35,
+			sequence: []string{
+				"test-label | Line-1",
+				"test-label | Line-2",
+				"test-label | Line-3",
+				"test-label | Line-4",
+				"test-label | Line-5",
+				"test-label | Line-6",
+				"test-label | Line-7",
+				"test-label | Line-8",
+				"test-label | Line-9",
+				"test-label | Line-10",
+				"test-label | Line-11",
+				"test-label | Line-12",
+				"test-label | Line-13",
+				"test-label | Line-14",
+				"test-label | Line-15",
+				"test-label | Line-16",
+				"test-label | Line-17",
+			},
+			checksum: []string{
+				"test-label | Line-9",
+				"test-label | Line-10",
+				"test-label | Line-11",
+				"test-label | Line-12",
+				"test-label | Line-13",
+				"test-label | Line-14",
+				"test-label | Line-15",
+				"test-label | Line-16",
+				"test-label | Line-17",
+			},
+		},
 		{
 			name:      "each item requires 2 lines",
 			maxHeight: 9,
@@ -200,6 +200,24 @@ func TestMoveDownAssertHeight(t *testing.T) {
 	}
 }
 
+func TestAssertSameCapacity(t *testing.T) {
+
+	capacity := 50
+	store := New(1024)
+	pager := store.NewPager(uint8(capacity), 100, testRefreshRate)
+
+	prefix := "test-label | "
+	for i := 0; i < 2048; i++ {
+		store.Insert("test-label", len(prefix), []byte(`{"level":"error","ts":1692292122.983928,"caller":"application/structred.go:68","msg":"unable to do X","index":81,"error":"unable to do X","ts":1692292122.9839098,"stacktrace":"main.handleLog\n\t/Users/konstantingasser/coffecode/scotty/test/application/structred.go:68\nmain.main\n\t/Users/konstantingasser/coffecode/scotty/test/application/structred.go:47\nruntime.main\n\t/usr/local/go/src/runtime/proc.go:250"}`))
+		pager.MovePosition()
+		if cap(pager.buffer) != capacity {
+			t.Fatalf("Capacity has changed after updating the buffer. From: %d -> To: %d", capacity, cap(pager.buffer))
+		}
+	}
+
+}
+
+// BenchmarkMoveDown-12        	16231768	       744.3 ns/op	    4033 B/op	       5 allocs/op
 func BenchmarkMoveDown(b *testing.B) {
 	store := New(2048)
 	pager := store.NewPager(44, 75, testRefreshRate)
@@ -217,6 +235,7 @@ func BenchmarkMoveDown(b *testing.B) {
 	}
 }
 
+// BenchmarkMovePosition-12    	54408824	       219.6 ns/op	     515 B/op	       4 allocs/op
 func BenchmarkMovePosition(b *testing.B) {
 	store := New(2048)
 	pager := store.NewPager(44, 75, testRefreshRate)
