@@ -15,7 +15,7 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 
 	truePrefixLen := ansi.PrintableRuneWidth(item.Raw[:item.DataPointer])
 	// here we could do things better..how to avoid the string concadination?
-	indent := strings.Repeat(" ", truePrefixLen-len(indentSuffix)) + indentSuffix
+	indent := strings.Repeat(" ", clamp(truePrefixLen-len(indentSuffix))) + indentSuffix
 
 	var builder = strings.Builder{}
 	// in order to minimize runtime.growslice and
