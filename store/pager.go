@@ -71,6 +71,10 @@ func (pager *Pager) MovePosition() {
 // shiftAppend takes the given lines and updates the pager's
 // buffer such that the lines are append to the buffer and if
 // nessecarry truncates the buffer.
+//
+// The shift value depends on the len(lines) and each item of
+// the buffer is shifted N to the left leaving N free slots
+// at the end of the buffer for the N new lines.
 func (pager *Pager) shiftAppend(lines []string) {
 
 	var lineIndex int
@@ -128,24 +132,37 @@ func (pager *Pager) String() string {
 	}
 }
 
-// Rerender updates the pagers internal view which depends on
-// the current tty width and height.
-//
-// Rerender flushes the current buffer and recomputes the lines
-// visible within the new dimensions (width, height).
-func (pager *Pager) Rerender(width int, height int) {
+func (pager *Pager) Resize(width int, height int) {
 
 	pager.ttyWidth = width
 	pager.size = uint8(height)
 
-	start := clamp(int(pager.position) - len(pager.buffer))
-	items := make([]ring.Item, len(pager.buffer))
+	start := clamp(int(pager.position) - int(pager.size))
+
+	items := make([]ring.Item, pager.size)
 	pager.reader.OffsetRead(start, items)
 
-	pager.reload(items)
-	pager.bufferView = strings.Join(pager.buffer, "\n")
+	buf := make([]string, pager.size)
+	for i := range buf {
+		buf[i] = "\000"
+	}
+	pager.writeHead = 0
+
+	for _, item := range items {
+		lines := lineWrap(item, pager.ttyWidth)
+		pager.shiftAppend(lines)
+	}
 }
 
+// // Rerender updates the pagers internal view which depends on
+// // the current tty width and height.
+// //
+// // Rerender flushes the current buffer and recomputes the lines
+// // visible within the new dimensions (width, height).
+//
+//	func (pager *Pager) Rerender(width int, height int) {
+//		pager.Resize(width, height)
+//	}
 func (pager *Pager) reload(items ring.Slice) {
 
 	pager.buffer = make([]string, pager.size)

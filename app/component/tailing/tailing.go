@@ -72,7 +72,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		model.pager.Rerender(model.width, model.height)
+		model.pager.Resize(model.width, model.height)
 
 	case tea.KeyMsg:
 		if !model.bindings.Matches(msg) {

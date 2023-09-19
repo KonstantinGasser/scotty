@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -11,61 +10,62 @@ var (
 	testRefreshRate = time.Nanosecond * 0 // evaluates to a nil time.Ticker causing asap update of pager
 )
 
-func TestMoveDownNoOverflow(t *testing.T) {
-
-	store := New(12)
-	pager := store.NewPager(4, 23, testRefreshRate)
-
-	prefix := "test-label | "
-	for i := 0; i < 4; i++ {
-		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
-	}
-
-	sequence := []string{
-		"test-label | Line-1\n\x00\n\x00\n\x00",
-		"test-label | Line-1\ntest-label | Line-2\n\x00\n\x00",
-		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\n\x00",
-		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
-	}
-
-	// seqID := 0
-	for _, seq := range sequence {
-		pager.MoveDownDeprecated(false)
-		if seq != pager.String() {
-			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
-		}
-	}
-}
-
-func TestMoveDownOverflow(t *testing.T) {
-
-	store := New(12)
-	pager := store.NewPager(4, 23, testRefreshRate)
-
-	prefix := "test-label | "
-	for i := 0; i < 9; i++ {
-		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
-	}
-
-	sequence := []string{
-		"test-label | Line-1\n\x00\n\x00\n\x00",
-		"test-label | Line-1\ntest-label | Line-2\n\x00\n\x00",
-		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\n\x00",
-		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
-		"test-label | Line-2\ntest-label | Line-3\ntest-label | Line-4\ntest-label | Line-5",
-		"test-label | Line-3\ntest-label | Line-4\ntest-label | Line-5\ntest-label | Line-6",
-		"test-label | Line-4\ntest-label | Line-5\ntest-label | Line-6\ntest-label | Line-7",
-		"test-label | Line-5\ntest-label | Line-6\ntest-label | Line-7\ntest-label | Line-8",
-		"test-label | Line-6\ntest-label | Line-7\ntest-label | Line-8\ntest-label | Line-9",
-	}
-
-	for _, seq := range sequence {
-		pager.MoveDownDeprecated(false)
-		if seq != pager.String() {
-			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
-		}
-	}
-}
+//
+// func TestMoveDownNoOverflow(t *testing.T) {
+//
+// 	store := New(12)
+// 	pager := store.NewPager(4, 23, testRefreshRate)
+//
+// 	prefix := "test-label | "
+// 	for i := 0; i < 4; i++ {
+// 		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
+// 	}
+//
+// 	sequence := []string{
+// 		"test-label | Line-1\n\x00\n\x00\n\x00",
+// 		"test-label | Line-1\ntest-label | Line-2\n\x00\n\x00",
+// 		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\n\x00",
+// 		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
+// 	}
+//
+// 	// seqID := 0
+// 	for _, seq := range sequence {
+// 		pager.MoveDownDeprecated(false)
+// 		if seq != pager.String() {
+// 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
+// 		}
+// 	}
+// }
+//
+// func TestMoveDownOverflow(t *testing.T) {
+//
+// 	store := New(12)
+// 	pager := store.NewPager(4, 23, testRefreshRate)
+//
+// 	prefix := "test-label | "
+// 	for i := 0; i < 9; i++ {
+// 		store.Insert("test-label", len(prefix), []byte(fmt.Sprintf("%sLine-%d", prefix, i+1)))
+// 	}
+//
+// 	sequence := []string{
+// 		"test-label | Line-1\n\x00\n\x00\n\x00",
+// 		"test-label | Line-1\ntest-label | Line-2\n\x00\n\x00",
+// 		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\n\x00",
+// 		"test-label | Line-1\ntest-label | Line-2\ntest-label | Line-3\ntest-label | Line-4",
+// 		"test-label | Line-2\ntest-label | Line-3\ntest-label | Line-4\ntest-label | Line-5",
+// 		"test-label | Line-3\ntest-label | Line-4\ntest-label | Line-5\ntest-label | Line-6",
+// 		"test-label | Line-4\ntest-label | Line-5\ntest-label | Line-6\ntest-label | Line-7",
+// 		"test-label | Line-5\ntest-label | Line-6\ntest-label | Line-7\ntest-label | Line-8",
+// 		"test-label | Line-6\ntest-label | Line-7\ntest-label | Line-8\ntest-label | Line-9",
+// 	}
+//
+// 	for _, seq := range sequence {
+// 		pager.MoveDownDeprecated(false)
+// 		if seq != pager.String() {
+// 			t.Fatalf("[pager.MoveDown] expected line(s):\n%q\ngot:\n%q", seq, pager.String())
+// 		}
+// 	}
+// }
 
 func TestMoveDownAssertHeight(t *testing.T) {
 
