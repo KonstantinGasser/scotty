@@ -13,22 +13,22 @@ var (
 		MarginBottom(2).
 		Render(
 			strings.Join([]string{
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4C94")).Render(
 					"███████╗ ██████╗ ██████╗ ████████╗████████╗██╗   ██╗",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#EF46AC")).Render(
 					"██╔════╝██╔════╝██╔═══██╗╚══██╔══╝╚══██╔══╝╚██╗ ██╔╝",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#D840C0")).Render(
 					"███████╗██║     ██║   ██║   ██║      ██║    ╚████╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#BE38D5")).Render(
 					"╚════██║██║     ██║   ██║   ██║      ██║     ╚██╔╝ ",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#BE38D5")).Render(
 					"███████║╚██████╗╚██████╔╝   ██║      ██║      ██║",
 				),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#62fcaf")).Render(
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#9F2DEB")).Render(
 					"╚══════╝ ╚═════╝ ╚═════╝    ╚═╝      ╚═╝      ╚═╝",
 				),
 			}, "\n"),
