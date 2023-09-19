@@ -2,6 +2,7 @@ package store
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/KonstantinGasser/scotty/store/ring"
 	"github.com/muesli/ansi"
@@ -11,13 +12,17 @@ const (
 	indentSuffix = "| "
 )
 
+var (
+	builders sync.Pool = sync.Pool{New: func() any { return &strings.Builder{} }}
+)
+
 func lineWrap(item ring.Item, ttyWidth int) []string {
 
 	truePrefixLen := ansi.PrintableRuneWidth(item.Raw[:item.DataPointer])
 	// here we could do things better..how to avoid the string concadination?
 	indent := strings.Repeat(" ", clamp(truePrefixLen-len(indentSuffix))) + indentSuffix
 
-	var builder = strings.Builder{}
+	var builder = builders.Get().(*strings.Builder)
 	// in order to minimize runtime.growslice and
 	// runtime.movemem calls we estimate how big
 	// the builder's buffer has to be by using the number of characters
@@ -29,6 +34,8 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	builder.Grow(len(item.Raw) + len(item.Raw)/ttyWidth + (clamp(int(len(item.Raw)/ttyWidth)-1) * len(indent)))
 
 	if len(item.Raw[item.DataPointer:])+truePrefixLen <= ttyWidth {
+		builder.Reset()
+		builders.Put(builder)
 		return []string{item.Raw}
 	}
 
@@ -44,6 +51,9 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	if right+ttyWidth >= len(item.Raw)-ansiSeqLen {
 		builder.WriteString(indent)
 		builder.WriteString(item.Raw[right+ansiSeqLen:])
+
+		builder.Reset()
+		builders.Put(builder)
 		return strings.Split(builder.String(), "\n")
 	}
 
@@ -65,5 +75,7 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 		}
 	}
 
+	builder.Reset()
+	builders.Put(builder)
 	return strings.Split(builder.String(), "\n")
 }
