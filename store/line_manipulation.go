@@ -23,6 +23,11 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	indent := strings.Repeat(" ", clamp(truePrefixLen-len(indentSuffix))) + indentSuffix
 
 	var builder = builders.Get().(*strings.Builder)
+	defer func() {
+		builder.Reset()
+		builders.Put(builder)
+	}()
+	// var builder = strings.Builder{}
 	// in order to minimize runtime.growslice and
 	// runtime.movemem calls we estimate how big
 	// the builder's buffer has to be by using the number of characters
@@ -34,8 +39,8 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	builder.Grow(len(item.Raw) + len(item.Raw)/ttyWidth + (clamp(int(len(item.Raw)/ttyWidth)-1) * len(indent)))
 
 	if len(item.Raw[item.DataPointer:])+truePrefixLen <= ttyWidth {
-		builder.Reset()
-		builders.Put(builder)
+		// builder.Reset()
+		// builders.Put(builder)
 		return []string{item.Raw}
 	}
 
@@ -52,8 +57,8 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 		builder.WriteString(indent)
 		builder.WriteString(item.Raw[right+ansiSeqLen:])
 
-		builder.Reset()
-		builders.Put(builder)
+		// builder.Reset()
+		// builders.Put(builder)
 		return strings.Split(builder.String(), "\n")
 	}
 
@@ -71,11 +76,12 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 		if right >= len(item.Raw) {
 			builder.WriteString(indent)
 			builder.WriteString(item.Raw[left:])
+
+			// builder.Reset()
+			// builders.Put(builder)
 			break
 		}
 	}
 
-	builder.Reset()
-	builders.Put(builder)
 	return strings.Split(builder.String(), "\n")
 }
