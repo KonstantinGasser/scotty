@@ -14,7 +14,6 @@ const (
 )
 
 var (
-	// builders sync.Pool = sync.Pool{New: func() any { return &strings.Builder{} }}
 	builders sync.Pool = sync.Pool{New: func() any { return bytes.NewBuffer(nil) }}
 )
 
@@ -31,7 +30,6 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	// shows better results for B/op and maintains allocations (which have decreased by 1)
 	// however there is now free lunch and ns/op increase on average by 100ns while dividing the B/op thou
 	var builder = builders.Get().(*bytes.Buffer)
-
 	defer func() {
 		builder.Reset()
 		builders.Put(builder)
@@ -60,8 +58,6 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 		builder.WriteString(indent)
 		builder.WriteString(item.Raw[right+ansiSeqLen:])
 
-		// builder.Reset()
-		// builders.Put(builder)
 		return strings.Split(builder.String(), "\n")
 	}
 
@@ -83,9 +79,5 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 		}
 	}
 
-	out := strings.Split(builder.String(), "\n")
-	// builder.Reset()
-	// builders.Put(builder)
-
-	return out
+	return strings.Split(builder.String(), "\n")
 }
