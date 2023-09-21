@@ -85,6 +85,8 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		index, ok := model.statsMap[msg.label]
 		if ok {
 			model.stats[index].state = connected
+			model.stats[index].stateChar = symbolConnected
+			model.stats[index].compile()
 			break
 		}
 
@@ -109,6 +111,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		model.stats[index].state = disconnected
 		model.stats[index].stateChar = symbolDisconnected
+		model.stats[index].compile()
 	case requestPause:
 		for index, st := range model.stats {
 			if st.state == disconnected {
