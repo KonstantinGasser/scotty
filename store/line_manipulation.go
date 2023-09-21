@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"strings"
 	"sync"
 
@@ -13,7 +14,8 @@ const (
 )
 
 var (
-	builders sync.Pool = sync.Pool{New: func() any { return &strings.Builder{} }}
+	// builders sync.Pool = sync.Pool{New: func() any { return &strings.Builder{} }}
+	builders sync.Pool = sync.Pool{New: func() any { return bytes.NewBuffer(nil) }}
 )
 
 func lineWrap(item ring.Item, ttyWidth int) []string {
@@ -22,12 +24,19 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	// here we could do things better..how to avoid the string concadination?
 	indent := strings.Repeat(" ", clamp(truePrefixLen-len(indentSuffix))) + indentSuffix
 
-	var builder = builders.Get().(*strings.Builder)
+	if len(item.Raw[item.DataPointer:])+truePrefixLen <= ttyWidth {
+		return []string{item.Raw}
+	}
+
+	// shows better results for B/op and maintains allocations (which have decreased by 1)
+	// however there is now free lunch and ns/op increase on average by 100ns while dividing the B/op thou
+	var builder = builders.Get().(*bytes.Buffer)
+
 	defer func() {
 		builder.Reset()
 		builders.Put(builder)
 	}()
-	// var builder = strings.Builder{}
+
 	// in order to minimize runtime.growslice and
 	// runtime.movemem calls we estimate how big
 	// the builder's buffer has to be by using the number of characters
@@ -37,12 +46,6 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	// Lastly, each second+ row has an inden prefix of the
 	// length of the line prefix which we need to add as well.
 	builder.Grow(len(item.Raw) + len(item.Raw)/ttyWidth + (clamp(int(len(item.Raw)/ttyWidth)-1) * len(indent)))
-
-	if len(item.Raw[item.DataPointer:])+truePrefixLen <= ttyWidth {
-		// builder.Reset()
-		// builders.Put(builder)
-		return []string{item.Raw}
-	}
 
 	ansiSeqLen := len(item.Raw[:item.DataPointer]) - truePrefixLen
 
@@ -76,12 +79,13 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 		if right >= len(item.Raw) {
 			builder.WriteString(indent)
 			builder.WriteString(item.Raw[left:])
-
-			// builder.Reset()
-			// builders.Put(builder)
 			break
 		}
 	}
 
-	return strings.Split(builder.String(), "\n")
+	out := strings.Split(builder.String(), "\n")
+	// builder.Reset()
+	// builders.Put(builder)
+
+	return out
 }
