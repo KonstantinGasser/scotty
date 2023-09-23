@@ -119,6 +119,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			model.stats[index].state = paused
 			model.stats[index].stateChar = symbolPaused
+			model.stats[index].compile()
 		}
 	case requestResume:
 		for index, st := range model.stats {
@@ -127,6 +128,7 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			model.stats[index].state = connected
 			model.stats[index].stateChar = symbolConnected
+			model.stats[index].compile()
 		}
 	case requestIncrement:
 		index, ok := model.statsMap[string(msg)]
@@ -158,21 +160,14 @@ func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (model Model) View() string {
 
-	var (
-		statsList, optsList string
-	)
-
 	statsTmp := []string{}
 	for _, st := range model.stats {
 		statsTmp = append(statsTmp, st.compiled)
 	}
 
-	statsList = lipgloss.JoinHorizontal(lipgloss.Left, statsTmp...)
-	optsList = lipgloss.JoinHorizontal(lipgloss.Left, model.availOpts...)
-
 	return lipgloss.JoinHorizontal(lipgloss.Left,
 		model.baseInfo,
-		statsList,
-		optsList,
+		lipgloss.JoinHorizontal(lipgloss.Left, statsTmp...),
+		lipgloss.JoinHorizontal(lipgloss.Left, model.availOpts...),
 	)
 }

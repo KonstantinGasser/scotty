@@ -28,7 +28,7 @@ func lineWrap(item ring.Item, ttyWidth int) []string {
 	}
 
 	// shows better results for B/op and maintains allocations (which have decreased by 1)
-	// however there is now free lunch and ns/op increase on average by 100ns while dividing the B/op thou
+	// however there is no free lunch and ns/op increase on average by 100ns while dividing the B/op by 2 thou
 	var builder = builders.Get().(*bytes.Buffer)
 	defer func() {
 		builder.Reset()
